@@ -4,3 +4,12 @@ node_modules/
 dev/harness.html
 *.log
 .DS_Store
+cloudflare/node_modules/
+cloudflare/pages/dist/
+cloudflare/worker/gen/
+.wrangler/
+.dev.vars
+# ไฟล์ key ของ service account ห้าม commit
+sa.json
+*service-account*.json
+*-sa-key*.json

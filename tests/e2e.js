@@ -1,7 +1,7 @@
 // ทดสอบหน้าเว็บผ่าน dev/harness.html ด้วย Playwright: node dev/build-harness.js && node tests/e2e.js
 const { chromium } = require('playwright');
 const path = require('path');
-const url = 'file://' + path.join(__dirname, '..', 'dev', 'harness.html');
+const url = process.env.E2E_URL || 'file://' + path.join(__dirname, '..', 'dev', 'harness.html');
 const shots = process.env.SHOTS;
 let pass = 0, fail = 0;
 async function t(name, fn) { try { await fn(); pass++; console.log('  ✓ ' + name); } catch (e) { fail++; console.log('  ✗ ' + name + '\n    ' + String(e.message).split('\n').slice(0,12).join(' | ')); } }
@@ -11,6 +11,7 @@ function ok(v, m) { if (!v) throw new Error(m || 'ควรเป็นจริ
   const browser = await chromium.launch();
   for (const [vw, vh, scheme] of [[1366, 900, 'light'], [390, 844, 'light'], [1366, 900, 'dark']]) {
     console.log(`หน้าจอ ${vw}x${vh} ${scheme}`);
+    if (process.env.E2E_RESET) await fetch(process.env.E2E_RESET, { method: 'POST' });
     const page = await browser.newPage({ viewport: { width: vw, height: vh }, colorScheme: scheme });
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));

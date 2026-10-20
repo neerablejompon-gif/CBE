@@ -21,8 +21,15 @@ function childByPrefix_(parent, prefix) {
   return null;
 }
 
+/** เปิดโฟลเดอร์จาก ID ที่เก็บไว้ คืน null ถ้าถูกลบ ย้าย หรือไม่มีสิทธิ์ (จะค้นหาจากชื่อแทน) */
+function folderById_(id) {
+  if (!id) return null;
+  try { return DriveApp.getFolderById(id); } catch (err) { return null; }
+}
+
 function enablerFolder_(e, create) {
-  if (e.folder_id) return DriveApp.getFolderById(e.folder_id);
+  var known = folderById_(e.folder_id);
+  if (known) return known;
   var root = DriveApp.getFolderById(settings_().root_folder_id);
   var f = childByPrefix_(root, e.drive) || (create ? root.createFolder(e.drive + ' ' + e.code) : null);
   if (f) Db.update('enablers', e, { folder_id: f.getId() });
@@ -30,7 +37,8 @@ function enablerFolder_(e, create) {
 }
 
 function subFolder_(s, create) {
-  if (s.folder_id) return DriveApp.getFolderById(s.folder_id);
+  var known = folderById_(s.folder_id);
+  if (known) return known;
   var e = Db.find('enablers', function (x) { return x.code === s.enabler; });
   var ef = enablerFolder_(e, create);
   if (!ef) return null;
@@ -42,7 +50,8 @@ function subFolder_(s, create) {
 
 function levelFolder_(s, n, create) {
   var L = levelRow_(s.key, n, create);
-  if (L && L.folder_id) return DriveApp.getFolderById(L.folder_id);
+  var known = folderById_(L && L.folder_id);
+  if (known) return known;
   var sf = subFolder_(s, create);
   if (!sf) return null;
   var f = childFolder_(sf, LEVEL_FOLDER + n, create);
@@ -141,7 +150,7 @@ function syncDrive_(u) {
         var lf = childFolder_(sf, LEVEL_FOLDER + n, false);
         if (!lf) continue;
         var L = levelRow_(s.key, n, true);
-        if (!L.folder_id) Db.update('levels', L, { folder_id: lf.getId() });
+        if (L.folder_id !== lf.getId()) Db.update('levels', L, { folder_id: lf.getId() });
         var it = lf.getFiles();
         while (it.hasNext()) {
           var file = it.next();
