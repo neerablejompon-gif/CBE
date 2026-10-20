@@ -31,7 +31,16 @@
 | `Seed.gs` | โครงสร้างตัวชี้วัด หัวข้อ ประเด็นย่อย และน้ำหนักตาม SE-AM 2569 |
 | `Setup.gs` | ติดตั้งฐานข้อมูลและแอดมินคนแรก |
 
-## ติดตั้ง
+## รูปแบบการติดตั้ง
+
+ใช้โค้ดตรรกะชุดเดียวกัน (`src/*.gs`) ได้ 2 แบบ
+
+| แบบ | เหมาะกับ | เอกสาร |
+|---|---|---|
+| **Google Apps Script** | ติดตั้งเร็ว ไม่มีค่าใช้จ่าย ใช้บัญชี Google ที่มีสิทธิ์โฟลเดอร์ | หัวข้อ "ติดตั้งบน Apps Script" ด้านล่าง |
+| **Cloudflare Pages + Workers + Sheets/Drive API** | หน้าเว็บเร็ว ใช้โดเมนของตนเอง ไม่ผูกกับบัญชีบุคคล (ใช้ service account) | หัวข้อ "Deploy บน Cloudflare" ด้านล่าง |
+
+## ติดตั้งบน Apps Script
 
 1. สร้างโปรเจกต์ Apps Script ใหม่ (script.google.com) ด้วยบัญชีที่จะเป็นเจ้าของข้อมูลและมีสิทธิ์โฟลเดอร์ Drive ของ CBE
 2. นำโค้ดขึ้น เลือกวิธีใดวิธีหนึ่ง
@@ -49,6 +58,81 @@
 7. เพิ่มผู้ใช้ในหน้า **ผู้ใช้งาน** และแจ้งรหัสชั่วคราวผ่านช่องทางที่ปลอดภัย
 
 ลืมรหัสแอดมิน: ใส่ Script Property `RESET_EMAIL` แล้วรัน `resetPasswordFromEditor` รหัสชั่วคราวใหม่อยู่ใน Execution log
+
+## Deploy บน Cloudflare (Pages + Workers + Google Sheets API)
+
+> สถานะ: โค้ดและชุดทดสอบพร้อมแล้ว ทดสอบกับ Google API จำลองเท่านั้น **ยังไม่เคย deploy หรือต่อ Google/Cloudflare จริง** ควรทดลองกับสเปรดชีตและโฟลเดอร์สำเนาก่อนใช้ข้อมูลจริง
+
+### โครงสร้าง
+
+```
+เบราว์เซอร์ ──▶ Cloudflare Pages (cloudflare/pages)  หน้าเว็บ index.html + app.js + _headers (CSP)
+                    │ POST /api  (Pages Function: functions/api.js)
+                    ▼ service binding (ไม่เปิด Worker สู่อินเทอร์เน็ตโดยตรง)
+               Worker "cbe-api" (cloudflare/worker) ──▶ Durable Object ตัวเดียว: รันคำขอทีละรายการ, เก็บ session, จำกัดการ login ต่อ IP
+                    │ service account (JWT → OAuth)
+                    ▼
+               Google Sheets API (ฐานข้อมูล)  +  Google Drive API (ไฟล์หลักฐาน)
+```
+
+- `cloudflare/build.mjs` ห่อ `src/*.gs` เป็น `worker/gen/core.js` (ตรรกะเดียวกับ Apps Script ไม่ต้องดูแลสองชุด) และสร้าง `pages/dist`
+- `worker/src/engine.js` จำลอง SpreadsheetApp/DriveApp/CacheService บน API จริง: โหลดตารางครั้งเดียวต่อคำขอ เขียนกลับเฉพาะแถวที่เปลี่ยนแบบ `RAW` (ข้อความไม่ถูกแปลงเป็นวันที่/ตัวเลข) และเขียน Drive ก่อน Sheets เพื่อไม่ให้มีแถวอ้างไฟล์ที่ไม่มีอยู่จริง
+- `worker/src/google.js` ขอ access token ด้วย service account และเรียก Sheets/Drive REST API (ลองใหม่อัตโนมัติเมื่อเจอ 429/5xx)
+
+### สิ่งที่ต้องเตรียม
+
+1. **Google Cloud**
+   - สร้างโปรเจกต์ เปิดใช้ **Google Sheets API** และ **Google Drive API**
+   - IAM & Admin → Service Accounts → สร้าง service account (ไม่ต้องให้ role ในโปรเจกต์) → Keys → Add key → JSON เก็บไฟล์ไว้อย่างปลอดภัย ห้าม commit
+2. **สเปรดชีตฐานข้อมูล**: สร้าง Google Sheet เปล่า 1 ไฟล์ แชร์ให้อีเมล service account (`...@...iam.gserviceaccount.com`) เป็น **Editor** จด ID จาก URL (`/d/<ID>/edit`)
+3. **สเปรดชีตต้นทาง** (แบบฟอร์มเดิม ใช้ตอนนำเข้า): แชร์ให้ service account เป็น **Viewer**
+4. **โฟลเดอร์เอกสาร**: service account ไม่มีพื้นที่เก็บไฟล์ของตัวเอง จึง**อัปโหลดลง My Drive ของบุคคลไม่ได้** ให้ย้ายโฟลเดอร์ "Core Business Enablers" ไปไว้ใน **Shared drive** แล้วเพิ่ม service account เป็นสมาชิกสิทธิ์ **Content manager** ถ้า ID โฟลเดอร์เปลี่ยนหลังย้าย ให้แก้ค่า `root_folder_id` ในชีท `settings` ของสเปรดชีตฐานข้อมูล (หลังรัน setup) (ถ้าเพียงแชร์โฟลเดอร์ใน My Drive จะอ่าน/ซิงก์ได้ แต่อัปโหลดไม่ได้)
+5. **Cloudflare**: บัญชี Cloudflare แผน **Workers Paid** (ทดสอบในเครื่องพบว่าการ login ใช้ CPU ราว 35 ms ต่อครั้งจากการแฮชรหัสผ่าน ซึ่งเกินเพดาน 10 ms ของแผนฟรี) และ Node.js 20 ขึ้นไป
+
+### ขั้นตอน
+
+```bash
+cd cloudflare
+npm install
+npx wrangler login                     # หรือตั้ง CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID
+
+# 1) สร้างตาราง โครงสร้างตัวชี้วัด และแอดมินคนแรก (รันจากเครื่องผู้ดูแล รหัสชั่วคราวแสดงบนจอครั้งเดียว)
+GOOGLE_SERVICE_ACCOUNT_FILE=./sa.json DB_SPREADSHEET_ID=<ID> ADMIN_EMAIL=<อีเมลแอดมิน> npm run setup
+
+# 2) Worker API
+npx wrangler secret put GOOGLE_SERVICE_ACCOUNT_JSON --config worker/wrangler.toml < ./sa.json
+npm run build && npx wrangler deploy --config worker/wrangler.toml --var DB_SPREADSHEET_ID:<ID>
+
+# 3) หน้าเว็บ (ครั้งแรกจะสร้าง Pages project ชื่อ cbe-reporting)
+npm run deploy:pages
+```
+
+จากนั้นเปิด `https://cbe-reporting.pages.dev` (หรือผูกโดเมนของหน่วยงานใน Pages → Custom domains) เข้าสู่ระบบด้วยรหัสชั่วคราว แล้วทำต่อตามข้อ 6–7 ของการติดตั้งบน Apps Script (นำเข้าข้อมูล ซิงก์ Drive เพิ่มผู้ใช้)
+
+- Pages Function เรียก Worker ผ่าน service binding ที่ตั้งใน `pages/wrangler.toml` (`API` → `cbe-api`) จึงต้อง deploy Worker ก่อน Pages
+- Worker ตั้ง `workers_dev = false` เรียกจากภายนอกโดยตรงไม่ได้
+- ลืมรหัสแอดมิน: `GOOGLE_SERVICE_ACCOUNT_FILE=./sa.json DB_SPREADSHEET_ID=<ID> RESET_EMAIL=<อีเมล> npm run setup`
+- ดู log ของ Worker: `npx wrangler tail cbe-api`
+- อัปเดตโค้ด: แก้ที่ `src/` แล้วรันขั้นตอนที่ 2–3 ซ้ำ (ไม่ต้องรัน setup ใหม่)
+
+### ข้อควรรู้
+
+- ทุกคำขอผ่าน Durable Object ตัวเดียวเพื่อไม่ให้การเขียนชีทชนกัน เหมาะกับผู้ใช้หลักสิบคน แต่ละคำขออ่านทั้งฐานข้อมูลใหม่จาก Sheets (เรียก API 2 ครั้ง) เวลาตอบสนองจริงยังไม่ได้วัดกับ Google จริง
+- โควตา Sheets API เริ่มต้น 300 คำขอต่อนาทีต่อโปรเจกต์ เพียงพอสำหรับการใช้งานปกติ การซิงก์ Drive ครั้งแรกเรียก Drive API ตามจำนวนโฟลเดอร์
+- ไฟล์ที่เป็น Google Docs/Sheets ในโฟลเดอร์จะดาวน์โหลดเป็น PDF
+- ห้ามแก้หัวตาราง (แถวที่ 1) ในสเปรดชีตฐานข้อมูล แก้ค่าในแถวได้แต่ควรทำเมื่อไม่มีผู้ใช้กำลังบันทึก
+- ความลับ (`GOOGLE_SERVICE_ACCOUNT_JSON`) เก็บเป็น Worker secret เท่านั้น ไม่อยู่ในโค้ดหรือหน้าเว็บ
+- หน้าเว็บใช้ CSP `script-src 'self'` และ header ความปลอดภัยใน `pages/_headers`
+
+### ทดสอบในเครื่อง (ไม่ต้องใช้ Google/Cloudflare จริง)
+
+```bash
+cd cloudflare
+npm test              # Worker engine กับ Google API จำลอง (test/fake-google.mjs)
+npm run test:core     # ชุดทดสอบเดิม 61 รายการกับโค้ดที่ห่อสำหรับ Worker
+npm run test:e2e      # ทดสอบหน้าจอผ่านเซิร์ฟเวอร์ในเครื่อง + CSP จริง (ต้องมี Playwright)
+node test/e2e-server.mjs --serve   # เปิดลองที่ http://localhost:8788 บัญชีทดลองเดียวกับ dev/harness.html
+```
 
 ## ความปลอดภัย
 

@@ -1,0 +1,22 @@
+{
+  "name": "cbe-reporting-cloudflare",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "CBE Reporting บน Cloudflare Pages + Workers + Google Sheets/Drive API (service account)",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node build.mjs && node test/engine.test.mjs",
+    "test:core": "node build.mjs && cd .. && CORE=gen node tests/run.js",
+    "test:e2e": "node build.mjs && node test/e2e-server.mjs",
+    "setup": "node build.mjs && node scripts/setup.mjs",
+    "deploy:worker": "node build.mjs && wrangler deploy --config worker/wrangler.toml",
+    "deploy:pages": "node build.mjs && cd pages && wrangler pages deploy dist --project-name cbe-reporting"
+  },
+  "dependencies": {
+    "@noble/hashes": "1.8.0"
+  },
+  "devDependencies": {
+    "wrangler": "4.40.0"
+  }
+}
