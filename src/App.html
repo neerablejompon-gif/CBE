@@ -1,0 +1,812 @@
+<script>
+(function () {
+'use strict';
+/* ---------- ยูทิลิตี ---------- */
+var M = ['ต.ค.', 'พ.ย.', 'ธ.ค.', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.'];
+var TM = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+var MAX_UPLOAD = 10 * 1024 * 1024;
+function ico(n, c) { return '<svg class="ico ' + (c || '') + '" aria-hidden="true"><use href="#i-' + n + '"/></svg>'; }
+function esc(s) { return String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function f2(n) { return n === null || n === undefined || isNaN(n) ? '—' : Number(n).toFixed(2); }
+function f4(n) { return n === null || n === undefined || isNaN(n) ? '—' : Number(n).toFixed(4); }
+function pd(s) { if (!s) return null; var d = new Date(s.length === 10 ? s + 'T00:00:00' : s); return isNaN(d) ? null : d; }
+function thD(s) { var d = typeof s === 'string' ? pd(s) : s; return d ? d.getDate() + ' ' + TM[d.getMonth()] + ' ' + (d.getFullYear() + 543) : '—'; }
+function thDT(s) { var d = pd(s); if (!d) return '—'; return d.getDate() + ' ' + TM[d.getMonth()] + ' ' + String((d.getFullYear() + 543) % 100) + ' ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+function fsize(b) { return !b ? '—' : b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB'; }
+function $(s) { return document.querySelector(s); }
+function store(k, v) { try { if (v === undefined) return sessionStorage.getItem(k); if (v === null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, v); } catch (e) { return null; } }
+
+/* ---------- เรียกเซิร์ฟเวอร์ ---------- */
+var TOKEN = store('cbe-token') || null;
+function call(action, payload) {
+  return new Promise(function (resolve, reject) {
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (r && r.ok) return resolve(r.data);
+        if (r && r.auth) { TOKEN = null; store('cbe-token', null); D = null; resetState(); renderLogin(r.error); }
+        reject(new Error(r && r.error ? r.error : 'ไม่ได้รับคำตอบจากเซิร์ฟเวอร์'));
+      })
+      .withFailureHandler(function () { reject(new Error('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่')); })
+      .api(TOKEN, action, payload || {});
+  });
+}
+/** ปุ่มแสดงสถานะกำลังทำงานระหว่างรอเซิร์ฟเวอร์ และแสดงข้อผิดพลาดเป็น toast */
+function busy(btn, p) {
+  if (btn) { btn.classList.add('loading'); btn.disabled = true; }
+  return p.then(function (v) { return v; }, function (e) { toast(e.message, true); throw e; })
+    .finally(function () { if (btn) { btn.classList.remove('loading'); btn.disabled = false; } });
+}
+
+/* ---------- state ---------- */
+var D = null; // ข้อมูลจาก bootstrap
+var DET = {}; // รายละเอียดประเด็นย่อยที่โหลดแล้ว
+var FILES = {}; // ไฟล์ของแต่ละตัวชี้วัด (คลังเอกสาร)
+var USERS = null;
+var st;
+function resetState() { st = { view: 'overview', en: null, sub: null, lv: 0, qf: 'submitted', menu: false, ovEn: null, lib: [], libQ: '', tlEn: 'all', dirty: false }; DET = {}; FILES = {}; USERS = null; }
+resetState();
+var SUBS = [], ENm = {};
+
+function index() {
+  SUBS = []; ENm = {};
+  D.enablers.forEach(function (e) {
+    ENm[e.code] = e;
+    e.topics.forEach(function (t) { t.subs.forEach(function (s) { s.e = e; s.t = t; SUBS.push(s); }); });
+  });
+}
+function S(k) { for (var i = 0; i < SUBS.length; i++) if (SUBS[i].key === k) return SUBS[i]; return null; }
+function isAdmin() { return D.me.role === 'admin'; }
+function canEdit(code) { return !isAdmin() && D.me.enablers.indexOf(code) >= 0; }
+function editableSt(s) { return s.status === 'draft' || s.status === 'returned'; }
+function subsOf(e) { return SUBS.filter(function (s) { return s.e === e; }); }
+function wavg(list, f) { var sw = 0, sv = 0; list.forEach(function (s) { var v = f(s); if (v !== null && v !== undefined) { sw += s.w; sv += v * s.w; } }); return sw ? sv / sw : null; }
+function enScore(e) { return wavg(subsOf(e), function (s) { return s.self; }); }
+function topicScore(t) { return wavg(t.subs, function (s) { return s.self; }); }
+function sumW(e) { return subsOf(e).reduce(function (a, x) { return a + x.w; }, 0); }
+function enStats(e) {
+  var l = subsOf(e), x = { n: l.length, ok: 0, sub: 0, ret: 0, draft: 0, req: 0, have: 0, docs: 0, withDocs: 0, cm: 0, tl: 0 };
+  l.forEach(function (s) {
+    x[{ approved: 'ok', submitted: 'sub', returned: 'ret', draft: 'draft' }[s.status] || 'draft']++;
+    x.req += s.req; x.have += s.reqHas; x.docs += s.docs; if (s.docs) x.withDocs++; x.cm += s.openCm; if (s.hasTl) x.tl++;
+  });
+  x.ev = x.req ? Math.round(x.have / x.req * 100) : null;
+  return x;
+}
+function lvState(score, n) { return score === null || score === undefined ? 'none' : score >= n ? 'pass' : score > n - 1 ? 'part' : 'none'; }
+var stTxt = { approved: 'ตรวจแล้ว', submitted: 'รอ กปม. ตรวจ', returned: 'ส่งกลับแก้ไข', draft: 'ร่าง' };
+function statusPill(s) { return '<span class="pill ' + { approved: 'ok', submitted: 'info', returned: 'bad', draft: 'warn' }[s] + '">' + stTxt[s] + '</span>'; }
+function tone(e) { var s = enScore(e); if (e.target === null || s === null) return 'idle'; return s >= e.target ? 'ok' : s >= e.target - 0.15 ? 'warn' : 'bad'; }
+function vsTarget(e) { return { idle: '<span class="pill idle">ยังไม่มีเป้าหมาย/คะแนน</span>', ok: '<span class="pill ok">ถึงเป้า</span>', warn: '<span class="pill warn">ใกล้เป้า</span>', bad: '<span class="pill bad">ต่ำกว่าเป้า</span>' }[tone(e)]; }
+function track(score, target, cls) {
+  var p = score === null ? 0 : Math.min(score / 5 * 100, 100);
+  return '<div class="track" role="img" aria-label="คะแนน ' + f2(score) + ' จาก 5' + (target !== null ? ' เป้าหมาย ' + f4(target) : '') + '"><div class="fill ' + (cls || '') + '" style="width:' + p + '%"></div>' + (target !== null ? '<div class="tick" style="left:calc(' + (target / 5 * 100) + '% - 1px)"></div>' : '') + '</div>';
+}
+function potGain(s) { return s.self === null ? 0 : (Math.floor(s.self) + 1 - s.self) * s.w / sumW(s.e); }
+function actStatus(a) { var now = D.timeline.now; if (a.p >= 100) return 'done'; if (a.e < now) return 'late'; if (a.s > now) return 'wait'; return 'run'; }
+var actTxt = { done: 'เสร็จแล้ว', late: 'ล่าช้า', wait: 'ยังไม่ถึงกำหนด', run: 'กำลังดำเนินการ' };
+function tlMonth(i) { var fy = Number(D.timeline.fy); return M[i] + ' ' + String((i < 3 ? fy - 1 : fy) % 100); }
+function rptMonth(i) { var fy = Number(D.settings.fy); return M[i] + ' ' + String((i < 3 ? fy - 1 : fy) % 100); }
+
+/* ---------- หน้าเข้าสู่ระบบ ---------- */
+function brand(sub) { return '<div class="brand"><img class="logo" src="' + LOGO + '" alt="CBE8 Core Business Enablers" width="210" height="82"><small>' + sub + '</small></div>'; }
+function pwField(id, label, auto) {
+  return '<div class="field"><label for="' + id + '">' + label + '</label><div class="pw-wrap"><input type="password" id="' + id + '" autocomplete="' + auto + '" maxlength="128" required><button type="button" data-pw="' + id + '" aria-label="แสดงรหัสผ่าน">' + ico('eye') + '</button></div></div>';
+}
+function renderLogin(msg) {
+  $('#root').innerHTML = '<main class="login"><form class="login-card glass" id="loginForm" novalidate>' + brand('ระบบรายงานผล Core Business Enablers') +
+    '<div><h1>เข้าสู่ระบบ</h1><p class="muted small">ใช้อีเมลและรหัสผ่านที่ได้รับจากกองประเมินผล</p></div>' +
+    '<div class="notice bad" id="loginErr" role="alert"' + (msg ? '' : ' hidden') + '>' + ico('alert') + '<span>' + esc(msg || '') + '</span></div>' +
+    '<div class="field"><label for="email">อีเมล</label><input type="email" id="email" autocomplete="username" inputmode="email" maxlength="200" required></div>' +
+    pwField('password', 'รหัสผ่าน', 'current-password') +
+    '<button class="btn primary" type="submit" id="loginBtn">เข้าสู่ระบบ</button>' +
+    '<p class="foot">ลืมรหัสผ่านหรือบัญชีถูกล็อก ติดต่อผู้ดูแลระบบ กองประเมินผล</p></form></main>';
+  $('#email').focus();
+}
+function loginErr(m) { var e = $('#loginErr'); e.hidden = false; e.querySelector('span').textContent = m; }
+function doLogin() {
+  var email = $('#email').value.trim(), pw = $('#password').value;
+  if (!email || !pw) { loginErr('กรุณากรอกอีเมลและรหัสผ่าน'); (!email ? $('#email') : $('#password')).focus(); return; }
+  var b = $('#loginBtn'); b.classList.add('loading'); b.disabled = true;
+  call('login', { email: email, password: pw }).then(function (r) {
+    TOKEN = r.token; store('cbe-token', TOKEN); load();
+  }, function (e) { b.classList.remove('loading'); b.disabled = false; loginErr(e.message); $('#password').select(); });
+}
+function renderChangePw(forced) {
+  var html = (forced ? '<div class="notice info">' + ico('lock') + '<span>เข้าสู่ระบบครั้งแรกด้วยรหัสผ่านชั่วคราว กรุณาตั้งรหัสผ่านใหม่ก่อนใช้งาน</span></div>' : '') +
+    pwField('oldPw', 'รหัสผ่านปัจจุบัน', 'current-password') + pwField('newPw', 'รหัสผ่านใหม่', 'new-password') +
+    '<span class="hint small muted">อย่างน้อย 10 ตัวอักษร มีทั้งตัวอักษรและตัวเลข</span>' + pwField('newPw2', 'ยืนยันรหัสผ่านใหม่', 'new-password') +
+    '<span class="err" id="pwErr" hidden></span>';
+  if (forced) {
+    $('#root').innerHTML = '<main class="login"><form class="login-card glass" id="pwForm" novalidate>' + brand('ระบบรายงานผล Core Business Enablers') + '<h1>ตั้งรหัสผ่านใหม่</h1>' + html +
+      '<button class="btn primary" type="submit" id="pwBtn">บันทึกรหัสผ่าน</button><button class="btn ghost" type="button" data-act="logout">ออกจากระบบ</button></form></main>';
+    $('#oldPw').focus();
+  } else {
+    dialog('<h2>เปลี่ยนรหัสผ่าน</h2>' + html, { ok: 'บันทึกรหัสผ่าน', onOk: function (btn) { return savePw(btn); } });
+  }
+}
+function savePw(btn) {
+  var o = $('#oldPw').value, n = $('#newPw').value, n2 = $('#newPw2').value, err = $('#pwErr');
+  var m = !o || !n ? 'กรุณากรอกให้ครบ' : n !== n2 ? 'รหัสผ่านใหม่ทั้งสองช่องไม่ตรงกัน' : n.length < 10 ? 'รหัสผ่านต้องยาวอย่างน้อย 10 ตัวอักษร' : !(/[A-Za-z]/.test(n) && /[0-9]/.test(n)) ? 'รหัสผ่านต้องมีทั้งตัวอักษรและตัวเลข' : '';
+  if (m) { err.textContent = m; err.hidden = false; return Promise.reject(); }
+  return busy(btn, call('changePassword', { oldPw: o, newPw: n })).then(function () { toast('เปลี่ยนรหัสผ่านแล้ว'); if (D && D.me.mustChange) load(); }, function (e) { err.textContent = e.message; err.hidden = false; throw e; });
+}
+
+/* ---------- โหลดข้อมูล ---------- */
+function load(keepView) {
+  return call('bootstrap').then(function (d) {
+    D = d; index(); DET = {}; FILES = {};
+    if (D.me.mustChange) return renderChangePw(true);
+    if (!keepView) {
+      try { var r = JSON.parse(store('cbe-view') || '{}'); if (r.uid === D.me.id) Object.assign(st, r.st); } catch (e) { /* ใช้ค่าเริ่มต้น */ }
+    }
+    shell(); render();
+  }, function () { if (!TOKEN) renderLogin(); });
+}
+function refresh() { return call('bootstrap').then(function (d) { D = d; index(); render(); }); }
+function saveView() { store('cbe-view', JSON.stringify({ uid: D.me.id, st: { view: st.view, en: st.en, sub: st.sub, lv: st.lv } })); }
+
+/* ---------- โครงหน้า ---------- */
+function shell() {
+  $('#root').innerHTML = '<div class="app"><div class="scrim" id="scrim"></div><aside class="side glass" id="side" aria-label="เมนูหลัก"></aside><div class="main">' +
+    '<header class="top glass"><button class="btn ghost sm menu-btn" id="menuBtn" aria-label="เปิดเมนู" aria-controls="side" aria-expanded="false">' + ico('menu') + '</button>' +
+    '<div class="grow crumb" id="crumb"></div><div class="user"><span class="avatar" aria-hidden="true">' + esc(initials(D.me.name)) + '</span><span class="who" id="whoBox"></span>' +
+    '<button class="btn icon ghost" data-act="changePw" aria-label="เปลี่ยนรหัสผ่าน" title="เปลี่ยนรหัสผ่าน">' + ico('lock') + '</button>' +
+    '<button class="btn icon ghost" data-act="logout" aria-label="ออกจากระบบ" title="ออกจากระบบ">' + ico('logout') + '</button></div></header>' +
+    '<main id="view" tabindex="-1"></main></div></div>';
+}
+function initials(n) { var p = String(n).replace(/^(นาย|นางสาว|นาง)\s*/, '').trim(); return p.slice(0, 2); }
+function side() {
+  var q = SUBS.filter(function (s) { return s.status === 'submitted'; }).length;
+  var mine = SUBS.filter(function (s) { return s.status === 'returned' || s.status === 'draft'; }).length;
+  function nav(v, label, icon, extra) { return '<button class="nav-btn" data-go="' + v + '"' + (st.view === v ? ' aria-current="page"' : '') + '>' + ico(icon) + '<span>' + label + '</span>' + (extra || '') + '</button>'; }
+  return brand('ระบบรายงานผล · SE-AM ปีบัญชี ' + esc(D.settings.fy)) +
+    nav('overview', 'ภาพรวม', 'home') +
+    (isAdmin() ? nav('review', 'กล่องงานตรวจ', 'inbox', q ? '<span class="badge">' + q + '</span>' : '') : nav('mine', 'งานของฉัน', 'inbox', mine ? '<span class="badge">' + mine + '</span>' : '')) +
+    nav('timeline', 'Timeline', 'gantt', D.timeline.isOpen && !isAdmin() ? '<span class="badge" style="background:var(--ok)" title="เปิดให้กรอก">•</span>' : '') +
+    nav('library', 'คลังเอกสาร', 'folder') +
+    '<div class="nav-label">' + (isAdmin() ? 'ตัวชี้วัดทั้งหมด' : 'ตัวชี้วัดที่รับผิดชอบ') + '</div>' +
+    D.enablers.map(function (e) { return '<button class="nav-btn" data-en="' + e.code + '"' + (st.view === 'enabler' && st.en === e.code ? ' aria-current="page"' : '') + '><span class="code">' + e.code + '</span><span>' + esc(e.name) + '</span>' + (e.incomplete ? '<span class="badge" style="background:#D58A10" title="ข้อมูลในชีทต้นทางไม่สมบูรณ์">!</span>' : '') + '</button>'; }).join('') +
+    '<div class="nav-label">ระบบ</div>' + (isAdmin() ? nav('users', 'ผู้ใช้งาน', 'user') + nav('settings', 'ตั้งค่าและนำเข้าข้อมูล', 'gear') : '') + nav('log', 'ประวัติการแก้ไข', 'clock') +
+    '<div class="side-foot">รอบรายงานผล <b>' + rptMonth(D.settings.reportMonth) + '</b> · ปิดรับ ' + thD(D.settings.deadline) + '<br>Timeline ' + esc(D.timeline.fy) + ' เปิดกรอก ' + thD(D.timeline.open) + ' – ' + thD(D.timeline.close) + '<br>ติดต่อ ' + esc(D.settings.contact) + '</div>';
+}
+function crumb() {
+  var e = ENm[st.en];
+  var map = { overview: 'ภาพรวม', review: 'กล่องงานตรวจ', mine: 'งานของฉัน', users: 'ผู้ใช้งาน', settings: 'ตั้งค่าและนำเข้าข้อมูล', log: 'ประวัติการแก้ไข', library: 'คลังเอกสาร', timeline: 'Timeline ปีบัญชี ' + esc(D.timeline.fy), enabler: e ? 'ตัวชี้วัด ' + esc(e.no) + ' · ' + e.code : '' };
+  return 'Core Business Enablers / <b>' + map[st.view] + '</b>';
+}
+function render() {
+  if (!D) return;
+  if (!isAdmin() && ['review', 'users', 'settings'].indexOf(st.view) >= 0) st.view = 'overview';
+  if (isAdmin() && st.view === 'mine') st.view = 'review';
+  if (st.view === 'enabler' && !ENm[st.en]) st.view = 'overview';
+  $('#side').innerHTML = side(); $('#side').classList.toggle('open', st.menu); $('#scrim').classList.toggle('open', st.menu); $('#menuBtn').setAttribute('aria-expanded', st.menu);
+  $('#crumb').innerHTML = crumb();
+  $('#whoBox').innerHTML = '<b>' + esc(D.me.name) + '</b><br><span class="faint small">' + (isAdmin() ? 'แอดมิน / Audit' : 'ผู้รายงาน ' + esc(D.me.enablers.join(', '))) + '</span>';
+  var V = { overview: isAdmin() ? vOverviewAdmin : vOverviewUser, enabler: vEnabler, review: vReview, mine: vMine, users: vUsers, settings: vSettings, log: vLog, library: vLibrary, timeline: vTimeline }[st.view];
+  $('#view').innerHTML = V();
+  saveView();
+  if (st.view === 'enabler') ensureDetail();
+  if (st.view === 'library') ensureFiles();
+  if (st.view === 'users' && !USERS) call('listUsers').then(function (u) { USERS = u; if (st.view === 'users') render(); }, function (e) { toast(e.message, true); });
+}
+function go(v, extra) {
+  if (st.dirty && !leaveOk()) return;
+  Object.assign(st, { view: v }, extra || {}); st.menu = false; render();
+  $('#view').focus({ preventScroll: true }); window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function leaveOk() { if (window.confirm) { try { return window.confirm('มีข้อมูลที่ยังไม่ได้บันทึก ต้องการออกจากหน้านี้หรือไม่'); } catch (e) { /* ไม่มี confirm */ } } return true; }
+
+/* ---------- ภาพรวม ---------- */
+function monthState(e, i) {
+  if (i > D.settings.reportMonth) return 'future';
+  var m = e.monthly; if (!m || !m.plan[i]) return 'none';
+  return m.done[i] >= m.plan[i] ? 'approved' : m.done[i] > 0 ? 'late' : 'returned';
+}
+var heatLab = { approved: 'ผลครบตามแผน', late: 'ผลบางส่วน', returned: 'ยังไม่มีผล', none: 'ไม่มีแผน', future: 'ยังไม่ถึงรอบ' };
+function heatmap(list) {
+  return '<div class="panel glass"><div class="panel-head"><div><h2>ผลรายเดือนเทียบแผน</h2><p>จำนวนขั้นตอนที่มีผลถึงแผนในแต่ละเดือน ปีบัญชี ' + esc(D.settings.fy) + '</p></div><div class="legend">' +
+    Object.keys(heatLab).map(function (k) { return '<span><i class="cell ' + (k === 'none' ? 'future' : k) + '" style="height:12px;width:12px"></i>' + heatLab[k] + '</span>'; }).join('') + '</div></div>' +
+    '<div class="scroll-x"><table class="heat"><caption class="sr">ผลรายเดือนเทียบแผน</caption><thead><tr><th scope="col">ตัวชี้วัด</th>' + M.map(function (m, i) { return '<th scope="col">' + rptMonth(i) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+    list.map(function (e) {
+      return '<tr><th scope="row" class="code">' + e.code + '</th>' + M.map(function (m, i) {
+        var k = monthState(e, i), mm = e.monthly, txt = mm && mm.plan[i] ? mm.done[i] + '/' + mm.plan[i] : '';
+        return '<td><div class="cell ' + (k === 'none' ? 'future' : k) + '" title="' + e.code + ' ' + m + ': ' + heatLab[k] + (txt ? ' (' + txt + ')' : '') + '">' + (k !== 'future' && k !== 'none' ? txt : '') + '<span class="sr">' + heatLab[k] + '</span></div></td>';
+      }).join('') + '</tr>';
+    }).join('') + '</tbody></table></div></div>';
+}
+function attention(list) {
+  var items = [];
+  list.forEach(function (e) {
+    var t = tone(e), x = enStats(e);
+    if (t === 'bad') items.push(['bad', 'target', e.code + ' ต่ำกว่าเป้า ' + f2(e.target - enScore(e)) + ' คะแนน', 'คะแนน ' + f2(enScore(e)) + ' เป้า ' + f4(e.target), 'en:' + e.code]);
+    if (e.target === null) items.push(['warn', 'alert', e.code + ' ยังไม่มีคะแนนเป้าหมาย', 'กำหนดในหน้าตั้งค่า', isAdmin() ? 'go:settings' : 'en:' + e.code]);
+    if (!e.owner) items.push(['warn', 'alert', e.code + ' ยังไม่ระบุผู้รับผิดชอบ', 'กำหนดในหน้าตั้งค่า', isAdmin() ? 'go:settings' : 'en:' + e.code]);
+    if (x.ret) items.push(['bad', 'undo', e.code + ' มีประเด็นถูกส่งกลับ ' + x.ret + ' รายการ', 'รอผู้รายงานแก้ไข', 'en:' + e.code]);
+    if (x.cm) items.push(['info', 'msg', e.code + ' มีข้อสังเกต กปม. ค้าง ' + x.cm + ' รายการ', 'รอผู้รายงานชี้แจง', 'en:' + e.code]);
+    if (x.tl === 0) items.push(['warn', 'gantt', e.code + ' ยังไม่กรอก Timeline ' + esc(D.timeline.fy), 'ปิดรับ ' + thD(D.timeline.close), 'go:timeline']);
+  });
+  var order = { bad: 0, warn: 1, info: 2 }; items.sort(function (a, b) { return order[a[0]] - order[b[0]]; });
+  return items.length ? '<div class="alist">' + items.slice(0, 8).map(function (it) { return '<button class="aitem" data-to="' + it[4] + '"><span class="ai ' + it[0] + '">' + ico(it[1]) + '</span><span><p>' + it[2] + '</p><span class="small">' + it[3] + '</span></span>' + ico('chev') + '</button>'; }).join('') + '</div>' : '<div class="empty">' + ico('check') + 'ไม่มีรายการที่ต้องติดตาม</div>';
+}
+function kpi(label, value, unit, pct, color, sub) {
+  return '<div class="kpi glass"><span class="label">' + label + '</span><span class="value num">' + value + (unit ? '<small>' + unit + '</small>' : '') + '</span><div class="meter"><i style="width:' + Math.max(0, Math.min(100, pct || 0)) + '%;background:' + color + '"></i></div><span class="sub">' + sub + '</span></div>';
+}
+function vOverviewAdmin() {
+  var E = D.enablers, withT = E.filter(function (e) { return e.target !== null && enScore(e) !== null; }), met = withT.filter(function (e) { return tone(e) === 'ok'; }).length;
+  var all = SUBS.length || 1, ok = SUBS.filter(function (s) { return s.status === 'approved'; }).length, sent = SUBS.filter(function (s) { return s.status !== 'draft'; }).length;
+  var q = SUBS.filter(function (s) { return s.status === 'submitted'; }).length, ret = SUBS.filter(function (s) { return s.status === 'returned'; }).length;
+  var req = 0, have = 0; E.forEach(function (e) { var x = enStats(e); req += x.req; have += x.have; });
+  var tlc = SUBS.filter(function (s) { return s.hasTl; }).length;
+  var sorted = E.slice().sort(function (a, b) { var sa = enScore(a), sb = enScore(b); var ga = a.target === null || sa === null ? 9 : sa - a.target, gb = b.target === null || sb === null ? 9 : sb - b.target; return ga - gb; });
+  return '<section class="view" aria-labelledby="h-ov"><div class="head"><div><h1 id="h-ov">ภาพรวมการตรวจประเมิน ปีบัญชี ' + esc(D.settings.fy) + '</h1><p>คะแนนประเมินตนเองถ่วงน้ำหนักตาม SE-AM เทียบเป้าหมาย สถานะการตรวจ และความพร้อมของหลักฐาน ข้อมูล ณ ' + thD(D.today) + '</p></div>' +
+    '<button class="btn primary" data-go="review">' + ico('inbox') + 'เปิดกล่องงานตรวจ (' + q + ')</button></div>' +
+    '<div class="kpis">' +
+    kpi('ตัวชี้วัดที่ถึงเป้า', met, ' / ' + withT.length, withT.length ? met / withT.length * 100 : 0, 'var(--accent)', withT.length < E.length ? (E.length - withT.length) + ' ตัวยังไม่มีเป้าหรือคะแนน' : 'ทุกตัวมีเป้าหมาย') +
+    kpi('ประเด็นย่อยที่ตรวจแล้ว', Math.round(ok / all * 100), '%', ok / all * 100, 'var(--ok)', ok + ' จาก ' + SUBS.length + ' · ส่งแล้ว ' + sent) +
+    kpi('รอ กปม. ตรวจ', q, '', q / all * 100, 'var(--accent)', 'ส่งกลับแก้ไข ' + ret + ' รายการ') +
+    kpi('หลักฐานครบตาม Min. Req.', req ? Math.round(have / req * 100) : 0, '%', req ? have / req * 100 : 0, 'var(--ok)', have + ' จาก ' + req + ' รายการ') +
+    kpi('ประเด็นย่อยที่มี Timeline ' + esc(D.timeline.fy), Math.round(tlc / all * 100), '%', tlc / all * 100, '#D58A10', tlc + ' จาก ' + SUBS.length + ' · ปิดรับ ' + thD(D.timeline.close)) + '</div>' +
+    '<div class="cols"><div class="panel glass c7"><div class="panel-head"><div><h2>คะแนนเทียบเป้าหมาย</h2><p>เรียงจากห่างเป้ามากที่สุด เส้นดำคือคะแนนเป้าหมาย</p></div><div class="legend"><span><i style="background:var(--ok)"></i>ถึงเป้า</span><span><i style="background:#D58A10"></i>ห่างไม่เกิน 0.15</span><span><i style="background:var(--bad)"></i>ต่ำกว่าเป้า</span></div></div>' +
+    '<div class="axis" aria-hidden="true"><span></span><div><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div><span style="text-align:right">คะแนน</span><span style="text-align:right">ส่วนต่าง</span></div><div class="bullet">' +
+    sorted.map(function (e) {
+      var s = enScore(e), t = tone(e), g = e.target === null || s === null ? null : s - e.target;
+      return '<button class="brow" data-en="' + e.code + '" aria-label="' + esc(e.name) + ' คะแนน ' + f2(s) + '"><span class="code">' + e.code + '</span><span style="min-width:0">' + track(s, e.target, t === 'idle' ? '' : t) + '<span class="nm">' + esc(e.no) + '. ' + esc(e.name) + '</span></span><span class="sc">' + f2(s) + '</span><span class="gp ' + (g === null ? 'na' : g >= 0 ? 'up' : 'down') + '">' + (g === null ? 'ไม่มีข้อมูล' : (g >= 0 ? '+' : '') + g.toFixed(2)) + '</span></button>';
+    }).join('') + '</div></div>' +
+    '<div class="panel glass c5"><div class="panel-head"><div><h2>ต้องติดตาม</h2><p>เรียงตามความเร่งด่วน</p></div></div>' + attention(E) + '</div>' +
+    '<div class="panel glass c6"><div class="panel-head"><div><h2>สถานะการตรวจรายตัวชี้วัด</h2><p>จำนวนประเด็นย่อยแยกตามสถานะ</p></div><div class="legend"><span><i class="s-approved"></i>ตรวจแล้ว</span><span><i class="s-submitted"></i>รอตรวจ</span><span><i class="s-returned"></i>ส่งกลับ</span><span><i class="s-draft"></i>ร่าง</span></div></div>' +
+    E.map(function (e) { var x = enStats(e); return '<div class="srow"><span class="code">' + e.code + '</span><div class="stack" role="img" aria-label="' + e.code + ': ตรวจแล้ว ' + x.ok + ' รอตรวจ ' + x.sub + ' ส่งกลับ ' + x.ret + ' ร่าง ' + x.draft + '">' + [['approved', x.ok], ['submitted', x.sub], ['returned', x.ret], ['draft', x.draft]].map(function (p) { return p[1] ? '<i class="s-' + p[0] + '" style="width:' + (p[1] / x.n * 100) + '%"></i>' : ''; }).join('') + '</div><span class="num muted" style="text-align:right"><b style="color:var(--fg)">' + x.ok + '</b>/' + x.n + '</span></div>'; }).join('') + '</div>' +
+    '<div class="panel glass c6"><div class="panel-head"><div><h2>ความพร้อมของข้อมูล</h2><p>หลักฐาน คลังเอกสาร Timeline และข้อสังเกตค้าง</p></div></div><div class="scroll-x"><table class="dtable" style="min-width:480px"><thead><tr><th>ตัวชี้วัด</th><th>หลักฐานครบ</th><th>ประเด็นที่มีเอกสาร</th><th>Timeline</th><th>ข้อสังเกตค้าง</th></tr></thead><tbody>' +
+    E.map(function (e) { var x = enStats(e); return '<tr class="click" data-en="' + e.code + '" tabindex="0"><td class="code">' + e.code + '</td><td class="num">' + (x.ev === null ? '<span class="faint">ยังไม่มีรายการ</span>' : x.ev + '%') + '</td><td class="num">' + x.withDocs + '/' + x.n + '</td><td class="num">' + (x.tl ? x.tl + '/' + x.n : '<span class="pill warn">ยังไม่กรอก</span>') + '</td><td class="num">' + (x.cm || '–') + '</td></tr>'; }).join('') + '</tbody></table></div></div></div>' +
+    heatmap(E) + '</section>';
+}
+function vOverviewUser() {
+  var list = D.enablers;
+  if (!list.length) return '<section class="view"><div class="panel glass"><div class="empty">' + ico('info') + 'บัญชีนี้ยังไม่ได้รับมอบหมายตัวชี้วัด ติดต่อ ' + esc(D.settings.contact) + '</div></div></section>';
+  if (!st.ovEn || !ENm[st.ovEn]) st.ovEn = list[0].code;
+  var e = ENm[st.ovEn], s = enScore(e), x = enStats(e), t = tone(e), need = e.target !== null && s !== null ? e.target - s : null;
+  var opp = subsOf(e).filter(function (v) { return v.self !== null && v.self < 5; }).map(function (v) { return { v: v, g: potGain(v) }; }).sort(function (a, b) { return b.g - a.g; }).slice(0, 5);
+  var todo = subsOf(e).filter(function (v) { return v.status === 'returned' || v.status === 'draft'; }).sort(function (a, b) { return (a.status === 'returned' ? 0 : 1) - (b.status === 'returned' ? 0 : 1); });
+  var acts = D.timeline.acts.filter(function (a) { var q = S(a.sub); return q && q.e === e; });
+  var ringC = { ok: 'var(--ok)', warn: '#D58A10', bad: 'var(--bad)', idle: 'var(--accent)' }[t];
+  return '<section class="view" aria-labelledby="h-ov"><div class="head"><div><h1 id="h-ov">สวัสดี ' + esc(D.me.name.split(' ')[0]) + '</h1><p>ภาพรวมเฉพาะตัวชี้วัดที่คุณรับผิดชอบ ข้อมูล ณ ' + thD(D.today) + '</p></div>' +
+    (list.length > 1 ? '<div class="chips" role="group" aria-label="เลือกตัวชี้วัด">' + list.map(function (v) { return '<button class="chip" data-ov="' + v.code + '" aria-pressed="' + (v.code === e.code) + '">' + v.code + ' ' + esc(v.name) + '</button>'; }).join('') + '</div>' : '') + '</div>' +
+    '<div class="hero glass"><div class="ring" style="--p:' + (s === null ? 0 : s / 5 * 100) + ';--c:' + ringC + '" role="img" aria-label="คะแนน ' + f2(s) + ' จาก 5"><div><span><b class="num">' + f2(s) + '</b><br><small>จาก 5</small></span></div></div>' +
+    '<div style="min-width:0"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="en-code">' + e.code + '</span><div><span class="faint small">ตัวชี้วัดที่ ' + esc(e.no) + ' · ' + esc(e.en) + '</span><h2 style="font-size:20px">' + esc(e.name) + '</h2></div>' + vsTarget(e) + '</div>' +
+    '<div class="hero-facts"><div class="fact"><span>คะแนนเป้าหมาย</span><b>' + (e.target !== null ? f4(e.target) : '—') + '</b></div><div class="fact"><span>' + (need === null ? 'ส่วนต่างจากเป้า' : need > 0 ? 'ต้องเพิ่มอีก' : 'เกินเป้า') + '</span><b style="color:' + (need === null ? 'inherit' : need > 0 ? 'var(--bad)' : 'var(--ok)') + '">' + (need === null ? '—' : Math.abs(need).toFixed(2)) + '</b></div><div class="fact"><span>ประเด็นย่อยตรวจแล้ว</span><b>' + x.ok + '/' + x.n + '</b></div><div class="fact"><span>หลักฐานครบ</span><b>' + (x.ev === null ? '—' : x.ev + '%') + '</b></div></div></div>' +
+    '<div class="hero-act" style="display:flex;flex-direction:column;gap:8px"><button class="btn primary" data-en="' + e.code + '">' + ico('file') + 'รายงานผล</button><button class="btn" data-go="timeline">' + ico('gantt') + 'Timeline ' + esc(D.timeline.fy) + '</button></div></div>' +
+    '<div class="cols"><div class="panel glass c7"><div class="panel-head"><div><h2>คะแนนรายหัวข้อ</h2><p>คะแนน 0–5 เทียบเป้าหมายของตัวชี้วัด และน้ำหนักร้อยละ</p></div></div>' +
+    e.topics.map(function (tp) { var ts = topicScore(tp), tc = e.target === null || ts === null ? '' : ts >= e.target ? 'ok' : ts >= e.target - 0.15 ? 'warn' : 'bad'; return '<div class="trow"><span style="min-width:0">' + esc(tp.no) + '. ' + esc(tp.name) + '</span><span class="w num">' + tp.w + '%</span>' + track(ts, e.target, tc) + '<span class="sc num">' + f2(ts) + '</span></div>'; }).join('') + '</div>' +
+    '<div class="panel glass c5"><div class="panel-head"><div><h2>โอกาสเพิ่มคะแนน</h2><p>ถ้าผ่านระดับถัดไป จะเพิ่มคะแนนตัวชี้วัดได้มากที่สุด</p></div></div>' +
+    (opp.length ? '<div class="alist">' + opp.map(function (o) { return '<button class="opp" data-open="' + o.v.key + '"><span style="min-width:0"><span class="small muted">' + esc(o.v.no) + ' · น้ำหนัก ' + o.v.w + ' · ปัจจุบัน ' + f2(o.v.self) + ' → ระดับ ' + (Math.floor(o.v.self) + 1) + '</span><br><span style="font-size:13px">' + esc(o.v.name) + '</span></span><b class="num">+' + o.g.toFixed(3) + '</b></button>'; }).join('') + '</div>' : '<div class="empty">ยังไม่มีคะแนนประเมินตนเองให้คำนวณ</div>') + '</div>' +
+    '<div class="panel glass c6"><div class="panel-head"><div><h2>สิ่งที่ต้องทำ</h2><p>ก่อนปิดรับผล ' + thD(D.settings.deadline) + '</p></div></div>' +
+    (todo.length || !acts.length ? '<div class="alist">' + todo.slice(0, 8).map(function (v) { return '<button class="aitem" data-to="open:' + v.key + '"><span class="ai ' + (v.status === 'returned' ? 'bad' : 'warn') + '">' + ico(v.status === 'returned' ? 'undo' : 'file') + '</span><span><p>' + esc(v.no) + ' ' + esc(v.name) + '</p><span class="small">' + (v.status === 'returned' ? 'ตอบข้อสังเกตและแก้ไขข้อมูล' : 'กรอกผลและแนบหลักฐาน แล้วส่งตรวจ') + '</span></span>' + ico('chev') + '</button>'; }).join('') +
+      (todo.length > 8 ? '<button class="btn sm" data-go="mine">ดูทั้งหมด ' + todo.length + ' รายการ</button>' : '') +
+      (!acts.length ? '<button class="aitem" data-to="go:timeline"><span class="ai warn">' + ico('gantt') + '</span><span><p>กรอก Timeline ปีบัญชี ' + esc(D.timeline.fy) + '</p><span class="small">เปิดให้กรอก ' + thD(D.timeline.open) + ' – ' + thD(D.timeline.close) + '</span></span>' + ico('chev') + '</button>' : '') + '</div>' : '<div class="empty">' + ico('check') + 'ไม่มีงานค้าง</div>') + '</div>' +
+    '<div class="panel glass c6"><div class="panel-head"><div><h2>กิจกรรม Timeline ' + esc(D.timeline.fy) + '</h2><p>' + acts.length + ' กิจกรรม</p></div><button class="btn sm" data-go="timeline">ดูทั้งหมด</button></div>' +
+    (acts.length ? '<div class="alist">' + acts.slice(0, 4).map(function (a) { var k = actStatus(a); return '<div class="aitem" style="cursor:default"><span class="ai ' + (k === 'late' ? 'bad' : k === 'run' ? 'info' : 'warn') + '">' + ico('cal') + '</span><span><p>' + esc(a.name) + '</p><span class="small">' + esc(S(a.sub).no) + ' · ' + tlMonth(a.s) + ' – ' + tlMonth(a.e) + ' · ' + actTxt[k] + '</span></span><span class="num small">' + a.p + '%</span></div>'; }).join('') + '</div>' : '<div class="empty">' + ico('gantt') + 'ยังไม่มีกิจกรรม</div>') + '</div></div>' +
+    heatmap(list) + '</section>';
+}
+
+/* ---------- หน้าตัวชี้วัดและรายละเอียด ---------- */
+function ensureDetail() {
+  var k = st.sub;
+  if (!k || DET[k]) return;
+  call('getSub', { key: k }).then(function (d) { DET[k] = d; if (st.view === 'enabler' && st.sub === k) renderSub(); }, function (e) { toast(e.message, true); });
+}
+function renderSub() { var el = $('#subPanel'); if (el) el.outerHTML = vSub(); }
+function vEnabler() {
+  var e = ENm[st.en], s = enScore(e);
+  if (!S(st.sub) || S(st.sub).e !== e) { st.sub = subsOf(e)[0] ? subsOf(e)[0].key : null; st.lv = 0; }
+  return '<section class="view" aria-labelledby="h-en"><div class="en-head glass"><div><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="en-code">' + e.code + '</span><div><span class="faint small">ตัวชี้วัดที่ ' + esc(e.no) + ' · ' + esc(e.en) + '</span><h1 id="h-en">' + esc(e.name) + '</h1></div></div>' +
+    '<div class="facts"><span>ผู้รับผิดชอบ <b>' + esc(e.owner || 'ยังไม่ระบุ') + '</b></span><span>งบประมาณ <b>' + esc(e.budget || '—') + '</b></span><span>คะแนนเป้าหมาย <b class="num">' + (e.target !== null ? f4(e.target) : '—') + '</b></span><span>' + vsTarget(e) + '</span>' + (isAdmin() ? '<span class="readonly">' + ico('eye') + 'ดูอย่างเดียว</span>' : '') + '</div></div>' +
+    '<div class="ring sm" style="--p:' + (s === null ? 0 : s / 5 * 100) + '" role="img" aria-label="คะแนน ' + f2(s) + ' จาก 5"><div><span><b class="num">' + f2(s) + '</b><br><small>จาก 5</small></span></div></div></div>' +
+    (e.incomplete ? '<div class="notice warn">' + ico('alert') + '<span>ชีทต้นทางของ ' + e.code + ' ไม่มีคอลัมน์แผน/ผลรายเดือน คะแนน และเป้าหมาย ผู้รับผิดชอบเพิ่มขั้นตอนและแผนได้ในระบบ</span></div>' : '') +
+    '<div class="split"><nav class="tree glass" aria-label="หัวข้อและประเด็นย่อย">' + e.topics.map(function (t) {
+      var open = t.subs.some(function (v) { return v.key === st.sub; });
+      return '<details' + (open || e.topics.length < 4 ? ' open' : '') + '><summary>' + ico('chev', 'chev') + '<span>' + esc(t.no) + '. ' + esc(t.name) + '</span><span class="w num">' + t.w + '% · ' + f2(topicScore(t)) + '</span></summary>' +
+        t.subs.map(function (v) { return '<button class="sub-btn" data-sub="' + v.key + '"' + (v.key === st.sub ? ' aria-current="true"' : '') + '><span class="dot ' + v.status + '" aria-hidden="true"></span><span>' + esc(v.no) + ' ' + esc(v.name) + '<span class="sr">, ' + stTxt[v.status] + '</span></span><span class="score num">' + f2(v.self) + '</span></button>'; }).join('') + '</details>';
+    }).join('') + '</nav>' + vSub() + '</div></section>';
+}
+function vSub() {
+  var s = S(st.sub);
+  if (!s) return '<div class="sub-panel" id="subPanel"><div class="card glass"><div class="empty">ยังไม่มีประเด็นย่อย</div></div></div>';
+  var d = DET[s.key];
+  if (!d) return '<div class="sub-panel" id="subPanel"><div class="card glass"><div class="empty"><div class="spinner"></div>กำลังโหลดรายละเอียด…</div></div></div>';
+  var e = s.e, editable = canEdit(e.code) && editableSt(s), sw = sumW(e);
+  var L = d.levels[st.lv];
+  var lvBtns = [0, 1, 2, 3, 4].map(function (i) {
+    var n = i + 1, stt = lvState(s.self, n), fr = stt === 'pass' ? 100 : stt === 'part' ? Math.round((s.self - (n - 1)) * 100) : 0;
+    return '<button class="lv ' + stt + '" role="tab" aria-selected="' + (i === st.lv) + '" data-lv="' + i + '"><b>ระดับ ' + n + '</b><span>' + (stt === 'pass' ? 'ผ่าน' : stt === 'part' ? 'บางส่วน ' + fr + '%' : d.levels[i].exists ? 'ยังไม่ผ่าน' : 'ยังไม่มีข้อมูล') + '</span><span class="bar" aria-hidden="true"><i style="width:' + fr + '%"></i></span></button>';
+  }).join('');
+  var openCm = d.comments.filter(function (c) { return c.role === 'admin' && !c.resolved; }).length;
+  return '<div class="sub-panel" id="subPanel"><div class="sub-head glass"><div class="sub-title"><div><span class="faint small">หัวข้อ ' + esc(s.t.no) + '. ' + esc(s.t.name) + ' · โฟลเดอร์ ' + esc(e.drive) + '.' + esc(s.no) + '</span><h2>' + esc(s.no) + ' ' + esc(s.name) + '</h2></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' + statusPill(s.status) + actionBtns(s) + '</div></div>' +
+    (isAdmin() ? '<div class="notice info">' + ico('eye') + '<span>แอดมิน/Audit ดูรายละเอียดผลการดำเนินงานได้อย่างเดียว ใช้ข้อสังเกตและผลการตรวจด้านล่างแทน</span></div>' : '') +
+    (s.status === 'returned' && !isAdmin() ? '<div class="notice bad">' + ico('undo') + '<span>กปม. ส่งกลับให้แก้ไข ตอบข้อสังเกตด้านล่างและแก้ข้อมูลก่อนส่งตรวจอีกครั้ง</span></div>' : '') +
+    (!editableSt(s) && !isAdmin() ? '<div class="notice info">' + ico('lock') + '<span>' + (s.status === 'approved' ? 'กปม. ตรวจแล้ว ข้อมูลถูกล็อก หากต้องแก้ไขให้ขอปลดล็อกจาก กปม.' : 'ส่งตรวจแล้ว ข้อมูลถูกล็อกระหว่างที่ กปม. ตรวจ') + '</span></div>' : '') +
+    '<div class="stats"><div class="stat"><span>น้ำหนัก (ร้อยละ)</span><b>' + s.w + '</b></div><div class="stat"><span>สัดส่วนในตัวชี้วัด</span><b>' + (s.w / sw * 100).toFixed(1) + '%</b></div><div class="stat"><span>คะแนนประเมินตนเอง</span><b>' + f4(s.self) + '</b></div><div class="stat"><span>คะแนนถ่วงน้ำหนัก</span><b>' + (s.self === null ? '—' : f4(s.self * s.w / sw)) + '</b></div><div class="stat"><span>คะแนน กปม.</span><b>' + f4(s.audit) + '</b></div></div>' +
+    (editable ? '<div class="self"><div class="field"><label for="selfScore">คะแนนประเมินตนเอง (0.00–5.00)</label><input type="number" id="selfScore" min="0" max="5" step="0.05" value="' + (s.self === null ? '' : s.self) + '"></div><button class="btn sm" data-act="selfScore">บันทึกคะแนน</button><span class="hint small muted">เช่น 2.25 = ผ่านระดับ 2 และระดับ 3 ได้ 25%</span></div>' : '') +
+    '<div class="levels" role="tablist" aria-label="ระดับการประเมิน">' + lvBtns + '</div></div>' +
+    vLevel(s, L, editable) + vComments(s, d, openCm) + (isAdmin() ? vAudit(s) : '') + '</div>';
+}
+function actionBtns(s) {
+  if (isAdmin()) return s.status === 'submitted' ? '<button class="btn sm danger" data-act="return">' + ico('undo') + 'ส่งกลับแก้ไข</button><button class="btn sm primary" data-act="approve">' + ico('check') + 'อนุมัติผล</button>' : s.status === 'approved' ? '<button class="btn sm" data-act="unlock">' + ico('lock') + 'ปลดล็อกให้แก้ไข</button>' : '';
+  return canEdit(s.e.code) && editableSt(s) ? '<button class="btn sm primary" data-act="submit">' + ico('send') + 'ส่งให้ กปม. ตรวจ</button>' : '';
+}
+function monthTable(st_, i, editable) {
+  var cur = D.settings.reportMonth;
+  var plan = st_.plan || [], res = st_.result || [];
+  var tp = plan.reduce(function (a, b) { return a + (Number(b) || 0); }, 0), tr = res.reduce(function (a, b) { return a + (Number(b) || 0); }, 0);
+  var cp = plan.slice(0, cur + 1).reduce(function (a, b) { return a + (Number(b) || 0); }, 0), cr = res.slice(0, cur + 1).reduce(function (a, b) { return a + (Number(b) || 0); }, 0);
+  var tgt = st_.target || tp;
+  return '<div class="scroll-x"><table class="mtable"><caption class="sr">แผนและผลรายเดือน</caption><thead><tr><th scope="col"></th>' + M.map(function (m, k) { return '<th scope="col" class="' + (k === cur ? 'cur' : '') + '">' + m + '</th>'; }).join('') + '<th scope="col">รวม</th></tr></thead><tbody>' +
+    '<tr><th scope="row">แผน</th>' + M.map(function (m, k) { return '<td class="num ' + (k === cur ? 'cur' : '') + '">' + (Number(plan[k]) || '–') + '</td>'; }).join('') + '<td class="num tot">' + tp + '</td></tr>' +
+    '<tr><th scope="row">ผล</th>' + M.map(function (m, k) { return '<td class="' + (k === cur ? 'cur' : '') + '"><label class="sr" for="r' + i + '-' + k + '">ผลเดือน ' + m + '</label><input id="r' + i + '-' + k + '" inputmode="decimal" data-res="' + st_.id + '" data-m="' + k + '" value="' + (Number(res[k]) || '') + '" placeholder="–"' + (editable && k <= cur ? '' : ' disabled') + '></td>'; }).join('') + '<td class="num tot">' + tr + '</td></tr></tbody></table></div>' +
+    '<div class="progress-row"><span>หน่วยนับ <b>' + esc(st_.unit || '—') + '</b></span><span>เป้าหมายทั้งปี <b class="num">' + tgt + '</b></span><span>ก้าวหน้าเทียบแผนสะสม <b class="num">' + (cp ? Math.min(100, Math.round(cr / cp * 100)) + '%' : '—') + '</b></span><span>เทียบแผนทั้งปี <b class="num">' + (tgt ? Math.min(100, Math.round(tr / tgt * 100)) + '%' : '—') + '</b></span></div>';
+}
+function fileChip(f, editable) {
+  return '<span class="file">' + ico('file') + '<span title="' + esc(f.name) + '">' + esc(f.name) + '</span>' +
+    (f.driveId ? '<button type="button" data-dl="' + f.id + '" aria-label="เปิดไฟล์ ' + esc(f.name) + '">' + ico('download') + '</button>' : '<span class="faint small" title="นำเข้าจากชีทเฉพาะชื่อ ยังไม่พบไฟล์ใน Drive">(ยังไม่เชื่อมไฟล์)</span>') +
+    (editable ? '<button type="button" data-rmf="' + f.id + '" aria-label="ลบไฟล์ ' + esc(f.name) + '">' + ico('x') + '</button>' : '') + '</span>';
+}
+function vLevel(s, L, editable) {
+  var n = L.level;
+  var steps = L.steps.map(function (x, i) {
+    return '<div class="step"><div class="step-head"><div style="min-width:0"><b>ขั้นตอนที่ ' + (i + 1) + '</b><p class="prose">' + esc(x.step || '—') + '</p></div>' + (editable ? '<div style="display:flex;gap:4px"><button class="btn sm" data-step="' + x.id + '">แก้ไข</button><button class="btn sm danger" data-delstep="' + x.id + '" aria-label="ลบขั้นตอนที่ ' + (i + 1) + '">' + ico('trash') + '</button></div>' : '') + '</div>' +
+      (x.gap ? '<div class="box"><h4>วิเคราะห์ GAP</h4><p class="prose">' + esc(x.gap) + '</p></div>' : '') +
+      (x.plan || x.result ? monthTable(x, i, editable) : '<p class="muted small">ไม่มีแผนรายเดือน</p>') + '</div>';
+  }).join('');
+  var reqs = L.reqs.map(function (r, i) {
+    return '<div class="req"><input type="checkbox" class="chk" id="q' + i + '" data-req="' + r.id + '"' + (r.has ? ' checked' : '') + (editable ? '' : ' disabled') + '><div style="min-width:0"><label for="q' + i + '" style="font-size:14px">' + esc(r.text) + '</label>' +
+      (r.has && !r.files.length ? '<div class="field"><span class="err">ติ๊กว่ามีเอกสารแล้ว แต่ยังไม่ได้แนบไฟล์</span></div>' : '') +
+      '<div class="files">' + r.files.map(function (f) { return fileChip(f, editable); }).join('') +
+      (editable ? '<label class="upl">' + ico('clip') + 'แนบไฟล์<input type="file" class="sr" data-upl="' + r.id + '" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png"></label>' : '') + '</div></div></div>';
+  }).join('');
+  return '<div class="card glass"><div class="card-title"><h3>' + ico('target') + 'เกณฑ์ระดับ ' + n + ' ตาม SE-AM</h3><span class="faint small">คู่มือ SE-AM บท ' + esc(s.e.no) + '</span></div><p class="prose">' + (esc(L.criteria) || '<span class="faint">ยังไม่มีข้อความเกณฑ์ (นำเข้าจาก Google Sheet ในหน้าตั้งค่า)</span>') + '</p></div>' +
+    '<div class="card glass"><div class="card-title"><h3>' + ico('cal') + 'ขั้นตอนการดำเนินงาน และแผน/ผลรายเดือน</h3><span class="faint small">รอบรายงาน ' + rptMonth(D.settings.reportMonth) + '</span></div>' +
+    (steps || '<div class="empty">' + ico('file') + '<span>ยังไม่มีขั้นตอนของระดับนี้</span></div>') + (editable ? '<div><button class="btn sm" data-act="addStep">' + ico('plus') + 'เพิ่มขั้นตอน</button></div>' : '') + '</div>' +
+    '<div class="card glass"><div class="card-title"><h3>' + ico('file') + 'รายละเอียดผลการดำเนินงาน</h3>' + (editable ? '<span class="faint small" id="cc">' + (L.narrative || '').length + ' / 5000 ตัวอักษร</span>' : '<span class="readonly">' + ico(isAdmin() ? 'eye' : 'lock') + (isAdmin() ? 'ดูอย่างเดียว' : 'ล็อกอยู่') + '</span>') + '</div>' +
+    (editable ? '<div class="field"><label for="narr" class="sr">รายละเอียดผลการดำเนินงาน ระดับ ' + n + '</label><textarea id="narr" maxlength="5000" placeholder="สรุปสิ่งที่ดำเนินการ วันที่ประชุม/มติ และอ้างอิงเลขเอกสารประกอบ">' + esc(L.narrative) + '</textarea><span class="hint">ระบุวันที่ประชุม เลขครั้ง และเลขเอกสารประกอบ เพื่อให้ กปม. ตรวจสอบย้อนกลับได้</span></div>' : '<p class="prose">' + (esc(L.narrative) || '<span class="faint">ยังไม่ได้กรอก</span>') + '</p>') +
+    (L.updatedBy ? '<span class="faint small">แก้ไขล่าสุด ' + esc(L.updatedBy) + ' · ' + thDT(L.updatedAt) + '</span>' : '') + '</div>' +
+    '<div class="card glass"><div class="card-title"><h3>' + ico('clip') + 'Minimum Requirement และหลักฐาน</h3><span class="faint small">' + L.reqs.filter(function (r) { return r.has && r.files.length; }).length + ' / ' + L.reqs.length + ' รายการมีหลักฐาน · โฟลเดอร์ "เอกสารแนบค่าเกณฑ์ระดับ ' + n + '"</span></div>' +
+    (reqs ? '<div>' + reqs + '</div>' : '<p class="muted small">ยังไม่มีรายการ</p>') +
+    (L.loose.length ? '<div><h4 class="small muted" style="margin:4px 0">ไฟล์อื่นในโฟลเดอร์ระดับนี้</h4><div class="files">' + L.loose.map(function (f) { return fileChip(f, editable); }).join('') + '</div></div>' : '') +
+    (editable ? '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end"><div class="field" style="flex:1;min-width:220px"><label for="newReq">เพิ่มรายการเอกสาร</label><input type="text" id="newReq" maxlength="1000" placeholder="เช่น เอกสารประกอบอื่น (ถ้ามี)"></div><button class="btn sm" data-act="addReq">' + ico('plus') + 'เพิ่ม</button></div>' +
+      '<div style="display:flex;justify-content:flex-end;gap:8px;align-items:center"><span class="dirty" id="dirtyMsg"' + (st.dirty ? '' : ' hidden') + '>มีการแก้ไขที่ยังไม่บันทึก</span><button class="btn primary" data-act="save">บันทึก</button></div>' : '') + '</div>';
+}
+function vComments(s, d, open) {
+  var canWrite = isAdmin() || canEdit(s.e.code);
+  return '<div class="card glass"><div class="card-title"><h3>' + ico('msg') + 'ข้อสังเกตของ กปม.</h3>' + (open ? '<span class="pill warn">ค้าง ' + open + '</span>' : '<span class="pill ok">ไม่มีข้อสังเกตค้าง</span>') + '</div><div class="thread">' +
+    (d.comments.length ? d.comments.map(function (c) {
+      return '<div class="msg ' + (c.role === 'admin' ? 'audit' : '') + '"><span class="avatar" aria-hidden="true">' + (c.role === 'admin' ? 'กปม' : 'ผร') + '</span><div class="bubble ' + (c.resolved ? 'resolved' : '') + '"><div class="meta"><b style="color:var(--fg)">' + esc(c.by) + '</b><span>' + thDT(c.at) + '</span>' + (c.resolved ? '<span class="pill ok">ปิดแล้ว</span>' : '') + '</div><p class="prose">' + esc(c.text) + '</p>' +
+        (c.role === 'admin' && !c.resolved && isAdmin() ? '<button class="btn sm ghost" data-resolve="' + c.id + '">' + ico('check') + 'ปิดข้อสังเกต</button>' : '') + '</div></div>';
+    }).join('') : '<p class="muted" style="font-size:14px">ยังไม่มีข้อสังเกตสำหรับประเด็นนี้</p>') + '</div>' +
+    (canWrite ? '<div class="field"><label for="cmt">' + (isAdmin() ? 'เพิ่มข้อสังเกต' : 'ตอบกลับ กปม.') + '</label><textarea id="cmt" maxlength="2000" style="min-height:80px"></textarea><span class="err" id="cmtErr" hidden>กรุณาพิมพ์ข้อความก่อนส่ง</span></div><div style="display:flex;justify-content:flex-end"><button class="btn primary sm" data-act="comment">' + ico('send') + 'ส่งข้อความ</button></div>' : '') + '</div>';
+}
+function vAudit(s) {
+  return '<div class="card glass"><div class="card-title"><h3>' + ico('shield') + 'ผลการตรวจของ กปม.</h3><span class="faint small">' + (s.submittedAt ? 'ส่งเมื่อ ' + thDT(s.submittedAt) : 'ยังไม่ส่ง') + '</span></div>' +
+    '<div class="two"><div class="field"><label for="ascore">คะแนนที่ กปม. ประเมิน (0.00–5.00)</label><input type="number" id="ascore" min="0" max="5" step="0.05" value="' + (s.audit !== null ? s.audit : s.self !== null ? s.self : '') + '"' + (s.status === 'submitted' ? '' : ' disabled') + '><span class="hint">ผู้รายงานประเมินตนเอง ' + f4(s.self) + (s.status !== 'submitted' ? ' · ให้คะแนนได้เมื่อสถานะเป็นรอตรวจ' : '') + '</span><span class="err" id="aErr" hidden>กรอกคะแนนระหว่าง 0 ถึง 5</span></div>' +
+    '<div class="box"><h4>เทียบเกณฑ์</h4><p style="font-size:14px">' + (s.self === null ? 'ยังไม่มีคะแนนประเมินตนเอง' : 'คะแนน ' + f2(s.self) + ' หมายถึงผ่านระดับ ' + Math.floor(s.self) + ' และระดับถัดไป ' + Math.round((s.self % 1) * 100) + '%') + '</p></div></div></div>';
+}
+
+/* ---------- กล่องงาน ---------- */
+function vReview() {
+  var f = st.qf, list = SUBS.filter(function (s) { return f === 'all' || s.status === f; }).sort(function (a, b) { return (a.submittedAt || '9') < (b.submittedAt || '9') ? -1 : 1; });
+  function cnt(k) { return SUBS.filter(function (s) { return k === 'all' || s.status === k; }).length; }
+  return '<section class="view" aria-labelledby="h-rv"><div class="head"><div><h1 id="h-rv">กล่องงานตรวจ</h1><p>ประเด็นย่อยที่ผู้รายงานส่งมา เรียงจากส่งก่อน คลิกแถวเพื่อเปิดตรวจ</p></div></div>' +
+    '<div class="chips" role="group" aria-label="กรองสถานะ">' + [['submitted', 'รอตรวจ'], ['returned', 'ส่งกลับแก้ไข'], ['approved', 'ตรวจแล้ว'], ['draft', 'ร่าง'], ['all', 'ทั้งหมด']].map(function (p) { return '<button class="chip" data-qf="' + p[0] + '" aria-pressed="' + (f === p[0]) + '">' + p[1] + ' (' + cnt(p[0]) + ')</button>'; }).join('') + '</div>' +
+    '<div class="panel glass"><div class="scroll-x">' + (list.length ? '<table class="dtable"><thead><tr><th>ตัวชี้วัด</th><th>ประเด็นย่อย</th><th>น้ำหนัก</th><th>ประเมินตนเอง</th><th>สถานะ</th><th>ส่งเมื่อ</th><th>เอกสาร</th><th>ข้อสังเกตค้าง</th></tr></thead><tbody>' +
+      list.map(function (s) { return '<tr class="click" data-open="' + s.key + '" tabindex="0"><td><span class="code">' + s.e.code + '</span></td><td>' + esc(s.no) + ' ' + esc(s.name) + '</td><td class="num">' + s.w + '</td><td class="num">' + f4(s.self) + '</td><td>' + statusPill(s.status) + '</td><td class="num">' + thDT(s.submittedAt) + '</td><td class="num">' + (s.docs || '–') + '</td><td class="num">' + (s.openCm || '–') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">' + ico('check') + '<span>ไม่มีรายการในสถานะนี้</span></div>') + '</div></div></section>';
+}
+function vMine() {
+  var list = SUBS.filter(function (s) { return s.status === 'returned' || s.status === 'draft'; });
+  return '<section class="view" aria-labelledby="h-mn"><div class="head"><div><h1 id="h-mn">งานของฉัน</h1><p>ประเด็นย่อยของ ' + esc(D.me.enablers.join(', ')) + ' ที่ต้องกรอกหรือแก้ไขก่อนปิดรับผล ' + thD(D.settings.deadline) + '</p></div></div>' +
+    '<div class="panel glass">' + (list.length ? '<div class="scroll-x"><table class="dtable"><thead><tr><th>ตัวชี้วัด</th><th>ประเด็นย่อย</th><th>สถานะ</th><th>สิ่งที่ต้องทำ</th></tr></thead><tbody>' +
+      list.map(function (s) { return '<tr class="click" data-open="' + s.key + '" tabindex="0"><td><span class="code">' + s.e.code + '</span></td><td>' + esc(s.no) + ' ' + esc(s.name) + '</td><td>' + statusPill(s.status) + '</td><td>' + (s.status === 'returned' ? 'ตอบข้อสังเกตและแก้ไขข้อมูล' : 'กรอกผลและแนบหลักฐาน แล้วส่งตรวจ') + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<div class="empty">' + ico('check') + 'ไม่มีงานค้าง</div>') + '</div></section>';
+}
+
+/* ---------- คลังเอกสาร ---------- */
+function ensureFiles() {
+  var codes = st.libQ ? D.enablers.map(function (e) { return e.code; }) : st.lib[0] ? [st.lib[0]] : [];
+  var need = codes.filter(function (c) { return !FILES[c]; });
+  if (!need.length) return;
+  Promise.all(need.map(function (c) { return call('listFiles', { code: c }).then(function (f) { FILES[c] = f; }); }))
+    .then(function () { if (st.view === 'library') { var q = document.activeElement && document.activeElement.id === 'libq'; render(); if (q) { var el = $('#libq'); el.focus(); el.setSelectionRange(el.value.length, el.value.length); } } }, function (e) { toast(e.message, true); });
+}
+function fIcon(n) { var x = String(n).split('.').pop().toLowerCase(); return x === 'pdf' ? 'pdf' : x.indexOf('xls') === 0 ? 'xls' : ''; }
+function vLibrary() {
+  var list = D.enablers, ec = st.lib[0], key = st.lib[1], lv = st.lib[2];
+  if (ec && !ENm[ec]) { st.lib = []; ec = key = lv = undefined; }
+  var q = st.libQ.trim().toLowerCase();
+  function row(icon, cls, name, sub, c3, c4, act, attrs) { return '<div class="frow ' + (attrs ? 'click' : '') + '" ' + (attrs || '') + '><span class="ficon ' + cls + '">' + ico(icon) + '</span><span class="fname"><b>' + name + '</b><small>' + sub + '</small></span><span class="hide-m num muted">' + c3 + '</span><span class="hide-m num muted">' + c4 + '</span><span class="factions">' + act + '</span></div>'; }
+  function fileRow(f) {
+    var s = S(f.sub), can = canEdit(s.e.code) && editableSt(s);
+    return row('file', fIcon(f.name), esc(f.name), esc(s.e.code + ' ' + s.no) + ' · ระดับ ' + f.level + ' · ' + esc(f.by), fsize(f.size), thD(f.at),
+      (f.driveId ? '<button class="btn icon ghost" data-dl="' + f.id + '" aria-label="เปิด ' + esc(f.name) + '">' + ico('download') + '</button>' : '<span class="faint small">ยังไม่เชื่อมไฟล์</span>') + (can ? '<button class="btn icon ghost" data-rmf="' + f.id + '" aria-label="ลบ ' + esc(f.name) + '">' + ico('trash') + '</button>' : ''));
+  }
+  var loading = '<div class="empty"><div class="spinner"></div>กำลังโหลดรายการไฟล์…</div>';
+  var bc = ['<button data-lib="">Core Business Enablers ' + esc(D.settings.fy) + '</button>'];
+  if (ec) bc.push(ico('chev'), key ? '<button data-lib="' + ec + '">' + esc(ENm[ec].drive) + ' ' + ec + '</button>' : '<span class="cur">' + esc(ENm[ec].drive) + ' ' + ec + '</span>');
+  if (key) bc.push(ico('chev'), lv !== undefined ? '<button data-lib="' + ec + '|' + key + '">' + esc(ENm[ec].drive) + '.' + esc(S(key).no) + '</button>' : '<span class="cur">' + esc(ENm[ec].drive) + '.' + esc(S(key).no) + ' ' + esc(S(key).name) + '</span>');
+  if (lv !== undefined) bc.push(ico('chev'), '<span class="cur">เอกสารแนบค่าเกณฑ์ระดับ ' + lv + '</span>');
+  var canUp = lv !== undefined && canEdit(ec) && editableSt(S(key));
+  var body = '';
+  if (q) {
+    var ready = list.every(function (e) { return FILES[e.code]; });
+    var hits = ready ? list.reduce(function (a, e) { return a.concat(FILES[e.code]); }, []).filter(function (f) { return f.name.toLowerCase().indexOf(q) >= 0; }) : [];
+    body = !ready ? loading : hits.length ? hits.map(fileRow).join('') : '<div class="empty">' + ico('search') + 'ไม่พบไฟล์ที่ชื่อมี "' + esc(st.libQ) + '"</div>';
+  } else if (!ec) {
+    body = list.map(function (e) { var x = enStats(e); return row('folder', '', esc(e.drive) + ' ' + e.code, esc(e.name), x.docs + ' ไฟล์', x.withDocs + '/' + x.n + ' ประเด็น', '', 'data-lib="' + e.code + '" tabindex="0" role="button"'); }).join('');
+  } else if (!FILES[ec]) {
+    body = loading;
+  } else if (!key) {
+    body = subsOf(ENm[ec]).map(function (s) {
+      var fs = FILES[ec].filter(function (f) { return f.sub === s.key; }), lvs = {};
+      fs.forEach(function (f) { lvs[f.level] = 1; });
+      return row('folder', '', esc(ENm[ec].drive) + '.' + esc(s.no) + ' ' + esc(s.name), statusPill(s.status) + ' ' + (fs.length ? 'มีเอกสาร ' + Object.keys(lvs).length + '/5 ระดับ' : '<span class="faint">ยังไม่มีเอกสาร</span>'), fs.length + ' ไฟล์', fs.length ? thD(fs.map(function (f) { return f.at; }).sort().pop()) : '—', '', 'data-lib="' + ec + '|' + s.key + '" tabindex="0" role="button"');
+    }).join('');
+  } else if (lv === undefined) {
+    body = [1, 2, 3, 4, 5].map(function (n) {
+      var fs = FILES[ec].filter(function (f) { return f.sub === key && f.level === n; }), stt = lvState(S(key).self, n);
+      return row('folder', '', 'เอกสารแนบค่าเกณฑ์ระดับ ' + n, fs.length ? fs.length + ' ไฟล์' : stt !== 'none' ? '<span class="pill warn">ผ่านเกณฑ์แต่ยังไม่มีไฟล์</span>' : '<span class="faint">ว่าง</span>', fs.length + ' ไฟล์', fs.length ? thD(fs.map(function (f) { return f.at; }).sort().pop()) : '—', '', 'data-lib="' + ec + '|' + key + '|' + n + '" tabindex="0" role="button"');
+    }).join('');
+  } else {
+    var fs = FILES[ec].filter(function (f) { return f.sub === key && f.level === lv; });
+    body = fs.length ? fs.map(fileRow).join('') : '<div class="empty">' + ico('folder') + '<span>ยังไม่มีไฟล์ในโฟลเดอร์นี้</span></div>';
+  }
+  return '<section class="view" aria-labelledby="h-lib"><div class="head"><div><h1 id="h-lib">คลังเอกสาร</h1><p>' + (isAdmin() ? 'เอกสารหลักฐานของทุกตัวชี้วัด (ดูอย่างเดียว)' : 'เอกสารหลักฐานเฉพาะตัวชี้วัดที่คุณรับผิดชอบ') + ' จัดเก็บใน Google Drive ตามโครงสร้าง ตัวชี้วัด → ประเด็นย่อย → เอกสารแนบค่าเกณฑ์ระดับ 1–5</p></div>' +
+    (canUp ? '<label class="upl big">' + ico('up') + 'อัปโหลดไฟล์<input type="file" class="sr" data-libup="1" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png"></label>' : '') + '</div>' +
+    '<div class="lib"><nav class="lib-side glass" aria-label="โฟลเดอร์ตัวชี้วัด">' + list.map(function (e) { return '<button class="nav-btn" data-lib="' + e.code + '"' + (ec === e.code ? ' aria-current="page"' : '') + '>' + ico('folder') + '<span>' + esc(e.drive) + ' ' + e.code + '</span><span class="small num" style="margin-left:auto">' + enStats(e).docs + '</span></button>'; }).join('') + '</nav>' +
+    '<div class="panel glass" style="padding:0"><div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)"><nav class="bc" aria-label="ตำแหน่งโฟลเดอร์">' + bc.join('') + '</nav>' +
+    '<div style="min-width:220px;flex:0 1 300px"><label for="libq" class="sr">ค้นหาไฟล์</label><input type="search" id="libq" placeholder="ค้นหาชื่อไฟล์" value="' + esc(st.libQ) + '"></div></div>' +
+    (canUp ? '<div class="notice info" style="margin:12px 16px 0">' + ico('info') + '<span>ตั้งชื่อไฟล์ขึ้นต้นด้วย "เอกสารประกอบที่ N" สำหรับ Minimum Requirement หรือ "เอกสารประกอบอื่น_" สำหรับเอกสารเพิ่มเติม ไฟล์ละไม่เกิน 10 MB</span></div>' : '') +
+    '<div class="frow head"><span></span><span>ชื่อ</span><span class="hide-m">ขนาด / จำนวน</span><span class="hide-m">แก้ไขล่าสุด</span><span></span></div>' + body + '</div></div></section>';
+}
+
+/* ---------- Timeline ---------- */
+function vTimeline() {
+  var T = D.timeline, list = D.enablers;
+  if (st.tlEn !== 'all' && !ENm[st.tlEn]) st.tlEn = 'all';
+  var shown = st.tlEn === 'all' ? list : [ENm[st.tlEn]];
+  var acts = T.acts.filter(function (a) { var s = S(a.sub); return s && shown.indexOf(s.e) >= 0; });
+  function cnt(k) { return acts.filter(function (a) { return actStatus(a) === k; }).length; }
+  var rows = '', r = 1;
+  shown.forEach(function (e) {
+    var ea = acts.filter(function (a) { return S(a.sub).e === e; }), lk = T.locked.indexOf(e.code) >= 0;
+    r++; rows += '<div class="grp" style="grid-row:' + r + '"><span class="en-code" style="min-width:40px;height:28px;font-size:11px">' + e.code + '</span>' + esc(e.name) + '<span class="faint small" style="font-weight:400">' + ea.length + ' กิจกรรม</span>' + (lk ? '<span class="pill bad">' + ico('lock') + 'ล็อกโดยแอดมิน</span>' : '') + '</div>';
+    if (!ea.length) { r++; rows += '<div class="lab" style="grid-row:' + r + ';grid-column:1/-1;color:var(--muted)">ยังไม่มีกิจกรรม</div>'; return; }
+    ea.sort(function (a, b) { return a.sub.localeCompare(b.sub, undefined, { numeric: true }) || a.s - b.s; }).forEach(function (a) {
+      var k = actStatus(a), s = S(a.sub);
+      r++;
+      rows += '<div class="lab" style="grid-row:' + r + ';grid-column:1"><b title="' + esc(a.name) + '">' + esc(a.name) + '</b><span>' + esc(s.no) + ' ระดับ ' + a.lv + (a.out ? ' · ' + esc(a.out) : '') + '</span></div>';
+      rows += M.map(function (m, i) { return '<div class="gcell ' + (i === T.now ? 'now' : '') + '" style="grid-row:' + r + ';grid-column:' + (i + 2) + '"></div>'; }).join('');
+      rows += '<button class="gbar ' + (k === 'done' ? 'done' : k === 'late' ? 'late' : k === 'wait' ? 'wait' : '') + '" style="grid-row:' + r + ';grid-column:' + (a.s + 2) + '/' + (a.e + 3) + '" data-act-edit="' + a.id + '" aria-label="' + esc(a.name) + ' ' + tlMonth(a.s) + ' ถึง ' + tlMonth(a.e) + ' ' + actTxt[k] + ' ' + a.p + '%"><i class="pg" style="width:' + a.p + '%"></i><span>' + a.p + '% · ' + actTxt[k] + '</span></button>';
+    });
+  });
+  var canAdd = !isAdmin() && T.isOpen && D.enablers.some(function (e) { return T.locked.indexOf(e.code) < 0; });
+  return '<section class="view" aria-labelledby="h-tl"><div class="head"><div><h1 id="h-tl">Timeline ปีบัญชี ' + esc(T.fy) + '</h1><p>ระยะเวลาการดำเนินงานแต่ละขั้นตอน/กิจกรรม รายประเด็นย่อยและระดับ ' + (isAdmin() ? 'แอดมินกำหนดช่วงเวลาให้ผู้รับผิดชอบกรอก' : 'กรอกได้ภายในช่วงเวลาที่แอดมินกำหนด') + '</p></div>' +
+    (!isAdmin() ? '<button class="btn primary" data-act="addAct"' + (canAdd ? '' : ' disabled') + '>' + ico('plus') + 'เพิ่มกิจกรรม</button>' : '') + '</div>' +
+    (isAdmin() ? vWindow() : '<div class="notice ' + (T.isOpen ? 'ok' : 'warn') + '">' + ico(T.isOpen ? 'check' : 'lock') + '<span>' + (T.isOpen ? 'เปิดให้กรอกถึง <b>' + thD(T.close) + '</b> กำหนดช่วงกิจกรรมได้ระหว่าง ' + tlMonth(T.from) + ' – ' + tlMonth(T.to) : 'ปิดรับการกรอก (ช่วงกรอก ' + thD(T.open) + ' – ' + thD(T.close) + ') ติดต่อ กปม. หากต้องแก้ไข') + '</span></div>') +
+    '<div class="kpis" style="grid-template-columns:repeat(4,minmax(0,1fr))">' + [['run', 'กำลังดำเนินการ', 'var(--accent)'], ['wait', 'ยังไม่ถึงกำหนด', '#5D8CF0'], ['late', 'ล่าช้า', 'var(--bad)'], ['done', 'เสร็จแล้ว', 'var(--ok)']].map(function (p) { return '<div class="kpi glass"><span class="label">' + p[1] + '</span><span class="value num" style="color:' + p[2] + '">' + cnt(p[0]) + '</span><span class="sub">จาก ' + acts.length + ' กิจกรรม</span></div>'; }).join('') + '</div>' +
+    '<div class="panel glass" style="padding:0"><div class="panel-head" style="padding:14px 16px 0"><div class="chips" role="group" aria-label="กรองตัวชี้วัด">' + (list.length > 1 ? '<button class="chip" data-tlen="all" aria-pressed="' + (st.tlEn === 'all') + '">ทั้งหมด</button>' : '') + list.map(function (e) { return '<button class="chip" data-tlen="' + e.code + '" aria-pressed="' + (st.tlEn === e.code || list.length === 1) + '">' + e.code + '</button>'; }).join('') + '</div>' +
+    '<div class="legend"><span><i style="background:var(--accent)"></i>กำลังดำเนินการ</span><span><i style="background:#5D8CF0"></i>ยังไม่ถึงกำหนด</span><span><i style="background:var(--bad)"></i>ล่าช้า</span><span><i style="background:var(--ok)"></i>เสร็จแล้ว</span></div></div>' +
+    '<div class="scroll-x" style="padding:0 0 8px"><div class="gantt" role="table" aria-label="แผนภูมิ Timeline"><div class="gh">ขั้นตอน / กิจกรรม</div>' + M.map(function (m, i) { return '<div class="gh ' + (i === T.now ? 'now' : '') + '">' + tlMonth(i) + '</div>'; }).join('') + rows + '</div></div></div>' +
+    (isAdmin() ? '<div class="panel glass"><div class="panel-head"><div><h2>ความครบถ้วนของ Timeline</h2><p>ประเด็นย่อยที่มีกิจกรรมอย่างน้อย 1 รายการ</p></div></div>' + D.enablers.map(function (e) { var x = enStats(e), lk = T.locked.indexOf(e.code) >= 0; return '<div class="covrow"><span class="code">' + e.code + '</span><div class="track"><div class="fill ' + (x.tl === 0 ? 'bad' : '') + '" style="width:' + (x.tl / x.n * 100) + '%"></div></div><span class="num small" style="text-align:right">' + x.tl + '/' + x.n + '</span><button class="btn sm ' + (lk ? 'danger' : '') + '" data-lock="' + e.code + '">' + ico('lock') + (lk ? 'ปลดล็อก' : 'ล็อก') + '</button></div>'; }).join('') + '</div>' : '') + '</section>';
+}
+function vWindow() {
+  var T = D.timeline;
+  return '<div class="panel glass"><div class="panel-head"><div><h2>ช่วงเวลาให้ผู้รับผิดชอบกรอก Timeline</h2><p>ผู้รับผิดชอบเพิ่มและแก้กิจกรรมได้เฉพาะในช่วงนี้</p></div><span class="pill ' + (T.isOpen ? 'ok' : 'idle') + '">' + (T.isOpen ? 'เปิดให้กรอกอยู่' : 'ปิดอยู่') + '</span></div>' +
+    '<div class="win"><div class="field"><label for="wOpen">เปิดให้กรอก</label><input type="date" id="wOpen" value="' + esc(T.open) + '"></div><div class="field"><label for="wClose">ปิดรับ</label><input type="date" id="wClose" value="' + esc(T.close) + '"></div>' +
+    '<div class="field"><label for="wFrom">กิจกรรมเริ่มได้ตั้งแต่</label><select id="wFrom">' + M.map(function (m, i) { return '<option value="' + i + '"' + (i === T.from ? ' selected' : '') + '>' + tlMonth(i) + '</option>'; }).join('') + '</select></div>' +
+    '<div class="field"><label for="wTo">สิ้นสุดได้ถึง</label><select id="wTo">' + M.map(function (m, i) { return '<option value="' + i + '"' + (i === T.to ? ' selected' : '') + '>' + tlMonth(i) + '</option>'; }).join('') + '</select></div></div>' +
+    '<span class="err" id="wErr" hidden></span><div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn primary" data-act="saveWin">' + ico('check') + 'บันทึกช่วงเวลา</button></div></div>';
+}
+function actForm(a) {
+  var T = D.timeline;
+  var subs = SUBS.filter(function (s) { return canEdit(s.e.code) && T.locked.indexOf(s.e.code) < 0; });
+  var ro = !a ? false : isAdmin() || !T.isOpen || T.locked.indexOf(S(a.sub).e.code) >= 0 || !canEdit(S(a.sub).e.code);
+  function opt(sel) { return M.map(function (m, k) { return '<option value="' + k + '"' + (k === sel ? ' selected' : '') + (k < T.from || k > T.to ? ' disabled' : '') + '>' + tlMonth(k) + '</option>'; }).join(''); }
+  var dis = ro ? ' disabled' : '';
+  return { ro: ro, html: '<h2>' + (a ? (ro ? 'รายละเอียดกิจกรรม' : 'แก้ไขกิจกรรม') : 'เพิ่มกิจกรรม') + '</h2>' + (ro ? '<p class="muted small">' + (isAdmin() ? 'แอดมินดูได้อย่างเดียว' : 'อยู่นอกช่วงเวลากรอกหรือถูกล็อก') + '</p>' : '') +
+    '<div class="field"><label for="fSub">ประเด็นย่อย</label><select id="fSub"' + (ro || a ? ' disabled' : '') + '>' + (a ? [S(a.sub)] : subs).map(function (s) { return '<option value="' + s.key + '">' + s.e.code + ' ' + esc(s.no) + ' ' + esc(s.name) + '</option>'; }).join('') + '</select></div>' +
+    '<div class="grid2"><div class="field"><label for="fLv">ระดับ</label><select id="fLv"' + dis + '>' + [1, 2, 3, 4, 5].map(function (n) { return '<option' + (a && a.lv === n ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select></div>' +
+    '<div class="field"><label for="fP">ความก้าวหน้า (%)</label><input type="number" id="fP" min="0" max="100" step="5" value="' + (a ? a.p : 0) + '"' + dis + '></div></div>' +
+    '<div class="field"><label for="fName">ชื่อขั้นตอน / กิจกรรม</label><input type="text" id="fName" maxlength="200" value="' + (a ? esc(a.name) : '') + '"' + dis + '><span class="err" id="eName" hidden>กรุณาระบุชื่อกิจกรรม</span></div>' +
+    '<div class="grid2"><div class="field"><label for="fS">เดือนเริ่ม</label><select id="fS"' + dis + '>' + opt(a ? a.s : T.from) + '</select></div><div class="field"><label for="fE">เดือนสิ้นสุด</label><select id="fE"' + dis + '>' + opt(a ? a.e : T.from) + '</select></div></div>' +
+    '<span class="err" id="eRange" hidden>เดือนสิ้นสุดต้องไม่ก่อนเดือนเริ่ม</span>' +
+    '<div class="field"><label for="fOut">ผลผลิต / หลักฐานที่จะได้</label><input type="text" id="fOut" maxlength="200" value="' + (a ? esc(a.out || '') : '') + '"' + dis + '></div>' + (a ? '<p class="faint small">บันทึกโดย ' + esc(a.by || '—') + '</p>' : '') };
+}
+function saveAct(a, btn) {
+  var name = $('#fName').value.trim(), s = +$('#fS').value, e = +$('#fE').value, bad = false;
+  $('#eName').hidden = !!name; if (!name) { $('#fName').setAttribute('aria-invalid', 'true'); bad = true; }
+  $('#eRange').hidden = e >= s; if (e < s) bad = true;
+  if (bad) return Promise.reject();
+  var p = { id: a ? a.id : '', sub: a ? a.sub : $('#fSub').value, lv: +$('#fLv').value, name: name, s: s, e: e, p: +$('#fP').value || 0, out: $('#fOut').value.trim() };
+  return busy(btn, call('saveActivity', p)).then(function (r) {
+    if (a) Object.assign(a, r); else D.timeline.acts.push(r);
+    var q = S(r.sub); if (q) q.hasTl = true;
+    render(); toast(a ? 'บันทึกกิจกรรมแล้ว' : 'เพิ่มกิจกรรมแล้ว');
+  });
+}
+
+/* ---------- ผู้ใช้ ---------- */
+function vUsers() {
+  var body = !USERS ? '<div class="empty"><div class="spinner"></div>กำลังโหลด…</div>' : '<div class="scroll-x"><table class="dtable"><thead><tr><th>ชื่อ</th><th>อีเมล</th><th>บทบาท</th><th>ตัวชี้วัด</th><th>สถานะ</th><th>เข้าใช้ล่าสุด</th><th></th></tr></thead><tbody>' +
+    USERS.map(function (u) { return '<tr><td>' + esc(u.name) + '</td><td>' + esc(u.email) + '</td><td>' + (u.role === 'admin' ? 'แอดมิน / Audit' : 'ผู้รายงาน') + '</td><td class="code">' + esc(u.enablers.join(', ') || 'ทั้งหมด') + '</td><td>' + (u.active ? (u.locked ? '<span class="pill warn">ล็อกชั่วคราว</span>' : '<span class="pill ok">ใช้งาน</span>') : '<span class="pill idle">ปิดใช้งาน</span>') + '</td><td class="num">' + thDT(u.lastLogin) + '</td><td style="white-space:nowrap"><button class="btn sm" data-user="' + u.id + '">แก้ไข</button> <button class="btn sm" data-resetpw="' + u.id + '">รีเซ็ตรหัสผ่าน</button></td></tr>'; }).join('') + '</tbody></table></div>';
+  return '<section class="view" aria-labelledby="h-us"><div class="head"><div><h1 id="h-us">ผู้ใช้งาน</h1><p>กำหนดบทบาทและตัวชี้วัดที่ผู้รายงานแต่ละคนเข้าถึงได้ ผู้ใช้ใหม่ได้รหัสผ่านชั่วคราวและต้องเปลี่ยนเมื่อเข้าใช้ครั้งแรก</p></div><button class="btn primary" data-user="">' + ico('plus') + 'เพิ่มผู้ใช้</button></div><div class="panel glass">' + body + '</div></section>';
+}
+function userForm(u) {
+  var codes = D.enablers.map(function (e) { return e.code; });
+  return '<h2>' + (u ? 'แก้ไขผู้ใช้' : 'เพิ่มผู้ใช้') + '</h2><div class="field"><label for="uName">ชื่อ-นามสกุล</label><input type="text" id="uName" maxlength="120" value="' + (u ? esc(u.name) : '') + '"></div>' +
+    '<div class="field"><label for="uEmail">อีเมล (ใช้เข้าสู่ระบบ)</label><input type="email" id="uEmail" maxlength="200" value="' + (u ? esc(u.email) : '') + '"></div>' +
+    '<div class="field"><label for="uRole">บทบาท</label><select id="uRole"><option value="reporter"' + (u && u.role === 'reporter' ? ' selected' : '') + '>ผู้รายงาน</option><option value="admin"' + (u && u.role === 'admin' ? ' selected' : '') + '>แอดมิน / Audit</option></select></div>' +
+    '<fieldset class="field" style="border:0;padding:0;margin:0"><legend style="font-size:13px;font-weight:500;margin-bottom:6px">ตัวชี้วัดที่รับผิดชอบ (ผู้รายงาน)</legend><div class="checks">' + codes.map(function (c) { return '<label><input type="checkbox" name="uEn" value="' + c + '"' + (u && u.enablers.indexOf(c) >= 0 ? ' checked' : '') + '>' + c + '</label>'; }).join('') + '</div></fieldset>' +
+    (u ? '<label style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" id="uActive"' + (u.active ? ' checked' : '') + ' style="accent-color:var(--accent);width:18px;height:18px">เปิดใช้งานบัญชี</label>' : '') + '<span class="err" id="uErr" hidden></span>';
+}
+function showTempPw(email, pw) {
+  dialog('<h2>รหัสผ่านชั่วคราว</h2><p class="muted small">แจ้งรหัสนี้ให้ ' + esc(email) + ' ทางช่องทางที่ปลอดภัย รหัสจะแสดงครั้งเดียว ผู้ใช้ต้องเปลี่ยนรหัสเมื่อเข้าสู่ระบบครั้งแรก</p><div class="temp-pw">' + esc(pw) + '</div>', { hideOk: true });
+}
+
+/* ---------- ตั้งค่า ---------- */
+function vSettings() {
+  var s = D.settings;
+  return '<section class="view" aria-labelledby="h-st"><div class="head"><div><h1 id="h-st">ตั้งค่าและนำเข้าข้อมูล</h1><p>รอบรายงาน ข้อมูลตัวชี้วัด การนำเข้าจาก Google Sheet เดิม และการซิงก์ไฟล์จาก Google Drive</p></div></div>' +
+    '<div class="panel glass"><div class="panel-head"><h2>รอบรายงานผล</h2></div><div class="win"><div class="field"><label for="sFy">ปีบัญชี (พ.ศ.)</label><input type="text" id="sFy" inputmode="numeric" maxlength="4" value="' + esc(s.fy) + '"></div>' +
+    '<div class="field"><label for="sMonth">เดือนรอบรายงาน</label><select id="sMonth">' + M.map(function (m, i) { return '<option value="' + i + '"' + (i === s.reportMonth ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select></div>' +
+    '<div class="field"><label for="sDeadline">วันปิดรับผล</label><input type="date" id="sDeadline" value="' + esc(s.deadline) + '"></div><div class="field"><label for="sContact">ช่องทางติดต่อ</label><input type="text" id="sContact" maxlength="120" value="' + esc(s.contact) + '"></div></div>' +
+    '<p class="hint small muted" style="margin-top:8px">ผู้รายงานบันทึกผลรายเดือนได้ถึงเดือนรอบรายงานเท่านั้น</p><div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn primary" data-act="saveSettings">บันทึก</button></div></div>' +
+    '<div class="panel glass"><div class="panel-head"><div><h2>ข้อมูลตัวชี้วัด</h2><p>ผู้รับผิดชอบ งบประมาณ และคะแนนเป้าหมาย</p></div></div><div class="scroll-x"><table class="dtable"><thead><tr><th>ตัวชี้วัด</th><th>ผู้รับผิดชอบ</th><th>งบประมาณ</th><th>คะแนนเป้าหมาย</th><th></th></tr></thead><tbody>' +
+    D.enablers.map(function (e) { return '<tr><td class="code">' + e.code + '</td><td><label class="sr" for="eo-' + e.code + '">ผู้รับผิดชอบ ' + e.code + '</label><input type="text" id="eo-' + e.code + '" maxlength="300" value="' + esc(e.owner) + '"></td><td><label class="sr" for="eb-' + e.code + '">งบประมาณ ' + e.code + '</label><input type="text" id="eb-' + e.code + '" maxlength="100" value="' + esc(e.budget) + '" style="max-width:160px"></td><td><label class="sr" for="et-' + e.code + '">คะแนนเป้าหมาย ' + e.code + '</label><input type="number" id="et-' + e.code + '" min="0" max="5" step="0.0001" value="' + (e.target === null ? '' : e.target) + '" style="max-width:120px"></td><td><button class="btn sm" data-saveen="' + e.code + '">บันทึก</button></td></tr>'; }).join('') + '</tbody></table></div></div>' +
+    '<div class="cols"><div class="panel glass c6"><div class="panel-head"><div><h2>นำเข้าจาก Google Sheet</h2><p>อ่านชีท "แบบฟอร์มรายงานผล Core Business Enablers" ตามชื่อหัวคอลัมน์ ได้เกณฑ์ ขั้นตอน แผน/ผล รายละเอียดผล Minimum Requirement ชื่อหลักฐาน และข้อสังเกต กปม.</p></div></div>' +
+    '<label style="display:flex;gap:8px;align-items:center;font-size:14px;margin-bottom:12px"><input type="checkbox" id="impOverwrite" style="accent-color:var(--accent);width:18px;height:18px">เขียนทับประเด็นที่มีข้อมูลในระบบแล้ว</label><button class="btn" data-act="import">' + ico('db') + 'นำเข้าข้อมูล</button><div id="impReport"></div></div>' +
+    '<div class="panel glass c6"><div class="panel-head"><div><h2>ซิงก์ไฟล์จาก Google Drive</h2><p>ลงทะเบียนไฟล์ในโฟลเดอร์ "เอกสารแนบค่าเกณฑ์ระดับ N" ที่ยังไม่อยู่ในระบบ และเชื่อมชื่อหลักฐานที่นำเข้ากับไฟล์จริง</p></div></div>' +
+    '<button class="btn" data-act="sync">' + ico('folder') + 'ซิงก์ Drive</button><div id="syncReport"></div></div></div></section>';
+}
+function vLog() {
+  return '<section class="view" aria-labelledby="h-l"><div class="head"><div><h1 id="h-l">ประวัติการแก้ไข</h1><p>' + (isAdmin() ? 'การเปลี่ยนแปลงทั้งหมด 150 รายการล่าสุด' : 'การเปลี่ยนแปลงของตัวชี้วัดที่คุณรับผิดชอบ') + '</p></div><button class="btn" data-act="refresh">' + ico('clock') + 'โหลดใหม่</button></div>' +
+    '<div class="panel glass">' + (D.log.length ? '<div class="log">' + D.log.map(function (l) { return '<div class="log-item"><span class="num muted">' + thDT(l.at) + '</span><span><b>' + esc(l.user) + '</b><br><span class="faint small">' + (l.role === 'admin' ? 'แอดมิน' : 'ผู้รายงาน') + (l.enabler ? ' · ' + esc(l.enabler) : '') + '</span></span><span>' + esc(l.detail) + '</span></div>'; }).join('') + '</div>' : '<div class="empty">ยังไม่มีประวัติ</div>') + '</div></section>';
+}
+
+/* ---------- dialog / toast ---------- */
+var tt;
+function toast(msg, err) { var t = $('#toast'); t.className = 'toast glass' + (err ? ' err' : ''); t.innerHTML = ico(err ? 'alert' : 'check') + '<span>' + esc(msg) + '</span>'; t.hidden = false; clearTimeout(tt); tt = setTimeout(function () { t.hidden = true; }, err ? 6000 : 3400); }
+function dialog(html, o) {
+  var d = $('#dlg'), f = $('#dlgForm');
+  f.innerHTML = html + '<div class="actions"><button class="btn" value="cancel" type="submit">' + (o.hideOk ? 'ปิด' : 'ยกเลิก') + '</button>' + (o.hideOk ? '' : '<button class="btn ' + (o.danger ? 'danger' : 'primary') + '" id="dlgOk" type="button">' + o.ok + '</button>') + '</div>';
+  d.showModal();
+  if (!o.hideOk) $('#dlgOk').onclick = function () { var b = $('#dlgOk'); Promise.resolve(o.onOk(b)).then(function (r) { if (r !== false) d.close(); }, function () { /* ข้อผิดพลาดแสดงในฟอร์มแล้ว */ }); };
+}
+function confirmDlg(o, cb) {
+  dialog('<h2>' + o.title + '</h2><p class="muted" style="font-size:14px">' + o.body + '</p>' + (o.needReason ? '<div class="field"><label for="reason">เหตุผล (บังคับ)</label><textarea id="reason" maxlength="2000" style="min-height:90px"></textarea><span class="err" id="rErr" hidden>กรุณาระบุเหตุผลอย่างน้อย 10 ตัวอักษร</span></div>' : ''), {
+    ok: o.ok, danger: o.danger, onOk: function (btn) {
+      var reason = '';
+      if (o.needReason) { reason = $('#reason').value.trim(); if (reason.length < 10) { $('#rErr').hidden = false; $('#reason').setAttribute('aria-invalid', 'true'); $('#reason').focus(); return false; } }
+      return cb(reason, btn);
+    }
+  });
+}
+
+/* ---------- การทำงาน ---------- */
+function curLevel() { return DET[st.sub].levels[st.lv]; }
+function markDirty(v) { st.dirty = v; var m = $('#dirtyMsg'); if (m) m.hidden = !v; }
+function afterSub(d) { DET[d.key] = d; var s = S(d.key); if (s) { s.status = d.status; s.self = d.self; s.audit = d.audit; } markDirty(false); return refresh(); }
+function collectLevel() {
+  var L = curLevel(), p = { key: st.sub, level: L.level, results: {}, reqHas: {} };
+  var n = $('#narr'); if (n) p.narrative = n.value;
+  var bad = false;
+  document.querySelectorAll('[data-res]').forEach(function (el) {
+    var id = el.dataset.res, raw = el.value.trim(), v = raw === '' ? 0 : Number(raw);
+    if (raw !== '' && (isNaN(v) || v < 0)) { el.setAttribute('aria-invalid', 'true'); bad = true; }
+    (p.results[id] = p.results[id] || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])[+el.dataset.m] = v;
+  });
+  L.steps.forEach(function (x) { if (p.results[x.id]) for (var i = D.settings.reportMonth + 1; i < 12; i++) p.results[x.id][i] = Number((x.result || [])[i]) || 0; });
+  document.querySelectorAll('[data-req]').forEach(function (el) { p.reqHas[el.dataset.req] = el.checked; });
+  return bad ? null : p;
+}
+function readFile(f) {
+  return new Promise(function (res, rej) {
+    var r = new FileReader();
+    r.onload = function () { res(String(r.result).split(',')[1] || ''); };
+    r.onerror = function () { rej(new Error('อ่านไฟล์ ' + f.name + ' ไม่ได้')); };
+    r.readAsDataURL(f);
+  });
+}
+function upload(files, key, level, reqId) {
+  var big = files.filter(function (f) { return f.size > MAX_UPLOAD; });
+  if (big.length) { toast('ไฟล์ ' + big[0].name + ' ใหญ่เกิน 10 MB', true); return Promise.resolve(); }
+  toast('กำลังอัปโหลด ' + files.length + ' ไฟล์…');
+  var chain = Promise.resolve(), n = 0;
+  files.forEach(function (f) {
+    chain = chain.then(function () { return readFile(f); }).then(function (data) { return call('uploadFile', { key: key, level: level, reqId: reqId || '', name: f.name, mime: f.type, data: data }); }).then(function () { n++; });
+  });
+  return chain.then(function () { toast('อัปโหลด ' + n + ' ไฟล์แล้ว'); }, function (e) { toast(e.message, true); })
+    .then(function () { delete FILES[key.split('-')[0]]; return call('getSub', { key: key }); }).then(afterSub);
+}
+function download(id) {
+  call('downloadFile', { id: id }).then(function (r) {
+    if (r.url) { window.open(r.url, '_blank', 'noopener'); return; }
+    var bin = atob(r.data), arr = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    var url = URL.createObjectURL(new Blob([arr], { type: r.mime || 'application/octet-stream' }));
+    var a = document.createElement('a'); a.href = url; a.download = r.name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+  }, function (e) { toast(e.message, true); });
+}
+function stepForm(x) {
+  var plan = x && x.plan ? x.plan : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  return '<h2>' + (x ? 'แก้ไขขั้นตอน' : 'เพิ่มขั้นตอน') + ' ระดับ ' + (st.lv + 1) + '</h2>' +
+    '<div class="field"><label for="sStep">ขั้นตอนการดำเนินงาน</label><textarea id="sStep" maxlength="3000" style="min-height:80px">' + (x ? esc(x.step) : '') + '</textarea><span class="err" id="sErr" hidden>กรุณาระบุขั้นตอน</span></div>' +
+    '<div class="field"><label for="sGap">วิเคราะห์ GAP</label><textarea id="sGap" maxlength="3000" style="min-height:70px">' + (x ? esc(x.gap) : '') + '</textarea></div>' +
+    '<div class="grid2"><div class="field"><label for="sUnit">หน่วยนับ</label><input type="text" id="sUnit" maxlength="50" value="' + (x ? esc(x.unit) : '') + '"></div><div class="field"><label for="sTarget">เป้าหมายทั้งปี</label><input type="number" id="sTarget" min="0" step="any" value="' + (x && x.target !== null ? x.target : '') + '"></div></div>' +
+    '<fieldset style="border:0;padding:0;margin:0"><legend style="font-size:13px;font-weight:500;margin-bottom:6px">แผนรายเดือน</legend><div class="months">' + M.map(function (m, i) { return '<label>' + m + '<input class="planin" type="number" min="0" step="any" data-plan="' + i + '" value="' + (Number(plan[i]) || '') + '"></label>'; }).join('') + '</div></fieldset>';
+}
+
+document.addEventListener('submit', function (ev) {
+  if (ev.target.id === 'loginForm') { ev.preventDefault(); doLogin(); }
+  if (ev.target.id === 'pwForm') { ev.preventDefault(); savePw($('#pwBtn')).catch(function () { /* แสดงในฟอร์มแล้ว */ }); }
+});
+document.addEventListener('click', function (ev) {
+  var t = ev.target.closest('button,[data-open],[data-lib],tr[data-en]');
+  if (!t || t.closest('a')) return;
+  var ds = t.dataset;
+  if (ds.pw) { var inp = document.getElementById(ds.pw); var show = inp.type === 'password'; inp.type = show ? 'text' : 'password'; t.setAttribute('aria-label', show ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'); return; }
+  if (t.id === 'menuBtn') { st.menu = !st.menu; render(); return; }
+  if (ds.go) return go(ds.go);
+  if (ds.to) { var p = ds.to.split(/:(.*)/); if (p[0] === 'en') return go('enabler', { en: p[1], sub: null, lv: 0 }); if (p[0] === 'open') { var so = S(p[1]); return go('enabler', { en: so.e.code, sub: so.key, lv: 0 }); } return go(p[1]); }
+  if (ds.en) return go('enabler', { en: ds.en, sub: null, lv: 0 });
+  if (ds.open) { var s1 = S(ds.open); return go('enabler', { en: s1.e.code, sub: s1.key, lv: 0 }); }
+  if (ds.ov) { st.ovEn = ds.ov; render(); return; }
+  if (ds.sub) { if (st.dirty && !leaveOk()) return; st.sub = ds.sub; st.lv = 0; markDirty(false); render(); var sp = $('#subPanel'); if (sp) sp.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+  if (ds.lv) { if (st.dirty && !leaveOk()) return; st.lv = +ds.lv; markDirty(false); renderSub(); return; }
+  if (ds.qf) { st.qf = ds.qf; render(); return; }
+  if (ds.tlen) { st.tlEn = ds.tlen; render(); return; }
+  if (ds.lib !== undefined) { var lp = ds.lib ? ds.lib.split('|') : []; st.lib = lp.length > 2 ? [lp[0], lp[1], +lp[2]] : lp; st.libQ = ''; st.menu = false; render(); return; }
+  if (ds.dl) return download(ds.dl);
+  if (ds.rmf) {
+    return confirmDlg({ title: 'ลบไฟล์หลักฐาน', body: 'ไฟล์จะถูกย้ายไปถังขยะของ Google Drive และหายจากรายการนี้ ต้องการลบหรือไม่', ok: 'ลบไฟล์', danger: true }, function (r, btn) {
+      return busy(btn, call('deleteFile', { id: ds.rmf })).then(function () { toast('ลบไฟล์แล้ว'); FILES = {}; var k = st.view === 'library' ? st.lib[1] || st.sub : st.sub; return k ? call('getSub', { key: k }).then(afterSub) : refresh(); });
+    });
+  }
+  if (ds.resolve) return busy(t, call('resolveComment', { id: ds.resolve })).then(function (c) { DET[st.sub].comments = c; refresh(); toast('ปิดข้อสังเกตแล้ว'); });
+  if (ds.step !== undefined || ds.act === 'addStep') {
+    var x = ds.step ? curLevel().steps.filter(function (y) { return y.id === ds.step; })[0] : null;
+    return dialog(stepForm(x), { ok: 'บันทึกขั้นตอน', onOk: function (btn) {
+      var step = $('#sStep').value.trim(); if (!step) { $('#sErr').hidden = false; $('#sStep').focus(); return false; }
+      var plan = [].map.call(document.querySelectorAll('[data-plan]'), function (el) { return Number(el.value) || 0; });
+      return busy(btn, call('saveStep', { key: st.sub, level: st.lv + 1, id: x ? x.id : '', step: step, gap: $('#sGap').value, unit: $('#sUnit').value, target: $('#sTarget').value, plan: plan })).then(function (d) { toast('บันทึกขั้นตอนแล้ว'); return afterSub(d); });
+    } });
+  }
+  if (ds.delstep) return confirmDlg({ title: 'ลบขั้นตอน', body: 'ลบขั้นตอนนี้พร้อมแผนและผลรายเดือนใช่หรือไม่', ok: 'ลบขั้นตอน', danger: true }, function (r, btn) { return busy(btn, call('deleteStep', { key: st.sub, id: ds.delstep })).then(function (d) { toast('ลบขั้นตอนแล้ว'); return afterSub(d); }); });
+  if (ds.lock) return busy(t, call('setTimelineLock', { code: ds.lock, locked: D.timeline.locked.indexOf(ds.lock) < 0 })).then(function (l) { D.timeline.locked = l; render(); toast('บันทึกแล้ว'); });
+  if (ds.actEdit) {
+    var a = D.timeline.acts.filter(function (y) { return y.id === ds.actEdit; })[0], fm = actForm(a);
+    if (fm.ro) return dialog(fm.html, { hideOk: true });
+    dialog(fm.html + '<button class="btn sm danger" type="button" id="delAct" style="align-self:flex-start">' + ico('trash') + 'ลบกิจกรรม</button>', { ok: 'บันทึก', onOk: function (btn) { return saveAct(a, btn); } });
+    $('#delAct').onclick = function () {
+      $('#dlg').close();
+      confirmDlg({ title: 'ลบกิจกรรม', body: 'ลบ "' + esc(a.name) + '" ออกจาก Timeline ใช่หรือไม่', ok: 'ลบกิจกรรม', danger: true }, function (r, btn) {
+        return busy(btn, call('deleteActivity', { id: a.id })).then(function () { D.timeline.acts.splice(D.timeline.acts.indexOf(a), 1); refresh(); toast('ลบกิจกรรมแล้ว'); });
+      });
+    };
+    return;
+  }
+  if (ds.user !== undefined) {
+    var u = ds.user ? USERS.filter(function (y) { return y.id === ds.user; })[0] : null;
+    return dialog(userForm(u), { ok: 'บันทึก', onOk: function (btn) {
+      var p = { id: u ? u.id : '', name: $('#uName').value.trim(), email: $('#uEmail').value.trim(), role: $('#uRole').value, enablers: [].map.call(document.querySelectorAll('[name=uEn]:checked'), function (el) { return el.value; }), active: u ? $('#uActive').checked : true };
+      var err = $('#uErr');
+      return busy(btn, call('saveUser', p)).then(function (r) { return call('listUsers').then(function (l) { USERS = l; render(); if (r.tempPassword) setTimeout(function () { showTempPw(p.email, r.tempPassword); }, 50); else toast('บันทึกผู้ใช้แล้ว'); }); }, function (e) { err.textContent = e.message; err.hidden = false; throw e; });
+    } });
+  }
+  if (ds.resetpw) {
+    var ru = USERS.filter(function (y) { return y.id === ds.resetpw; })[0];
+    return confirmDlg({ title: 'รีเซ็ตรหัสผ่าน', body: 'สร้างรหัสผ่านชั่วคราวใหม่ให้ ' + esc(ru.email) + ' รหัสเดิมจะใช้ไม่ได้ทันที', ok: 'รีเซ็ต', danger: true }, function (r, btn) {
+      return busy(btn, call('resetPassword', { id: ru.id })).then(function (x) { setTimeout(function () { showTempPw(ru.email, x.tempPassword); }, 50); });
+    });
+  }
+  if (ds.saveen) {
+    var c = ds.saveen;
+    return busy(t, call('saveEnabler', { code: c, owner: $('#eo-' + c).value, budget: $('#eb-' + c).value, target: $('#et-' + c).value })).then(function () { toast('บันทึก ' + c + ' แล้ว'); refresh(); });
+  }
+  var s = S(st.sub);
+  switch (ds.act) {
+    case 'logout':
+      call('logout').catch(function () { /* ออกจากระบบฝั่งเครื่องต่อ */ }).then(function () { TOKEN = null; store('cbe-token', null); D = null; resetState(); renderLogin(); });
+      break;
+    case 'changePw': renderChangePw(false); break;
+    case 'refresh': busy(t, refresh()); break;
+    case 'save': {
+      var p = collectLevel(); if (!p) { toast('กรอกผลรายเดือนเป็นตัวเลข 0 ขึ้นไป', true); return; }
+      busy(t, call('saveLevel', p)).then(function (d) { toast('บันทึกแล้ว'); return afterSub(d); });
+      break;
+    }
+    case 'selfScore': {
+      var v = $('#selfScore').value;
+      busy(t, call('setSelfScore', { key: s.key, score: v === '' ? '' : Number(v) })).then(function (r) { s.self = r.self; DET[s.key].self = r.self; toast('บันทึกคะแนนแล้ว'); render(); });
+      break;
+    }
+    case 'addReq': {
+      var txt = $('#newReq').value.trim(); if (!txt) { $('#newReq').focus(); return; }
+      busy(t, call('addRequirement', { key: s.key, level: st.lv + 1, text: txt })).then(afterSub);
+      break;
+    }
+    case 'submit':
+      if (st.dirty) { toast('กรุณากดบันทึกก่อนส่งตรวจ', true); return; }
+      confirmDlg({ title: 'ส่ง ' + s.e.code + ' ' + esc(s.no) + ' ให้ กปม. ตรวจ', body: 'หลังส่ง ข้อมูลและไฟล์ของประเด็นนี้จะถูกล็อกจนกว่า กปม. จะตรวจเสร็จหรือส่งกลับ', ok: 'ส่งตรวจ' }, function (r, btn) { return busy(btn, call('submit', { key: s.key })).then(function () { toast('ส่งตรวจแล้ว'); return call('getSub', { key: s.key }).then(afterSub); }); });
+      break;
+    case 'approve': {
+      var sc = $('#ascore').value, n = Number(sc);
+      if (sc === '' || isNaN(n) || n < 0 || n > 5) { $('#aErr').hidden = false; $('#ascore').setAttribute('aria-invalid', 'true'); $('#ascore').focus(); return; }
+      confirmDlg({ title: 'อนุมัติผล ' + s.e.code + ' ' + esc(s.no), body: 'บันทึกคะแนน กปม. ' + n.toFixed(2) + ' และล็อกข้อมูลของประเด็นนี้', ok: 'อนุมัติ' }, function (r, btn) { return busy(btn, call('approve', { key: s.key, score: n })).then(function () { toast('อนุมัติผลแล้ว'); return call('getSub', { key: s.key }).then(afterSub); }); });
+      break;
+    }
+    case 'return':
+    case 'unlock': {
+      var un = ds.act === 'unlock';
+      confirmDlg({ title: un ? 'ปลดล็อกให้แก้ไข' : 'ส่งกลับ ' + s.e.code + ' ' + esc(s.no) + ' ให้แก้ไข', body: 'ผู้รายงานจะแก้ไขข้อมูลได้อีกครั้ง เหตุผลจะถูกบันทึกเป็นข้อสังเกต', ok: un ? 'ปลดล็อก' : 'ส่งกลับแก้ไข', danger: true, needReason: true }, function (r, btn) {
+        return busy(btn, call('returnSub', { key: s.key, reason: r, unlock: un })).then(function () { toast(un ? 'ปลดล็อกแล้ว' : 'ส่งกลับให้ผู้รายงานแล้ว'); return call('getSub', { key: s.key }).then(afterSub); });
+      });
+      break;
+    }
+    case 'comment': {
+      var cm = $('#cmt'), cv = cm.value.trim();
+      if (!cv) { $('#cmtErr').hidden = false; cm.setAttribute('aria-invalid', 'true'); cm.focus(); return; }
+      busy(t, call('addComment', { key: s.key, text: cv })).then(function (c) { DET[s.key].comments = c; renderSub(); toast('ส่งข้อความแล้ว'); refresh(); });
+      break;
+    }
+    case 'addAct': {
+      var fm2 = actForm(null);
+      dialog(fm2.html, { ok: 'เพิ่มกิจกรรม', onOk: function (btn) { return saveAct(null, btn); } });
+      break;
+    }
+    case 'saveWin': {
+      var o = $('#wOpen').value, cl = $('#wClose').value, fr = +$('#wFrom').value, to = +$('#wTo').value, we = $('#wErr');
+      var msg = !o || !cl ? 'กรุณาระบุวันเปิดและปิด' : cl < o ? 'วันปิดรับต้องไม่ก่อนวันเปิด' : to < fr ? 'เดือนสิ้นสุดต้องไม่ก่อนเดือนเริ่ม' : '';
+      if (msg) { we.textContent = msg; we.hidden = false; return; }
+      busy(t, call('saveWindow', { open: o, close: cl, from: fr, to: to })).then(function () { toast('บันทึกช่วงเวลาแล้ว'); return refresh(); }, function (e) { we.textContent = e.message; we.hidden = false; });
+      break;
+    }
+    case 'saveSettings':
+      busy(t, call('saveSettings', { fy: $('#sFy').value.trim(), reportMonth: +$('#sMonth').value, deadline: $('#sDeadline').value, contact: $('#sContact').value })).then(function () { toast('บันทึกการตั้งค่าแล้ว'); return refresh(); });
+      break;
+    case 'import':
+      confirmDlg({ title: 'นำเข้าข้อมูลจาก Google Sheet', body: $('#impOverwrite').checked ? 'ข้อมูลของประเด็นที่มีในระบบจะถูกแทนที่ด้วยข้อมูลจากชีท (ไฟล์ที่อัปโหลดแล้วยังอยู่)' : 'นำเข้าเฉพาะประเด็นที่ยังไม่มีข้อมูลในระบบ', ok: 'นำเข้า', danger: $('#impOverwrite').checked }, function (r, btn) {
+        return busy(btn, call('importSheet', { overwrite: $('#impOverwrite').checked })).then(function (rep) {
+          $('#impReport').innerHTML = '<ul class="report">' + rep.map(function (x) { return '<li><b class="code">' + x.code + '</b> ' + (x.error ? '<span class="no">' + esc(x.error) + '</span>' : 'นำเข้า ' + x.imported + ' ข้าม ' + x.skipped + (x.unknown.length ? ' · ไม่รู้จักประเด็น ' + esc(x.unknown.join(', ')) : '') + (x.warnings.length ? ' · ' + esc(x.warnings.join(', ')) : '')) + '</li>'; }).join('') + '</ul>';
+          toast('นำเข้าเสร็จแล้ว'); DET = {}; return call('bootstrap').then(function (d) { D = d; index(); var keep = $('#impReport').innerHTML; render(); $('#impReport').innerHTML = keep; });
+        });
+      });
+      break;
+    case 'sync':
+      busy(t, call('syncDrive')).then(function (r) {
+        var html = '<p class="small" style="margin-top:10px">เพิ่มไฟล์ใหม่ ' + r.added + ' ไฟล์ · เชื่อมกับชื่อที่นำเข้า ' + r.linked + ' ไฟล์' + (r.missingFolders.length ? '<br><span class="no">ไม่พบโฟลเดอร์ของ ' + esc(r.missingFolders.join(', ')) + ' (ตรวจชื่อโฟลเดอร์หรือสิทธิ์ Drive)</span>' : '') + '</p>';
+        FILES = {}; DET = {}; return call('bootstrap').then(function (d) { D = d; index(); render(); $('#syncReport').innerHTML = html; });
+      });
+      break;
+  }
+});
+document.addEventListener('keydown', function (ev) {
+  if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.matches('tr[data-open],tr[data-en],[role="button"][data-lib]')) { ev.preventDefault(); ev.target.click(); }
+  if (ev.key === 'Escape' && st.menu) { st.menu = false; render(); }
+});
+document.addEventListener('input', function (ev) {
+  var el = ev.target;
+  if (el.dataset.res !== undefined || el.id === 'narr') markDirty(true);
+  if (el.dataset.res !== undefined) { var v = el.value.trim(); el.setAttribute('aria-invalid', v !== '' && (isNaN(Number(v)) || Number(v) < 0)); }
+  if (el.id === 'narr') { var cc = $('#cc'); if (cc) cc.textContent = el.value.length + ' / 5000 ตัวอักษร'; }
+  if (el.id === 'cmt' && el.value.trim()) { $('#cmtErr').hidden = true; el.removeAttribute('aria-invalid'); }
+  if (el.id === 'ascore') { $('#aErr').hidden = true; el.removeAttribute('aria-invalid'); }
+  if (el.id === 'fName' && el.value.trim()) { $('#eName').hidden = true; el.removeAttribute('aria-invalid'); }
+  if (el.id === 'libq') { st.libQ = el.value; clearTimeout(el._t); el._t = setTimeout(function () { render(); var q = $('#libq'); q.focus(); q.setSelectionRange(q.value.length, q.value.length); }, 300); }
+});
+document.addEventListener('change', function (ev) {
+  var el = ev.target;
+  if (el.dataset.req !== undefined) markDirty(true);
+  if (el.dataset.upl !== undefined && el.files.length) upload([].slice.call(el.files), st.sub, st.lv + 1, el.dataset.upl);
+  if (el.dataset.libup && el.files.length) upload([].slice.call(el.files), st.lib[1], st.lib[2], '');
+});
+document.addEventListener('click', function (ev) { if (ev.target.id === 'scrim') { st.menu = false; render(); } });
+window.addEventListener('beforeunload', function (ev) { if (st.dirty) { ev.preventDefault(); ev.returnValue = ''; } });
+
+if (TOKEN) load(); else renderLogin();
+})();
+</script>

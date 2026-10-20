@@ -1,0 +1,15 @@
+{
+  "name": "cbe-reporting",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ระบบรายงานผล Core Business Enablers (SE-AM) บน Google Apps Script",
+  "scripts": {
+    "test": "node tests/run.js",
+    "harness": "node dev/build-harness.js",
+    "test:e2e": "node dev/build-harness.js && node tests/e2e.js",
+    "push": "clasp push"
+  },
+  "devDependencies": {
+    "playwright": "^1.47.0"
+  }
+}

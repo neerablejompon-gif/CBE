@@ -1,0 +1,6 @@
+node_modules/
+.clasp.json
+.clasprc.json
+dev/harness.html
+*.log
+.DS_Store
