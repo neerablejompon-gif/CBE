@@ -1,13 +1,15 @@
 ﻿# Convert the old per-indicator report forms (Old Form\*.xlsx) + SE-AM 2569 structure into mockup/data.js
 # Usage: powershell -File mockup\tools\forms-to-json.ps1 -Forms "Old Form" -Seed "<repo>\src\Seed.gs" -Out mockup\data.js
-param($Forms, $Seed, $Out)
+# -KeepNames keeps organisation and people names (for internal files such as the new Excel forms; never for the published mockup)
+param($Forms, $Seed, $Out, [switch]$KeepNames)
 $ErrorActionPreference = 'Stop'
 $MONTHS = 'ต.ค.', 'พ.ย.', 'ธ.ค.', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.'
 $FILES = @{ 'CG' = 'CG 2569'; 'SP' = '_SP_'; 'RM' = 'RM 2569'; 'SM' = 'SM 2569'; 'CM' = 'CM  2569'; 'DT' = '_DT_'; 'IT' = 'IT 2569'; 'HCM' = 'HCM 2569'; 'KM' = 'KM 2569'; 'IM' = 'IM 2569'; 'IA' = 'IA 2569' }
 
 function Clean([string]$s) {
   if (-not $s) { return '' }
-  $s = $s -replace 'การยางแห่งประเทศไทย', 'รัฐวิสาหกิจ' -replace 'กยท\.', 'องค์กร' -replace '\r', ''
+  if (-not $KeepNames) { $s = $s -replace 'การยางแห่งประเทศไทย', 'รัฐวิสาหกิจ' -replace 'กยท\.', 'องค์กร' }
+  $s = $s -replace '\r', ''
   return $s.Trim()
 }
 function G($r, $col, $k) { if ($col[$k]) { return $r[$col[$k]] }; return $null }
@@ -106,7 +108,7 @@ function Parse-Form($xlsx) {
     if ($req) { $lv.mr += [ordered]@{ req = $req; has = $has; evidence = $ev } }
     elseif ($ev -and $lv.mr.Count) { $last = $lv.mr[$lv.mr.Count - 1]; if (-not $last.evidence) { $last.evidence = $ev } else { $last.evidence += "`n" + $ev } }
   }
-  if ($info.owner -match 'นาย|นาง|^[\d.]+$|^หัวข้อ$') { $info.owner = '' }
+  if ($info.owner -match '^[\d.]+$|^หัวข้อ$' -or (-not $KeepNames -and $info.owner -match 'นาย|นาง')) { $info.owner = '' }
   return $info
 }
 
@@ -121,7 +123,7 @@ foreach ($code in $FILES.Keys) {
 $seedText = [IO.File]::ReadAllText($Seed, [Text.Encoding]::UTF8)
 $seedJson = [regex]::Match($seedText, '(?s)var SEED_ENABLERS = (\[.*?\]);').Groups[1].Value
 # Personal names stay out of the mockup: keep unit names, replace people with a role label
-$seedJson = [regex]::Replace($seedJson, '"owner":"[^"]*(นาย|นาง)[^"]*"', '"owner":"ผู้รับผิดชอบตัวชี้วัด"')
+if (-not $KeepNames) { $seedJson = [regex]::Replace($seedJson, '"owner":"[^"]*(นาย|นาง)[^"]*"', '"owner":"ผู้รับผิดชอบตัวชี้วัด"') }
 $json = $result | ConvertTo-Json -Depth 8 -Compress
 [IO.File]::WriteAllText($Out, "window.CBE_SEED=$seedJson;`nwindow.CBE_FORMS=$json;", (New-Object Text.UTF8Encoding $false))
 "wrote {0:N0} KB" -f ((Get-Item $Out).Length / 1KB)
