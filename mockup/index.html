@@ -1017,8 +1017,9 @@ function sidebar() {
 function render() {
   CACHE = {}; FCACHE = {};
   var dark = applyTheme();
+  if (API && API.login) { $('#root').innerHTML = vLogin(); return; }
   var denied = API && (API.error || (!U && 'บัญชีนี้ยังไม่ได้กำหนดตัวชี้วัด ติดต่อ กปม.'));
-  if (denied) { $('#root').innerHTML = '<main class="login"><div class="login-form glass" style="max-width:560px"><h2>' + ico('lock') + ' เข้าใช้งานไม่ได้</h2><p class="lead">' + esc(denied) + '</p><a class="btn" href="/cdn-cgi/access/logout">เปลี่ยนบัญชี</a></div></main>'; return; }
+  if (denied) { $('#root').innerHTML = '<main class="login"><div class="login-form glass" style="max-width:560px"><h2>' + ico('lock') + ' เข้าใช้งานไม่ได้</h2><p class="lead">' + esc(denied) + '</p><button class="btn" data-act="logout">เปลี่ยนบัญชี</button></div></main>'; return; }
   if (!window.CBE_FORMS) { $('#root').innerHTML = '<main class="login"><div class="login-form glass" style="max-width:560px"><h2>' + ico('info') + ' ยังไม่มีไฟล์ข้อมูล data.js</h2><p class="lead">data.js สร้างจากแบบฟอร์มรายงานผล Excel และไม่ได้เก็บใน repo สร้างด้วยคำสั่งใน mockup/README.md แล้วเปิดหน้านี้อีกครั้ง</p></div></main>'; return; }
   if (!U) { $('#root').innerHTML = vLogin(); return; }
   if (U.role === 'reporter') { S.view = 'ind'; S.ind = U.ind; }
@@ -1046,15 +1047,16 @@ function vLogin() {
     '<div class="login-art"><div class="brand" style="padding:0"><div class="logo">CBE</div><div><b>CBE Report</b><span style="color:rgba(255,255,255,.75)">Core Business Enablers</span></div></div>' +
       '<h1>ระบบรายงานผล Core Business Enablers</h1><p>รายงานผลตามเกณฑ์ SE-AM ' + FY + ' ของ 8 ตัวชี้วัด แทนแบบฟอร์ม Excel เดิม ผู้รายงานกรอกแผน/ผลและหลักฐาน กองประเมินผล (กปม.) ตรวจ ให้คะแนน และส่งกลับได้ในระบบเดียว</p>' +
       '<ul><li>' + ico('lock') + 'ผู้รายงานเห็นเฉพาะตัวชี้วัดของตนเอง</li><li>' + ico('shield') + 'Quality Gate ตรวจความพร้อมก่อนส่งตรวจ</li><li>' + ico('history') + 'บันทึกทุกการแก้ไขใน Audit trail</li></ul></div>' +
-    '<form class="login-form" id="loginForm" novalidate><div><h2>เข้าสู่ระบบ</h2><p class="sub">ใช้อีเมลองค์กรและรหัสผ่าน</p></div>' +
-      '<div><label class="label" for="em">อีเมล</label><input class="input" id="em" type="email" autocomplete="username" placeholder="name@organization.go.th"></div>' +
+    '<form class="login-form" id="loginForm" novalidate><div><h2>เข้าสู่ระบบ</h2><p class="sub">ใช้รหัสพนักงานและรหัสผ่าน</p></div>' +
+      '<div><label class="label" for="em">รหัสพนักงาน</label><input class="input" id="em" inputmode="numeric" maxlength="4" autocomplete="username" placeholder="รหัส 4 หลัก"></div>' +
       '<div><label class="label" for="pw">รหัสผ่าน</label><input class="input" id="pw" type="password" autocomplete="current-password" placeholder="••••••••"></div>' +
       '<button class="btn primary" type="submit">เข้าสู่ระบบ</button>' +
+      (API ? '<p class="note-demo" id="loginMsg" role="alert"></p></form></div></main>' :
       '<p class="note-demo" id="loginMsg">' + ico('info', 14) + 'Mockup: เลือกบัญชีทดลองด้านล่างเพื่อดูมุมมองตามสิทธิ์</p>' +
       '<div class="acc-grid top2"><button type="button" class="acc wide" data-login="audit">' + ico('shield', 22) + '<span><b>กองประเมินผล (กปม.)</b><span>ตรวจ อนุมัติ ส่งกลับ ทุกตัวชี้วัด</span></span></button>' +
       '<button type="button" class="acc wide" data-login="exec">' + ico('eye', 22) + '<span><b>ผู้บริหาร</b><span>ดูภาพรวมอย่างเดียว</span></span></button></div>' +
       '<p class="sub" style="margin:0">ผู้รายงานรายตัวชี้วัด · SM/CM และ KM/IM แยกผู้รายงาน แต่รวมคะแนนเป็นตัวชี้วัดเดียว</p><div class="acc-grid rep">' +
-      INDS.map(function (I) { return I.parts.map(function (p) { return '<button type="button" class="acc" data-login="reporter:' + I.code + (I.parts.length > 1 ? ':' + p.key : '') + '"><b>' + p.key + '</b><span>ตัวชี้วัด ' + I.no + (I.parts.length > 1 ? ' · ' + I.label : '') + '</span></button>'; }).join(''); }).join('') + '</div></form></div></main>';
+      INDS.map(function (I) { return I.parts.map(function (p) { return '<button type="button" class="acc" data-login="reporter:' + I.code + (I.parts.length > 1 ? ':' + p.key : '') + '"><b>' + p.key + '</b><span>ตัวชี้วัด ' + I.no + (I.parts.length > 1 ? ' · ' + I.label : '') + '</span></button>'; }).join(''); }).join('') + '</div></form></div></main>');
 }
 
 /* ================= org overview (audit / exec) ================= */
@@ -1663,12 +1665,23 @@ function openUid(uid, level) {
   S.view = 'ind'; S.ind = code; S.tab = 'report'; S.step = null; S.sub = Math.max(0, i); S.level = Math.max(0, I.subs[S.sub].levels.findIndex(function (L) { return L.level === +level; }));
   document.body.classList.remove('nav-open'); render(); window.scrollTo(0, 0);
 }
-document.addEventListener('submit', function (e) { e.preventDefault(); var m = $('#loginMsg'); if (m) m.innerHTML = ico('info', 14) + 'Mockup นี้ยังไม่เชื่อมระบบยืนยันตัวตน · เลือกบัญชีทดลองด้านล่าง'; });
+document.addEventListener('submit', function (e) {
+  e.preventDefault(); var m = $('#loginMsg');
+  if (API) {
+    var btn = e.target.querySelector('button[type=submit]'); btn.disabled = true; m.textContent = '';
+    return fetch('/api/login', { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ id: $('#em').value.trim(), password: $('#pw').value }) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; location.reload(); }); })
+      .catch(function (j) { btn.disabled = false; m.innerHTML = ico('alert', 14) + esc((j && j.error) || 'เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง'); });
+  } if (m) m.innerHTML = ico('info', 14) + 'Mockup นี้ยังไม่เชื่อมระบบยืนยันตัวตน · เลือกบัญชีทดลองด้านล่าง'; });
 document.addEventListener('click', function (e) {
   var b = e.target.closest('button, tr.link, .scrim'); if (!b || b.disabled) return;
   var d = b.dataset;
   if (d.login) { var p = d.login.split(':'); U = { role: p[0], ind: p[1] || null, part: p[2] || null }; store('user', U); S = { view: 'home', ind: U.ind, tab: 'dash', sub: 0, level: 0, month: 11, filter: 'all', q: '', yr: 2568, theme: S.theme }; logIt('เข้าสู่ระบบ'); render(); return; }
-  if (d.act === 'logout' && API) { logIt('ออกจากระบบ'); flush(true); location.href = '/cdn-cgi/access/logout'; return; }
+  if (d.act === 'logout' && API) {
+    if (U) logIt('ออกจากระบบ');
+    flush(true); SENDING.then(function () { return fetch('/api/logout', { method: 'POST', credentials: 'same-origin' }); }).then(function () { location.reload(); });
+    return;
+  }
   if (d.act === 'logout') { logIt('ออกจากระบบ'); U = null; store('user', null); document.body.classList.remove('nav-open'); return render(); }
   if (d.act === 'open-nav') return document.body.classList.add('nav-open');
   if (d.act === 'close-nav') return document.body.classList.remove('nav-open');
