@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CBE Report Platform</title>
+<link rel="icon" type="image/png" href="assets/cbe-icon.png">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -91,7 +92,7 @@ h1, h2, h3 { text-wrap: balance; }
 .app { display: grid; grid-template-columns: 272px minmax(0, 1fr); min-height: 100vh; }
 .side { position: sticky; top: 0; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding: calc(18px + env(safe-area-inset-top, 0px)) 14px 16px max(14px, env(safe-area-inset-left, 0px)); background: var(--rail); color: var(--rail-ink); backdrop-filter: blur(24px); border-right: 1px solid rgba(255,255,255,.08); }
 .brand { display: flex; gap: 12px; align-items: center; padding: 4px 8px 16px; }
-.logo { width: 44px; height: 44px; border-radius: 13px; display: grid; place-items: center; color: #fff; font: 800 13px var(--num); letter-spacing: .02em; background: linear-gradient(145deg, #6FA0FF, #1F4BE0 60%, #0E2C99); box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 10px 24px -8px rgba(60,120,255,.8); }
+.logo { width: 44px; height: 44px; flex: none; border-radius: 13px; display: grid; place-items: center; color: #fff; font: 800 13px var(--num); letter-spacing: .02em; background: linear-gradient(145deg, #6FA0FF, #1F4BE0 60%, #0E2C99); box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 10px 24px -8px rgba(60,120,255,.8); }
 .brand b { display: block; font-size: 15px; line-height: 1.25; }
 .brand span { font-size: 11.5px; color: var(--rail-ink-2); }
 .who { margin: 0 4px 10px; padding: 10px 12px; border-radius: 14px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.08); display: flex; gap: 10px; align-items: center; }
@@ -334,6 +335,78 @@ input[type="range"] { flex: 1; accent-color: var(--primary); height: 28px; }
 .login-art li { display: flex; gap: 10px; align-items: center; }
 .login-form { padding: 32px; display: flex; flex-direction: column; gap: 14px; }
 .login-form .input { width: 100%; }
+/* login: always dark (the logo is white on transparent); hero on the left, liquid-glass card on the right, card only on small screens */
+.signin { --lg-ink: #EAF1FF; --lg-ink2: rgba(214, 228, 255, .74); position: relative; isolation: isolate; min-height: 100vh; min-height: 100dvh; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 440px); align-items: center; justify-content: center; gap: clamp(32px, 6vw, 104px); padding: 56px clamp(20px, 6vw, 104px); color: var(--lg-ink); color-scheme: dark; }
+.lg-bg { position: fixed; inset: 0; z-index: -1; overflow: hidden; background: radial-gradient(1100px 680px at 12% 8%, #183BB0 0%, transparent 62%), radial-gradient(900px 620px at 92% 96%, #0A56CF 0%, transparent 58%), linear-gradient(160deg, #040A22 0%, #071446 46%, #0A1D63 100%); }
+.lg-bg i { position: absolute; border-radius: 50%; filter: blur(64px); opacity: .7; animation: lgfloat 24s ease-in-out infinite alternate; }
+.lg-bg .o1 { width: 44vmax; height: 44vmax; left: -12vmax; top: -16vmax; background: radial-gradient(circle at 35% 35%, #4F86FF, #1F4BE0 55%, transparent 70%); }
+.lg-bg .o2 { width: 34vmax; height: 34vmax; right: -6vmax; top: 16vh; background: radial-gradient(circle at 40% 40%, #5FD3FF, #0E8FD8 50%, transparent 70%); opacity: .55; animation-duration: 28s; animation-delay: -8s; }
+.lg-bg .o3 { width: 38vmax; height: 38vmax; left: 34vw; bottom: -24vmax; background: radial-gradient(circle, #7A5CFF, #2B1FA8 50%, transparent 70%); opacity: .45; animation-duration: 32s; animation-delay: -15s; }
+.lg-bg b { position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px); background-size: 56px 56px; -webkit-mask-image: radial-gradient(ellipse 70% 60% at 30% 42%, #000, transparent 72%); mask-image: radial-gradient(ellipse 70% 60% at 30% 42%, #000, transparent 72%); }
+@keyframes lgfloat { 50% { transform: translate(4vw, -3vh) scale(1.06); } to { transform: translate(-3vw, 4vh) scale(.95); } }
+@keyframes lgin { from { opacity: 0; transform: translateY(16px); } }
+@keyframes lgspin { to { transform: rotate(360deg); } }
+.lg-hero { display: flex; flex-direction: column; gap: 22px; max-width: 640px; animation: lgin .9s cubic-bezier(.2,.8,.2,1) both; }
+.lg-logo { width: min(440px, 100%); height: auto; filter: drop-shadow(0 18px 44px rgba(40, 110, 255, .5)); }
+.lg-eyebrow { align-self: flex-start; display: inline-flex; align-items: center; gap: 9px; padding: 6px 14px 6px 11px; border-radius: 999px; font-size: 13px; font-weight: 600; color: #CFE0FF; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+.lg-eyebrow i { width: 8px; height: 8px; border-radius: 50%; background: #5FE3B0; box-shadow: 0 0 0 4px rgba(95,227,176,.18); }
+.lg-hero h1 { margin: 0; font-size: clamp(30px, 3.3vw, 46px); line-height: 1.22; font-weight: 700; letter-spacing: -.01em; }
+.lg-hero h1 em { font-style: normal; background: linear-gradient(90deg, #A8CBFF, #5FD3FF 52%, #B9A8FF); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lg-hero p { margin: 0; color: var(--lg-ink2); font-size: 16px; max-width: 52ch; }
+.lg-inds { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.lg-inds li { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 12px; font: 700 13px var(--num); background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.13); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); animation: lgin .7s both; animation-delay: calc(.35s + var(--i) * 60ms); }
+.lg-inds li b { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; font-size: 11.5px; background: linear-gradient(145deg, #5B8CFF, #1F4BE0); box-shadow: inset 0 1px 0 rgba(255,255,255,.5); }
+.lg-feats { list-style: none; margin: 4px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.lg-feats li { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; line-height: 1.45; color: var(--lg-ink2); }
+.lg-feats b { display: block; color: var(--lg-ink); font-weight: 600; }
+.lg-feats svg { flex: none; color: #7FD3FF; margin-top: 2px; }
+.lg-card { --mx: 25%; --my: 0%; position: relative; display: flex; flex-direction: column; gap: 16px; padding: 38px 34px 30px; border-radius: 30px; background: linear-gradient(150deg, rgba(255,255,255,.17), rgba(255,255,255,.06) 46%, rgba(255,255,255,.035)); -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%); box-shadow: inset 0 1px 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(255,255,255,.1), 0 40px 90px -30px rgba(0,6,40,.9); animation: lgin 1s .12s cubic-bezier(.2,.8,.2,1) both; }
+/* gradient rim, then a specular glow that follows the pointer */
+.lg-card::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.2px; pointer-events: none; background: linear-gradient(140deg, rgba(255,255,255,.8), rgba(255,255,255,.1) 28%, rgba(255,255,255,0) 55%, rgba(127,211,255,.6) 86%, rgba(255,255,255,.3)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+.lg-card::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: radial-gradient(380px circle at var(--mx) var(--my), rgba(255,255,255,.14), transparent 46%); }
+.lg-card-logo { display: none; }
+.lg-head h2 { margin: 0; font-size: 25px; font-weight: 700; }
+.lg-head p { margin: 2px 0 0; font-size: 14px; color: var(--lg-ink2); }
+.lg-label { display: block; margin-bottom: 7px; font-size: 13px; font-weight: 600; color: #D6E3FF; }
+.lg-input { display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 8px 0 14px; border-radius: 16px; background: rgba(4,12,44,.38); border: 1px solid rgba(255,255,255,.16); box-shadow: inset 0 1px 2px rgba(0,0,0,.25); transition: border-color .2s, box-shadow .2s, background .2s; }
+.lg-input:focus-within { border-color: rgba(127,190,255,.9); background: rgba(4,12,44,.52); box-shadow: 0 0 0 4px rgba(79,134,255,.3), inset 0 1px 2px rgba(0,0,0,.25); }
+.lg-input > svg { flex: none; color: #9CB8F0; }
+.lg-input input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent; color: #fff; font-size: 16px; letter-spacing: .02em; }
+.lg-input input::placeholder { color: rgba(200,215,255,.42); }
+.lg-input input:-webkit-autofill { -webkit-text-fill-color: #fff; caret-color: #fff; transition: background-color 9999s; }
+.lg-eye { flex: none; width: 38px; height: 38px; display: grid; place-items: center; border: 0; border-radius: 11px; background: transparent; color: #9CB8F0; cursor: pointer; }
+.lg-eye:hover, .lg-eye:focus-visible { background: rgba(255,255,255,.09); color: #fff; outline: 0; }
+.lg-caps[hidden] { display: none; }
+.lg-caps { margin: -8px 0 0; display: flex; gap: 6px; align-items: center; font-size: 12.5px; color: #FFD27A; }
+.lg-btn { position: relative; overflow: hidden; height: 54px; margin-top: 4px; border: 0; border-radius: 16px; cursor: pointer; color: #fff; font: 700 16px var(--font); display: flex; align-items: center; justify-content: center; gap: 10px; background: linear-gradient(135deg, #5B8FFF 0%, #2457F0 46%, #1238C4 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 16px 32px -12px rgba(40,100,255,.85); transition: transform .15s, box-shadow .2s, filter .2s; }
+.lg-btn::before { content: ""; position: absolute; top: 0; bottom: 0; left: -60%; width: 40%; background: linear-gradient(100deg, transparent, rgba(255,255,255,.38), transparent); transform: skewX(-20deg); transition: left .75s ease; }
+.lg-btn:hover::before { left: 125%; }
+.lg-btn:hover { filter: brightness(1.08); box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 20px 40px -12px rgba(40,100,255,1); }
+.lg-btn:active { transform: translateY(1px) scale(.99); }
+.lg-btn:focus-visible { outline: 3px solid #9CC4FF; outline-offset: 3px; }
+.lg-btn:disabled { cursor: progress; filter: saturate(.75); }
+.lg-btn .spin { display: none; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 50%; animation: lgspin .8s linear infinite; }
+.lg-btn.busy .spin { display: block; } .lg-btn.busy .arr { display: none; }
+.lg-msg { margin: 0; display: flex; gap: 7px; align-items: center; font-size: 13.5px; color: #FFA3B1; }
+.lg-msg:empty { display: none; }
+.lg-demo { display: flex; flex-direction: column; gap: 10px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.12); }
+.signin .note-demo, .signin .sub { color: var(--lg-ink2); }
+.signin .acc { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.14); color: #fff; }
+.signin .acc:hover { background: rgba(255,255,255,.13); }
+.signin .acc b { color: #A8CBFF; } .signin .acc span { color: rgba(214,228,255,.66); }
+.signin .acc.wide b { color: #fff; } .signin .acc.wide svg { color: #7FD3FF; }
+.signin .acc-grid.rep { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.lg-foot { position: absolute; left: 0; right: 0; bottom: 18px; text-align: center; font-size: 12px; color: rgba(200,215,255,.45); }
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) { .lg-card { background: rgba(12,30,88,.95); } }
+@media (prefers-reduced-transparency: reduce) { .lg-card { background: rgba(12,30,88,.97); -webkit-backdrop-filter: none; backdrop-filter: none; } }
+@media (max-width: 900px) {
+  .signin { grid-template-columns: minmax(0, 440px); padding: 32px 16px 64px; }
+  .lg-hero { display: none; }
+  .lg-card-logo { display: block; width: 200px; height: auto; margin: -8px auto 2px; filter: drop-shadow(0 10px 26px rgba(40,110,255,.5)); }
+  .lg-head { text-align: center; }
+}
+@media (max-width: 520px) { .lg-card { padding: 30px 20px 24px; border-radius: 26px; } .signin .acc-grid.rep { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
 .acc-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .acc { border: 1px solid var(--hair); background: var(--field); border-radius: 12px; padding: 10px 8px; cursor: pointer; text-align: center; display: flex; flex-direction: column; gap: 2px; align-items: center; min-height: 44px; }
 .acc:hover { border-color: var(--primary); }
@@ -994,7 +1067,7 @@ function applyTheme() {
 /* ================= shell ================= */
 function nav(attrs, label, icon, current, extra) { return '<button class="nav" ' + attrs + (current ? ' aria-current="page"' : '') + '>' + icon + '<span>' + label + '</span>' + (extra || '') + '</button>'; }
 function sidebar() {
-  var h = '<div class="brand"><div class="logo">CBE</div><div><b>CBE Report</b><span>Core Business Enablers · SE-AM ' + FY + '</span></div></div>' +
+  var h = '<div class="brand"><img class="logo" src="assets/cbe-icon.png" width="44" height="44" alt=""><div><b>CBE Report</b><span>Core Business Enablers · SE-AM ' + FY + '</span></div></div>' +
     '<div class="who"><div class="av">' + (isAudit() ? 'กป' : isExec() ? 'ผบ' : (U.part || indBy(U.ind).label).slice(0, 3)) + '</div><div><b>' + esc(userLabel()) + '</b><small>' + (isAudit() ? 'ตรวจ · ให้คะแนน · ดูแลระบบ' : isExec() ? 'ดูอย่างเดียว · ทุกตัวชี้วัด' : U.part ? 'แก้ไขเฉพาะส่วน ' + U.part + ' ของ ' + indBy(U.ind).label : 'เห็นเฉพาะตัวชี้วัดของตน') + '</small></div></div>';
   if (U.role !== 'reporter') {
     var q = INDS.filter(function (I) { return wfOf(I) === 'submitted'; }).length;
@@ -1043,20 +1116,27 @@ function v403() { return '<section class="view"><div class="panel glass empty">'
 
 /* ================= login ================= */
 function vLogin() {
-  return '<main class="login"><div class="login-card glass">' +
-    '<div class="login-art"><div class="brand" style="padding:0"><div class="logo">CBE</div><div><b>CBE Report</b><span style="color:rgba(255,255,255,.75)">Core Business Enablers</span></div></div>' +
-      '<h1>ระบบรายงานผล Core Business Enablers</h1><p>รายงานผลตามเกณฑ์ SE-AM ' + FY + ' ของ 8 ตัวชี้วัด แทนแบบฟอร์ม Excel เดิม ผู้รายงานกรอกแผน/ผลและหลักฐาน กองประเมินผล (กปม.) ตรวจ ให้คะแนน และส่งกลับได้ในระบบเดียว</p>' +
-      '<ul><li>' + ico('lock') + 'ผู้รายงานเห็นเฉพาะตัวชี้วัดของตนเอง</li><li>' + ico('shield') + 'Quality Gate ตรวจความพร้อมก่อนส่งตรวจ</li><li>' + ico('history') + 'บันทึกทุกการแก้ไขใน Audit trail</li></ul></div>' +
-    '<form class="login-form" id="loginForm" novalidate><div><h2>เข้าสู่ระบบ</h2><p class="sub">ใช้รหัสพนักงานและรหัสผ่าน</p></div>' +
-      '<div><label class="label" for="em">รหัสพนักงาน</label><input class="input" id="em" inputmode="numeric" maxlength="4" autocomplete="username" placeholder="รหัส 4 หลัก"></div>' +
-      '<div><label class="label" for="pw">รหัสผ่าน</label><input class="input" id="pw" type="password" autocomplete="current-password" placeholder="••••••••"></div>' +
-      '<button class="btn primary" type="submit">เข้าสู่ระบบ</button>' +
-      (API ? '<p class="note-demo" id="loginMsg" role="alert"></p></form></div></main>' :
-      '<p class="note-demo" id="loginMsg">' + ico('info', 14) + 'Mockup: เลือกบัญชีทดลองด้านล่างเพื่อดูมุมมองตามสิทธิ์</p>' +
+  var feats = [['lock', 'เห็นเฉพาะของตน', 'ผู้รายงานเข้าถึงเฉพาะตัวชี้วัดที่รับผิดชอบ'], ['shield', 'Quality Gate', 'ตรวจความพร้อมก่อนส่ง กปม.'], ['history', 'Audit trail', 'บันทึกทุกการแก้ไขย้อนหลังได้']];
+  return '<main class="signin"><div class="lg-bg" aria-hidden="true"><i class="o1"></i><i class="o2"></i><i class="o3"></i><b></b></div>' +
+    '<section class="lg-hero" aria-label="เกี่ยวกับระบบ"><img class="lg-logo" src="assets/cbe-logo.png" width="880" height="332" alt="CBE Core Business Enablers">' +
+      '<span class="lg-eyebrow"><i></i>ระบบรายงานผล · เกณฑ์ SE-AM ' + CUR_FY + '</span>' +
+      '<h1>รายงานผล <em>Core Business Enablers</em><br>ครบ 8 ตัวชี้วัด ในที่เดียว</h1>' +
+      '<p>ผู้รายงานกรอกแผน ผล และหลักฐานรายเดือน กองประเมินผล (กปม.) ตรวจ ให้คะแนน และส่งกลับได้ในระบบเดียว แทนแบบฟอร์ม Excel เดิม</p>' +
+      '<ul class="lg-inds">' + IND_DEF.map(function (d, i) { return '<li style="--i:' + i + '"><b>' + d.no + '</b>' + esc(d.label || d.code) + '</li>'; }).join('') + '</ul>' +
+      '<ul class="lg-feats">' + feats.map(function (f) { return '<li>' + ico(f[0], 20) + '<span><b>' + f[1] + '</b>' + f[2] + '</span></li>'; }).join('') + '</ul></section>' +
+    '<form class="lg-card" id="loginForm" novalidate><img class="lg-card-logo" src="assets/cbe-logo.png" width="880" height="332" alt="CBE Core Business Enablers">' +
+      '<div class="lg-head"><h2>เข้าสู่ระบบ</h2><p>ใช้รหัสพนักงานและรหัสผ่าน</p></div>' +
+      '<div><label class="lg-label" for="em">รหัสพนักงาน</label><div class="lg-input">' + ico('users', 19) + '<input id="em" inputmode="numeric" maxlength="4" autocomplete="username" placeholder="รหัส 4 หลัก" autofocus></div></div>' +
+      '<div><label class="lg-label" for="pw">รหัสผ่าน</label><div class="lg-input">' + ico('lock', 19) + '<input id="pw" type="password" autocomplete="current-password" placeholder="••••••••">' +
+        '<button type="button" class="lg-eye" data-act="pwtoggle" aria-label="แสดงรหัสผ่าน" aria-pressed="false">' + ico('eye', 19) + '</button></div></div>' +
+      '<p class="lg-caps" id="caps" hidden>' + ico('alert', 14) + 'Caps Lock เปิดอยู่</p>' +
+      '<button class="lg-btn" type="submit"><span class="spin" aria-hidden="true"></span><span>เข้าสู่ระบบ</span><span class="arr">' + ico('chev', 18) + '</span></button>' +
+      (API ? '<p class="lg-msg" id="loginMsg" role="alert"></p></form><footer class="lg-foot">CBE Report · Core Business Enablers</footer></main>' :
+      '<div class="lg-demo"><p class="note-demo" id="loginMsg">' + ico('info', 14) + 'Mockup: เลือกบัญชีทดลองด้านล่างเพื่อดูมุมมองตามสิทธิ์</p>' +
       '<div class="acc-grid top2"><button type="button" class="acc wide" data-login="audit">' + ico('shield', 22) + '<span><b>กองประเมินผล (กปม.)</b><span>ตรวจ อนุมัติ ส่งกลับ ทุกตัวชี้วัด</span></span></button>' +
       '<button type="button" class="acc wide" data-login="exec">' + ico('eye', 22) + '<span><b>ผู้บริหาร</b><span>ดูภาพรวมอย่างเดียว</span></span></button></div>' +
       '<p class="sub" style="margin:0">ผู้รายงานรายตัวชี้วัด · SM/CM และ KM/IM แยกผู้รายงาน แต่รวมคะแนนเป็นตัวชี้วัดเดียว</p><div class="acc-grid rep">' +
-      INDS.map(function (I) { return I.parts.map(function (p) { return '<button type="button" class="acc" data-login="reporter:' + I.code + (I.parts.length > 1 ? ':' + p.key : '') + '"><b>' + p.key + '</b><span>ตัวชี้วัด ' + I.no + (I.parts.length > 1 ? ' · ' + I.label : '') + '</span></button>'; }).join(''); }).join('') + '</div></form></div></main>');
+      INDS.map(function (I) { return I.parts.map(function (p) { return '<button type="button" class="acc" data-login="reporter:' + I.code + (I.parts.length > 1 ? ':' + p.key : '') + '"><b>' + p.key + '</b><span>ตัวชี้วัด ' + I.no + (I.parts.length > 1 ? ' · ' + I.label : '') + '</span></button>'; }).join(''); }).join('') + '</div></div></form><footer class="lg-foot">CBE Report · Core Business Enablers</footer></main>');
 }
 
 /* ================= org overview (audit / exec) ================= */
@@ -1665,18 +1745,29 @@ function openUid(uid, level) {
   S.view = 'ind'; S.ind = code; S.tab = 'report'; S.step = null; S.sub = Math.max(0, i); S.level = Math.max(0, I.subs[S.sub].levels.findIndex(function (L) { return L.level === +level; }));
   document.body.classList.remove('nav-open'); render(); window.scrollTo(0, 0);
 }
+// Login card: Caps Lock hint and a specular light that follows the pointer
+['keydown', 'keyup'].forEach(function (ev) { document.addEventListener(ev, function (e) { var c = $('#caps'); if (c && e.target.id === 'pw' && e.getModifierState) c.hidden = !e.getModifierState('CapsLock'); }); });
+document.addEventListener('pointermove', function (e) {
+  var c = e.pointerType === 'mouse' && document.querySelector('.lg-card'); if (!c) return;
+  var r = c.getBoundingClientRect(); c.style.setProperty('--mx', (e.clientX - r.left) + 'px'); c.style.setProperty('--my', (e.clientY - r.top) + 'px');
+});
 document.addEventListener('submit', function (e) {
   e.preventDefault(); var m = $('#loginMsg');
   if (API) {
-    var btn = e.target.querySelector('button[type=submit]'); btn.disabled = true; m.textContent = '';
+    var btn = e.target.querySelector('button[type=submit]'); btn.disabled = true; btn.classList.add('busy'); m.textContent = '';
     return fetch('/api/login', { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ id: $('#em').value.trim(), password: $('#pw').value }) })
       .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; location.reload(); }); })
-      .catch(function (j) { btn.disabled = false; m.innerHTML = ico('alert', 14) + esc((j && j.error) || 'เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง'); });
+      .catch(function (j) { btn.disabled = false; btn.classList.remove('busy'); m.innerHTML = ico('alert', 14) + esc((j && j.error) || 'เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง'); });
   } if (m) m.innerHTML = ico('info', 14) + 'Mockup นี้ยังไม่เชื่อมระบบยืนยันตัวตน · เลือกบัญชีทดลองด้านล่าง'; });
 document.addEventListener('click', function (e) {
   var b = e.target.closest('button, tr.link, .scrim'); if (!b || b.disabled) return;
   var d = b.dataset;
   if (d.login) { var p = d.login.split(':'); U = { role: p[0], ind: p[1] || null, part: p[2] || null }; store('user', U); S = { view: 'home', ind: U.ind, tab: 'dash', sub: 0, level: 0, month: 11, filter: 'all', q: '', yr: 2568, theme: S.theme }; logIt('เข้าสู่ระบบ'); render(); return; }
+  if (d.act === 'pwtoggle') {
+    var pw = $('#pw'), show = pw.type === 'password';
+    pw.type = show ? 'text' : 'password'; b.setAttribute('aria-pressed', show); b.setAttribute('aria-label', show ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'); pw.focus();
+    return;
+  }
   if (d.act === 'logout' && API) {
     if (U) logIt('ออกจากระบบ');
     flush(true); SENDING.then(function () { return fetch('/api/logout', { method: 'POST', credentials: 'same-origin' }); }).then(function () { location.reload(); });
