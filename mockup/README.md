@@ -3,7 +3,7 @@
 ระบบรายงานผล Core Business Enablers 8 ตัวชี้วัด (เกณฑ์ SE-AM) ธีมน้ำเงิน-ขาว Glassmorphism / Liquid glass เป็นไฟล์ HTML เดียว (vanilla JS ไม่มีไลบรารีภายนอก) ใช้ได้ 2 แบบ:
 
 - **Mockup:** เปิด `index.html` พร้อม `data.js` / `data-2570.js` ในเครื่อง เลือกบัญชีทดลองตามบทบาท การแก้ไขเก็บใน localStorage
-- **ระบบจริง:** Cloudflare Pages + `_worker.js` อ่านเขียน Google Sheets ผ่าน service account ล็อกอินด้วย Cloudflare Access ดูวิธีติดตั้งใน [DEPLOY.md](DEPLOY.md)
+- **ระบบจริง:** Cloudflare Pages + `_worker.js` อ่านเขียน Google Sheets ผ่าน service account ล็อกอินด้วยรหัสพนักงาน ดูวิธีติดตั้งใน [DEPLOY.md](DEPLOY.md)
 
 ## สิ่งที่มีในระบบ
 

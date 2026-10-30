@@ -1,12 +1,11 @@
 // Cloudflare Pages worker (advanced mode) for the CBE report system.
 // Serves the static app plus an API that reads and writes Google Sheets with a Google Cloud service account.
-// The whole site sits behind Cloudflare Access: the user comes from Access's signed JWT, the role from the "users" tab.
+// Users sign in with their 4-digit employee ID; the password is "cbe@" + ID (organisation's choice). Roles come from the "users" tab.
 //
 // Pages → Settings → Variables and Secrets:
 //   GOOGLE_SA        (secret) service account JSON key
+//   SESSION_SECRET   (secret) 32+ random characters for signing the session cookie
 //   SYSTEM_SHEET_ID  spreadsheet with tabs users, forms, state, log (see mockup/DEPLOY.md)
-//   ACCESS_TEAM      Cloudflare Access team name (<team>.cloudflareaccess.com)
-//   ACCESS_AUD       Access application AUD tag
 //   FILES_FOLDER_ID  Shared Drive folder for evidence files (optional)
 //   CUR_FY           current fiscal year (default 2570)
 
@@ -29,9 +28,11 @@ export default {
     try {
       if (path.startsWith('/tools/') || path.startsWith('/.test/')) return new Response('Not found', { status: 404 });
       if (path === `/data-${fy}.js`) {
-        try { return js(await boot(req, env, fy)); } catch (e) { if (!e.status) throw e; return js('window.CBE_API=' + JSON.stringify({ error: e.message }) + ';'); }
+        try { return js(await boot(req, env, fy)); } catch (e) { if (!e.status) throw e; return js('window.CBE_API=' + JSON.stringify(e.status === 401 ? { login: true, error: '' } : { error: e.message }) + ';'); }
       }
-      if (path === '/data.js') return js(await archive(req, env));
+      if (path === '/data.js') { try { return js(await archive(req, env)); } catch (e) { if (e.status !== 401) throw e; return js(''); } }
+      if (path === '/api/login' && req.method === 'POST') return await login(req, env);
+      if (path === '/api/logout' && req.method === 'POST') return json({ ok: true }, 200, { 'set-cookie': SESSION + '=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0' });
       if (path === '/api/save' && req.method === 'POST') return json(await save(req, env, fy));
       if (path === '/api/file' && req.method === 'POST') return json(await upload(req, env, fy));
       if (path.startsWith('/api/file/')) return await download(req, env, fy, path.slice(10));
@@ -47,7 +48,7 @@ export default {
 /* ---------- helpers ---------- */
 const enc = new TextEncoder(), dec = new TextDecoder();
 const noStore = { 'cache-control': 'no-store' };
-const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json; charset=utf-8', ...noStore } });
+const json = (o, status = 200, extra) => new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json; charset=utf-8', ...noStore, ...extra } });
 const js = s => new Response(s, { headers: { 'content-type': 'text/javascript; charset=utf-8', ...noStore } });
 function fail(status, message) { const e = new Error(message); e.status = status; throw e; }
 const b64url = b => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -68,20 +69,43 @@ function stamp() { const d = bkk(); return `${d.getUTCDate()} ${MONTHS[fyMonth(d
 // Months before this one are closed; last month stays open until the 10th, its reporting deadline
 function openFrom() { const d = bkk(), m = fyMonth(d); return d.getUTCDate() <= 10 ? Math.max(0, m - 1) : m; }
 
-/* ---------- Cloudflare Access ---------- */
-async function accessEmail(req, env) {
-  const jwt = req.headers.get('Cf-Access-Jwt-Assertion');
-  if (!jwt || !env.ACCESS_TEAM || !env.ACCESS_AUD) fail(401, 'ต้องเข้าสู่ระบบผ่าน Cloudflare Access');
-  const [h, p, sig] = jwt.split('.');
-  let head, body;
-  try { head = JSON.parse(dec.decode(unb64url(h))); body = JSON.parse(dec.decode(unb64url(p))); } catch (e) { fail(401, 'โทเคนเข้าสู่ระบบไม่ถูกต้อง'); }
-  const iss = `https://${env.ACCESS_TEAM}.cloudflareaccess.com`;
-  const certs = await cached('certs', 3600e3, async () => (await (await fetch(iss + '/cdn-cgi/access/certs')).json()).keys);
-  const jwk = certs.find(k => k.kid === head.kid);
-  if (!jwk || ![].concat(body.aud).includes(env.ACCESS_AUD) || body.iss !== iss || body.exp * 1000 < Date.now()) fail(401, 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
-  const key = await crypto.subtle.importKey('jwk', jwk, RS256, false, ['verify']);
-  if (!await crypto.subtle.verify(RS256, key, unb64url(sig), enc.encode(h + '.' + p))) fail(401, 'โทเคนเข้าสู่ระบบไม่ถูกต้อง');
-  return String(body.email || '').trim().toLowerCase();
+/* ---------- sign-in: employee ID + "cbe@ID", HMAC-signed session cookie ---------- */
+const SESSION = 'cbe_session', SESSION_HOURS = 8, MAX_FAILS = 5, LOCK_MS = 15 * 60e3;
+const FAILS = {}; // per isolate: "id|ip" → { n, until }; pair with a Cloudflare rate-limiting rule on /api/login
+function hmacKey(env) {
+  if (!env.SESSION_SECRET || env.SESSION_SECRET.length < 32) throw new Error('SESSION_SECRET is missing or shorter than 32 characters');
+  return cached('hmac', Infinity, () => crypto.subtle.importKey('raw', enc.encode(env.SESSION_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']));
+}
+async function sessionId(req, env) {
+  const m = new RegExp('(?:^|;\\s*)' + SESSION + '=([^;]+)').exec(req.headers.get('cookie') || '');
+  if (!m) fail(401, 'กรุณาเข้าสู่ระบบ');
+  const [p, s] = m[1].split('.');
+  const key = await hmacKey(env);
+  let body = null;
+  try { if (await crypto.subtle.verify('HMAC', key, unb64url(s || ''), enc.encode(p))) body = JSON.parse(dec.decode(unb64url(p))); } catch (e) { /* malformed cookie */ }
+  if (!body || body.exp < Date.now()) fail(401, 'หมดเวลาการใช้งาน กรุณาเข้าสู่ระบบใหม่');
+  return body.id;
+}
+// Browsers send SameSite=Strict cookies only from this site; the Origin check also blocks forms posted from elsewhere
+function sameOrigin(req) { const o = req.headers.get('origin'); if (o && o !== new URL(req.url).origin) fail(403, 'คำขอไม่ได้มาจากหน้าระบบ'); }
+async function login(req, env) {
+  sameOrigin(req);
+  const b = await req.json().catch(() => ({})), id = str(b.id), slot = id + '|' + (req.headers.get('cf-connecting-ip') || ''), now = Date.now();
+  let f = FAILS[slot];
+  if (f && f.until > now) fail(429, 'ใส่รหัสผ่านผิดหลายครั้ง ลองใหม่อีกครั้งใน 15 นาที');
+  if (f && f.until) f = null; // lock expired
+  const u = (await system(env)).users[id];
+  if (!/^\d{4}$/.test(id) || !u || String(b.password || '') !== 'cbe@' + id) {
+    const n = (f ? f.n : 0) + 1;
+    FAILS[slot] = { n, until: n >= MAX_FAILS ? now + LOCK_MS : 0 };
+    fail(401, 'รหัสพนักงานหรือรหัสผ่านไม่ถูกต้อง');
+  }
+  delete FAILS[slot];
+  checkUser(u);
+  const p = b64url(enc.encode(JSON.stringify({ id, exp: now + SESSION_HOURS * 3600e3 })));
+  const token = p + '.' + b64url(await crypto.subtle.sign('HMAC', await hmacKey(env), enc.encode(p)));
+  await appendRows(env, env.SYSTEM_SHEET_ID, 'log!A:D', [[stamp(), id, label(u), 'เข้าสู่ระบบ']]);
+  return json({ ok: true }, 200, { 'set-cookie': `${SESSION}=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_HOURS * 3600}` });
 }
 
 /* ---------- Google APIs (service account) ---------- */
@@ -121,15 +145,20 @@ const str = v => v == null ? '' : String(v).trim();
 function system(env) {
   return cached('system', TTL, async () => {
     const [users, forms] = await getRanges(env, env.SYSTEM_SHEET_ID, ['users!A2:E', 'forms!A2:C']);
-    const byEmail = {};
-    users.forEach(r => { const email = str(r[0]).toLowerCase(); if (email) byEmail[email] = { email, role: str(r[1]), ind: str(r[2]) || null, part: str(r[3]) || null, name: str(r[4]) }; });
-    return { users: byEmail, forms: forms.filter(r => str(r[1]) && str(r[2])).map(r => ({ fy: +r[0] || 0, code: str(r[1]), id: str(r[2]) })) };
+    const byId = {};
+    users.forEach(r => { const id = str(r[0]); if (id) byId[id] = { id, role: str(r[1]), ind: str(r[2]) || null, part: str(r[3]) || null, name: str(r[4]) }; });
+    return { users: byId, forms: forms.filter(r => str(r[1]) && str(r[2])).map(r => ({ fy: +r[0] || 0, code: str(r[1]), id: str(r[2]) })) };
   });
 }
+function checkUser(u) {
+  const ok = u.role === 'audit' || u.role === 'exec' || (u.role === 'reporter' && IND_PARTS[u.ind] && (!u.part || IND_PARTS[u.ind].includes(u.part)));
+  if (!ok) fail(403, `รหัสพนักงาน ${u.id} ยังไม่ได้กำหนดสิทธิ์ในระบบ ติดต่อ กปม.`);
+}
+// A user removed from the "users" tab loses access within a minute (system() cache), even with a valid cookie
 async function me(req, env) {
-  const email = await accessEmail(req, env), u = (await system(env)).users[email];
-  const ok = u && (u.role === 'audit' || u.role === 'exec' || (u.role === 'reporter' && IND_PARTS[u.ind] && (!u.part || IND_PARTS[u.ind].includes(u.part))));
-  if (!ok) fail(403, `บัญชี ${email} ยังไม่ได้รับสิทธิ์ในระบบ ติดต่อ กปม. เพื่อเพิ่มสิทธิ์`);
+  const id = await sessionId(req, env), u = (await system(env)).users[id];
+  if (!u) fail(401, 'บัญชีนี้ถูกยกเลิกแล้ว');
+  checkUser(u);
   return u;
 }
 const label = u => u.name || (u.role === 'audit' ? 'กปม.' : u.role === 'exec' ? 'ผู้บริหาร' : 'ผู้รายงาน ' + (u.part || u.ind));
@@ -198,7 +227,7 @@ async function boot(req, env, fy) {
     getRanges(env, env.SYSTEM_SHEET_ID, ['log!A2:D']).then(([rows]) => rows.slice(-60).reverse().map(r => ({ t: str(r[0]), who: str(r[2]), what: str(r[3]) })))]);
   const data = {};
   codes.forEach((c, i) => { if (forms[i]) data[c] = forms[i].data; });
-  const api = { me: { role: u.role, ind: u.ind, part: u.part, name: u.name, email: u.email }, state: stateFor(u, st), log, openFrom: openFrom() };
+  const api = { me: { role: u.role, ind: u.ind, part: u.part, name: u.name, id: u.id }, state: stateFor(u, st), log, openFrom: openFrom() };
   return `window.CBE_FORMS_${fy}=${JSON.stringify(data, hideRows)};\nwindow.CBE_API=${JSON.stringify(api)};`;
 }
 // FY2569 (closed year) and the indicator seed: the data.js built by tools/forms-to-json.ps1, kept as a Drive file
@@ -243,6 +272,7 @@ async function mirror(env, fy, ops) {
   await Promise.all(Object.keys(byForm).map(id => putRanges(env, id, byForm[id])));
 }
 async function save(req, env, fy) {
+  sameOrigin(req);
   const u = await me(req, env), body = await req.json().catch(() => ({}));
   if (+body.fy !== fy) fail(409, 'ปีบัญชีนี้ปิดรอบแล้ว แก้ไขไม่ได้');
   if (u.role === 'exec') fail(403, 'ผู้บริหารดูได้อย่างเดียว');
@@ -257,18 +287,19 @@ async function save(req, env, fy) {
   }));
   const when = stamp(), updates = [], appends = [];
   ops.forEach(op => {
-    const vals = [fy, op.s, op.k, op.v == null ? '' : JSON.stringify(op.v), u.email, when], row = at[op.s + '\n' + op.k];
+    const vals = [fy, op.s, op.k, op.v == null ? '' : JSON.stringify(op.v), u.id, when], row = at[op.s + '\n' + op.k];
     if (row) updates.push({ range: `state!A${row}:F${row}`, values: [vals] }); else if (op.v != null) appends.push(vals);
   });
   await putRanges(env, env.SYSTEM_SHEET_ID, updates);
   await appendRows(env, env.SYSTEM_SHEET_ID, 'state!A:F', appends);
-  await appendRows(env, env.SYSTEM_SHEET_ID, 'log!A:D', logs.map(w => [when, u.email, label(u), w]));
+  await appendRows(env, env.SYSTEM_SHEET_ID, 'log!A:D', logs.map(w => [when, u.id, label(u), w]));
   let mirrored = true;
   try { await mirror(env, fy, ops.filter(op => op.s === 'patch' && op.v && !op.k.endsWith('|self'))); } catch (e) { mirrored = false; console.error('mirror', e.stack || e); }
   return { ok: true, at: when, mirrored };
 }
 const extOf = name => (String(name).split('.').pop() || '').toLowerCase();
 async function upload(req, env, fy) {
+  sameOrigin(req);
   const u = await me(req, env), q = new URL(req.url).searchParams, key = q.get('key') || '', name = str(q.get('name')).slice(0, 200), ext = extOf(name);
   if (!env.FILES_FOLDER_ID) fail(501, 'ยังไม่ได้ตั้งค่าโฟลเดอร์เก็บไฟล์หลักฐาน');
   if (!own(u, key)) fail(403, 'แนบไฟล์ได้เฉพาะส่วนที่รับผิดชอบ');
@@ -276,7 +307,7 @@ async function upload(req, env, fy) {
   if (!editable((await loadState(env, fy)).st, u.ind)) fail(409, 'รายงานนี้ส่งตรวจแล้ว แก้ไขได้เมื่อ กปม. ส่งกลับ');
   const data = await req.arrayBuffer();
   if (data.byteLength > MAX_FILE) fail(413, 'ไฟล์ใหญ่กว่า 10 MB');
-  const b = 'cbe' + crypto.randomUUID(), meta = { name, parents: [env.FILES_FOLDER_ID], mimeType: FILE_TYPES[ext], description: key + ' · ' + u.email };
+  const b = 'cbe' + crypto.randomUUID(), meta = { name, parents: [env.FILES_FOLDER_ID], mimeType: FILE_TYPES[ext], description: key + ' · ' + u.id };
   const r = await g(env, 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id', { method: 'POST',
     headers: { 'content-type': 'multipart/related; boundary=' + b },
     body: new Blob([`--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${b}\r\nContent-Type: ${FILE_TYPES[ext]}\r\n\r\n`, data, `\r\n--${b}--`]) });

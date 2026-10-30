@@ -1,7 +1,7 @@
 # ติดตั้งระบบจริง: Cloudflare Pages + Google Sheets (Service Account)
 
 ```
-ผู้ใช้ → Cloudflare Access (ล็อกอินอีเมลองค์กร)
+ผู้ใช้ → หน้าเข้าสู่ระบบ (รหัสพนักงาน 4 หลัก + รหัสผ่าน cbe@รหัสพนักงาน)
       → Cloudflare Pages: index.html + _worker.js
       → _worker.js ──service account──→ Google Sheets (แบบฟอร์ม 10 ไฟล์ + ชีตระบบ) / Google Drive (ไฟล์หลักฐาน)
 ```
@@ -11,38 +11,37 @@
 - **ใช้ระบบเป็นช่องทางแก้หลัก:** ถ้าแก้ในชีตแบบฟอร์มโดยตรง ระดับที่เคยบันทึกผ่านระบบแล้วจะยังแสดงค่าจากระบบ
 
 ## 1. Google Cloud: สร้าง Service Account
-1. เปิด https://console.cloud.google.com แล้วสร้างโปรเจกต์ใหม่ เช่น `cbe-report`
-2. ไปที่ **APIs & Services → Library** แล้วเปิด **Google Sheets API** และ **Google Drive API**
-3. ไปที่ **IAM & Admin → Service Accounts → Create service account** ตั้งชื่อเช่น `cbe-worker` ไม่ต้องให้ role ใด ๆ
-4. เปิด service account ที่สร้าง แล้วไปที่ **Keys → Add key → JSON** ระบบจะดาวน์โหลดไฟล์กุญแจลงเครื่อง
+1. เปิด https://console.cloud.google.com/iam-admin/serviceaccounts แล้วเลือกโปรเจกต์
+2. กด **Create service account** ตั้งชื่อเช่น `cbe-report` ไม่ต้องให้ role ใด ๆ (สิทธิ์มาจากการแชร์ไฟล์)
+3. เปิด service account ที่สร้าง แล้วไปที่ **Keys → Add key → JSON** ระบบจะดาวน์โหลดไฟล์กุญแจลงเครื่อง
    - เก็บไฟล์นี้เป็นความลับ ห้ามใส่ใน GitHub ห้ามส่งทางแชต
-   - ถ้าองค์กรบล็อกการสร้างกุญแจ (`iam.disableServiceAccountKeyCreation`) ต้องให้ผู้ดูแล Google Cloud ขององค์กรอนุญาตก่อน
-5. จดอีเมลของ service account ไว้ใช้ในขั้นถัดไป หน้าตาแบบ `cbe-worker@cbe-report.iam.gserviceaccount.com`
+4. ไปที่ **APIs & Services → Library** แล้วเปิด **Google Sheets API** และ **Google Drive API**
+5. ใช้ service account แยกจากระบบอื่น เพื่อไม่แชร์กุญแจและโควตา Sheets (60 คำขอต่อนาทีต่อ service account)
 
 ## 2. Google Drive: เตรียมชีต
 1. **แปลงแบบฟอร์มเป็น Google Sheets:** อัปโหลด `New Form/*.xlsx` ทั้ง 10 ไฟล์ขึ้น Drive แล้วเปิดแต่ละไฟล์ เลือก **ไฟล์ → บันทึกเป็น Google ชีต**
-   - ใช้ไฟล์ Google ชีตที่ได้ ไม่ใช่ .xlsx เดิม
    - ห้ามเปลี่ยนชื่อแท็บ `1.สรุปรายงานผู้บริหาร` และ `2.ผลตามเกณฑ์และ GAP`
-2. **สร้าง Google ชีตใหม่ชื่อ "CBE System"** มี 4 แท็บ แถวที่ 1 เป็นหัวตาราง:
+2. **สร้าง Google ชีตชื่อ "CBE System"** มี 4 แท็บ แถวที่ 1 เป็นหัวตาราง:
 
    | แท็บ | หัวตาราง (A, B, C, …) | ใส่อะไร |
    |---|---|---|
-   | `users` | email · role · ind · part · name | หนึ่งแถวต่อผู้ใช้ |
+   | `users` | id · role · ind · part · name | หนึ่งแถวต่อผู้ใช้ |
    | `forms` | fy · code · id | หนึ่งแถวต่อแบบฟอร์ม |
    | `state` | fy · store · key · value · by · at | เว้นว่าง ระบบเขียนเอง |
-   | `log` | at · email · who · what | เว้นว่าง ระบบเขียนเอง |
+   | `log` | at · id · who · what | เว้นว่าง ระบบเขียนเอง |
 
-   **แท็บ `users`**
-   - **role:** `audit` (กปม.), `exec` (ผู้บริหาร) หรือ `reporter`
+   **แท็บ `users`** (คอลัมน์ id = รหัสพนักงาน 4 หลัก)
+   - **role:** `audit` (กปม./ผู้ดูแลระบบ), `exec` (ผู้บริหาร) หรือ `reporter`
    - **ind (เฉพาะ reporter):** `CG` `SP` `RM` `SCM` `DT` `HCM` `KMIM` `IA`
    - **part:** ใส่เฉพาะผู้รายงานรายส่วน คือ `SM` `CM` (ของ SCM) หรือ `KM` `IM` (ของ KMIM) ถ้าเว้นว่างจะแก้ได้ทั้งตัวชี้วัด
+   - **ยกเลิกสิทธิ์:** ลบแถวออก ระบบตัดการเข้าใช้ภายใน 1 นาที
 
    ```
-   email                     role      ind   part  name
-   auditor@org.go.th         audit                 กปม.
-   ceo@org.go.th             exec                  ผู้บริหาร
-   sm.owner@org.go.th        reporter  SCM   SM    ผู้รายงาน SM
-   rm.owner@org.go.th        reporter  RM          ผู้รายงาน RM
+   id    role      ind   part  name
+   1000  audit                 ผู้ดูแลระบบ
+   2001  exec                  ผู้บริหาร
+   3001  reporter  SCM   SM    ผู้รายงาน SM
+   3002  reporter  RM          ผู้รายงาน RM
    ```
 
    **แท็บ `forms`**
@@ -59,8 +58,7 @@
    - ถ้าไม่ตั้งค่าส่วนนี้ ปุ่มแนบไฟล์จะแจ้งว่ายังไม่ได้ตั้งค่า แต่ส่วนอื่นใช้งานได้ตามปกติ
 
 ## 3. Cloudflare Pages: ขึ้นเว็บ
-1. push โฟลเดอร์ `mockup/` ขึ้น GitHub
-   - `.gitignore` กันไฟล์ข้อมูลไว้แล้ว ระบบจริงดึงข้อมูลจากชีต ไม่ใช้ไฟล์ข้อมูลใน repo
+1. push โฟลเดอร์ `mockup/` ขึ้น GitHub (`.gitignore` กันไฟล์ข้อมูลไว้แล้ว)
 2. ไปที่ Cloudflare dashboard → **Workers & Pages → Create → Pages → Connect to Git** แล้วเลือก repo
    - **Build command:** เว้นว่าง
    - **Build output directory:** `mockup`
@@ -69,35 +67,39 @@
    | ชื่อ | ชนิด | ค่า |
    |---|---|---|
    | `GOOGLE_SA` | **Secret** | วางเนื้อหาไฟล์กุญแจ JSON ทั้งไฟล์ |
+   | `SESSION_SECRET` | **Secret** | ข้อความสุ่มยาว 32 ตัวขึ้นไป ใช้เซ็นคุกกี้เข้าสู่ระบบ ถ้าเปลี่ยน ทุกคนต้องล็อกอินใหม่ |
    | `SYSTEM_SHEET_ID` | Text | รหัสชีต CBE System |
-   | `ACCESS_TEAM` | Text | ชื่อทีม Zero Trust (ส่วนหน้า `.cloudflareaccess.com`) |
-   | `ACCESS_AUD` | Text | AUD tag จากขั้นที่ 4 |
    | `FILES_FOLDER_ID` | Text | รหัสโฟลเดอร์หลักฐาน (ไม่บังคับ) |
    | `CUR_FY` | Text | `2570` |
 
+   สร้าง `SESSION_SECRET` ได้ด้วยคำสั่ง PowerShell:
+   ```powershell
+   -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 48 | % { [char]$_ })
+   ```
 4. กด **Retry deployment** ให้ค่าใหม่มีผล
 
-## 4. Cloudflare Access: จำกัดคนเข้า
-1. ไปที่ **Zero Trust → Access → Applications → Add an application → Self-hosted**
-2. ใส่โดเมนของเว็บ เช่น `cbe-report.pages.dev` (และโดเมนองค์กร ถ้าผูกไว้)
-3. ตั้ง **Policy = Allow** ให้เฉพาะ **Emails ending in** `@org.go.th` หรือรายชื่ออีเมล
-   - วิธีล็อกอินใช้ One-time PIN ทางอีเมล หรือ Google / Microsoft ขององค์กรก็ได้
-4. บันทึก แล้วคัดลอก **Application Audience (AUD) Tag** ไปใส่ `ACCESS_AUD`
+## 4. ความปลอดภัยของการเข้าสู่ระบบ
+**ข้อจำกัดของรหัสผ่านแบบนี้:** รหัสผ่านเป็น `cbe@รหัสพนักงาน` ตามที่องค์กรกำหนด ใครรู้รหัสพนักงานของคนอื่นก็เข้าระบบแทนได้
 
-Worker ตรวจลายเซ็น JWT ของ Access ทุกคำขอข้อมูล ถ้าไม่มีหรือปลอมมา ระบบจะไม่ส่งข้อมูลให้ จากนั้นสิทธิ์ทั้งหมดตรวจที่เซิร์ฟเวอร์ตามแท็บ `users`:
-- ผู้รายงานเห็นเฉพาะตัวชี้วัดของตน และแก้ได้เฉพาะส่วนของตน
-- แก้ได้เฉพาะตอนสถานะเป็นร่างหรือถูกส่งกลับ
-- ผลเดือนก่อนแก้ได้ถึงวันที่ 10 ของเดือนถัดไป หลังจากนั้นต้องให้ กปม. ปลดล็อก
-- ผู้บริหารดูได้อย่างเดียว
+ระบบป้องกันเท่าที่ทำได้ภายใต้เงื่อนไขนี้:
+- **ล็อกเมื่อใส่ผิด:** ใส่รหัสผิด 5 ครั้งต่อรหัสพนักงานต่อเครื่อง ล็อก 15 นาที
+- **หมดเวลาอัตโนมัติ:** คุกกี้เข้าสู่ระบบเซ็นด้วย `SESSION_SECRET` และหมดอายุใน 8 ชั่วโมง
+- **กันคำขอจากเว็บอื่น:** ไม่รับคำขอที่ส่งมาจากเว็บไซต์อื่น
+- **Audit trail:** บันทึกการเข้า/ออกระบบและทุกการแก้ไข พร้อมรหัสพนักงาน
+- **ตัดสิทธิ์ได้เร็ว:** ลบแถวออกจากแท็บ `users` ระบบตัดการเข้าใช้ภายใน 1 นาที แม้ผู้ใช้ยังล็อกอินค้างอยู่
+
+ควรตั้งเพิ่มใน Cloudflare (แพ็กเกจฟรีทำได้):
+- **Security → WAF → Rate limiting rules:** URI path เท่ากับ `/api/login` จำกัด 10 ครั้งต่อนาทีต่อ IP แล้ว Block
+- **ถ้าจะให้ใช้เฉพาะในเครือข่ายองค์กร:** ตั้ง WAF custom rule ให้ Block เมื่อ IP ไม่อยู่ในช่วง IP ขององค์กร
 
 ## 5. ตรวจหลังติดตั้ง
-- **ทดสอบแต่ละบทบาท:** เข้าด้วยบัญชี กปม. ผู้บริหาร และผู้รายงาน ต้องเห็นเมนูตามสิทธิ์
-- **ทดสอบการบันทึก:** ให้ผู้รายงานกรอกผล 1 ช่อง แล้วดูแท็บ `state` และ `log` ใน CBE System กับแถวผลในชีตแบบฟอร์ม ต้องมีข้อมูลเข้า
-- **ถ้าเปิดแล้วขึ้น "บัญชี … ยังไม่ได้รับสิทธิ์":** เพิ่มอีเมลนั้นในแท็บ `users` แล้วรอไม่เกิน 1 นาที ระบบแคชรายชื่อไว้ 60 วินาที
+- **ทดสอบแต่ละบทบาท:** เข้าด้วย 1000 / `cbe@1000` แล้วลองบัญชีผู้บริหารและผู้รายงาน ต้องเห็นเมนูตามสิทธิ์
+- **ทดสอบการบันทึก:** ให้ผู้รายงานกรอกผล 1 ช่อง แล้วดูแท็บ `state` และ `log` กับแถวผลในชีตแบบฟอร์ม ต้องมีข้อมูลเข้า
+- **ถ้ารหัสถูกแต่เข้าไม่ได้:** ตรวจว่ามีรหัสพนักงานในแท็บ `users` และกำหนด role ถูกต้อง ระบบแคชรายชื่อไว้ 60 วินาที
 - **ถ้าขึ้น error 1102 (Worker exceeded resource limits):** แพ็กเกจฟรีให้ CPU 10ms ต่อคำขอ ให้เปลี่ยนเป็น Workers Paid ($5/เดือน)
 
 ## ทดสอบในเครื่อง (ไม่ต้องมี Google / Cloudflare)
-`.test/` มีชุดทดสอบที่จำลอง Google Sheets, Drive และ Access (อยู่ใน `.gitignore` เพราะมีข้อมูลจากแบบฟอร์มจริง)
+`.test/` มีชุดทดสอบที่จำลอง Google Sheets และ Drive (อยู่ใน `.gitignore` เพราะมีข้อมูลจากแบบฟอร์มจริง)
 1. รัน `powershell -File tools\serve.ps1`
-2. เปิด `http://localhost:8790/.test/worker-test.html` ดูผล 44 ข้อ
-3. เปิด `http://localhost:8790/.test/login.html?email=sm@x.go.th` เพื่อลองหน้าเว็บจริงในบทบาทผู้รายงาน SM
+2. เปิด `http://localhost:8790/.test/worker-test.html` ดูผล 54 ข้อ
+3. เปิด `http://localhost:8790/.test/login.html` แล้วเข้าด้วย 1000 / `cbe@1000`
