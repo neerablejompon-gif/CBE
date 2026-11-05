@@ -53,9 +53,37 @@
 3. **แชร์ทุกไฟล์ให้อีเมล service account:**
    - ชีตแบบฟอร์ม 10 ไฟล์ และ CBE System: สิทธิ์ **ผู้แก้ไข**
    - `data.js`: สิทธิ์ **ผู้มีสิทธิ์อ่าน**
-4. **โฟลเดอร์ไฟล์หลักฐาน (ไม่บังคับ):** ต้องเป็น **ไดรฟ์ที่แชร์ (Shared Drive)** ของ Google Workspace เพราะ service account ไม่มีพื้นที่เก็บไฟล์ของตัวเอง
-   - เพิ่ม service account เป็น **ผู้จัดการเนื้อหา** ของไดรฟ์นั้น แล้วจดรหัสโฟลเดอร์ไว้
-   - ถ้าไม่ตั้งค่าส่วนนี้ ปุ่มแนบไฟล์จะแจ้งว่ายังไม่ได้ตั้งค่า แต่ส่วนอื่นใช้งานได้ตามปกติ
+4. **โฟลเดอร์ไฟล์หลักฐาน:** ระบบเก็บไฟล์ตามโครงสร้างเดิมของโฟลเดอร์ "กลุ่มที่ 3 Core Business Enablers"
+   ```
+   กลุ่มที่ 3 Core Business Enablers/          ← FILES_FOLDER_ID
+     3.6 HCM/                                  ← ตามแบบฟอร์ม: 3.1 CG, 3.2 SP, 3.3 RM, 3.4.1 SM, 3.4.2 CM, 3.5 DT, 3.6 HCM, 3.7.1 KM, 3.7.2 IM, 3.8 IA
+       3.6.4.4 บทบาทของสายงาน HR/              ← "เลขแบบฟอร์ม.รหัสประเด็น ชื่อประเด็น"
+         เอกสารแนบค่าเกณฑ์ระดับ 1/ … 5/        ← ไฟล์ที่แนบในระดับนั้น
+   ```
+   - **โฟลเดอร์ที่มีอยู่แล้ว:** ระบบใช้โฟลเดอร์เดิม ค้นจากเลขนำหน้าชื่อ
+   - **โฟลเดอร์ที่ยังไม่มี:** ระบบสร้างให้อัตโนมัติด้วยชื่อแบบเดียวกัน
+   - **service account อัปโหลดไฟล์ไม่ได้:** Google ไม่ให้พื้นที่เก็บไฟล์กับ service account ถ้าโฟลเดอร์อยู่ใน Drive ส่วนตัว (@gmail.com) ต้องให้**เจ้าของโฟลเดอร์**อนุญาตผ่าน OAuth ตามขั้นที่ 2.5 ไฟล์จะเป็นของบัญชีนั้นและใช้พื้นที่ของบัญชีนั้น
+   - **ถ้าใช้ Shared Drive ของ Google Workspace:** เพิ่ม service account เป็นผู้จัดการเนื้อหาก็พอ ไม่ต้องทำขั้นที่ 2.5
+
+## 2.5 OAuth ของเจ้าของโฟลเดอร์หลักฐาน (ทำครั้งเดียว)
+1. **ตั้งหน้าขอความยินยอม:** ไปที่ Google Cloud โปรเจกต์ `cbe-report` → **APIs & Services → OAuth consent screen**
+   - เลือก **External** ตั้งชื่อแอปว่า `CBE Report` แล้วใส่อีเมลติดต่อ
+   - ในหน้า Audience กด **Publish app** เพื่อเปลี่ยนเป็น **In production** ถ้าค้างเป็น Testing โทเคนจะหมดอายุใน 7 วัน
+2. **สร้าง OAuth client:** ไปที่ **Credentials → Create credentials → OAuth client ID**
+   - เลือก **Web application**
+   - **Authorized redirect URIs:** `https://developers.google.com/oauthplayground`
+   - จด **Client ID** และ **Client secret**
+3. **ขอ refresh token:** เปิด https://developers.google.com/oauthplayground
+   - กด ⚙️ แล้วติ๊ก **Use your own OAuth credentials** วาง Client ID และ Client secret
+   - ช่อง Step 1 พิมพ์ `https://www.googleapis.com/auth/drive` แล้วกด **Authorize APIs**
+   - ล็อกอินด้วย**บัญชีเจ้าของโฟลเดอร์**แล้วกดอนุญาต ถ้าขึ้น "Google hasn't verified this app" ให้กด Advanced → Go to CBE Report
+   - Step 2 กด **Exchange authorization code for tokens** แล้วคัดลอก **Refresh token**
+4. **ใส่ค่าใน Cloudflare:** ไปที่ Settings → Variables and secrets
+   - `DRIVE_OAUTH` (**Secret**): `{"client_id":"…","client_secret":"…","refresh_token":"…"}`
+   - `FILES_FOLDER_ID` (Text): รหัสโฟลเดอร์ "กลุ่มที่ 3 Core Business Enablers"
+   - กด **Retry deployment**
+
+refresh token เข้าถึง Drive ทั้งหมดของบัญชีนั้น ต้องเก็บเป็นความลับ ถ้าต้องการยกเลิก ไปที่ https://myaccount.google.com/permissions ของบัญชีนั้น
 
 ## 3. Cloudflare Pages: ขึ้นเว็บ
 1. push โฟลเดอร์ `mockup/` ขึ้น GitHub (`.gitignore` กันไฟล์ข้อมูลไว้แล้ว)

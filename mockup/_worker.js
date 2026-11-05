@@ -6,7 +6,10 @@
 //   GOOGLE_SA        (secret) service account JSON key
 //   SESSION_SECRET   (secret) 32+ random characters for signing the session cookie
 //   SYSTEM_SHEET_ID  spreadsheet with tabs users, forms, state, log (see mockup/DEPLOY.md)
-//   FILES_FOLDER_ID  Shared Drive folder for evidence files (optional)
+//   FILES_FOLDER_ID  evidence root: the "กลุ่มที่ 3 Core Business Enablers" folder (optional)
+//   DRIVE_OAUTH      (secret) {"client_id","client_secret","refresh_token"} of the Google account that owns that folder.
+//                    Service accounts have no Drive storage, so files in a personal Drive must be uploaded as a real account;
+//                    without it the service account is used (works only on a Shared Drive).
 //   CUR_FY           current fiscal year (default 2570)
 
 const IND_PARTS = { CG: ['CG'], SP: ['SP'], RM: ['RM'], SCM: ['SM', 'CM'], DT: ['DT'], HCM: ['HCM'], KMIM: ['KM', 'IM'], IA: ['IA'] };
@@ -124,9 +127,20 @@ function gToken(env) {
     return (await r.json()).access_token;
   });
 }
-async function g(env, url, { json: body, headers, ...init } = {}) {
+// Evidence files go through the folder owner's account when DRIVE_OAUTH is set
+function driveToken(env) {
+  if (!env.DRIVE_OAUTH) return gToken(env);
+  return cached('dtoken', 50 * 60e3, async () => {
+    const o = JSON.parse(env.DRIVE_OAUTH);
+    const r = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ client_id: o.client_id, client_secret: o.client_secret, refresh_token: o.refresh_token, grant_type: 'refresh_token' }).toString() });
+    if (!r.ok) throw new Error('Drive token ' + r.status + ': ' + await r.text());
+    return (await r.json()).access_token;
+  });
+}
+async function g(env, url, { json: body, headers, drive, ...init } = {}) {
   const r = await fetch(url, { ...init, body: body ? JSON.stringify(body) : init.body,
-    headers: { authorization: 'Bearer ' + await gToken(env), ...(body ? { 'content-type': 'application/json' } : {}), ...headers } });
+    headers: { authorization: 'Bearer ' + await (drive ? driveToken(env) : gToken(env)), ...(body ? { 'content-type': 'application/json' } : {}), ...headers } });
   if (!r.ok) throw Object.assign(new Error('Google ' + r.status + ' ' + url.split('?')[0] + ': ' + (await r.text()).slice(0, 300)), { google: r.status });
   return r;
 }
@@ -216,7 +230,33 @@ async function form(env, fy, code) {
 const hideRows = (k, v) => k === 'row' || k === 'mrRows' ? undefined : v;
 async function findLevel(env, fy, lvKey) {
   const [, part, code, lv] = lvKey.split('|'), f = await form(env, fy, part), s = f && f.data.subs.find(x => x.code === code);
-  return { f, L: s && s.levels.find(x => x.level === +lv) };
+  return { f, s, L: s && s.levels.find(x => x.level === +lv) };
+}
+
+/* ---------- evidence folders: <root>/3.6 HCM/3.6.4.4 ชื่อประเด็น/เอกสารแนบค่าเกณฑ์ระดับ 1 ---------- */
+const PART_DIR = { CG: '3.1 CG', SP: '3.2 SP', RM: '3.3 RM', SM: '3.4.1 SM', CM: '3.4.2 CM', DT: '3.5 DT', HCM: '3.6 HCM', KM: '3.7.1 KM', IM: '3.7.2 IM', IA: '3.8 IA' };
+const FOLDER = 'application/vnd.google-apps.folder', DRIVE_LIST = DRIVE.slice(0, -1);
+// Finds a child folder whose name is `prefix` or starts with "prefix "; creates `name` when there is none
+function childFolder(env, parent, prefix, name) {
+  return cached('dir:' + parent + '|' + prefix, 6 * 3600e3, async () => {
+    const q = `'${parent}' in parents and mimeType='${FOLDER}' and trashed=false`;
+    let token = '';
+    do {
+      const j = await (await g(env, `${DRIVE_LIST}?q=${encodeURIComponent(q)}&fields=nextPageToken,files(id,name)&pageSize=200&supportsAllDrives=true&includeItemsFromAllDrives=true${token ? '&pageToken=' + encodeURIComponent(token) : ''}`, { drive: true })).json();
+      const hit = (j.files || []).find(f => f.name.trim() === prefix || f.name.trim().startsWith(prefix + ' '));
+      if (hit) return hit.id;
+      token = j.nextPageToken;
+    } while (token);
+    return (await (await g(env, `${DRIVE_LIST}?supportsAllDrives=true&fields=id`, { method: 'POST', drive: true, json: { name: name.slice(0, 120), mimeType: FOLDER, parents: [parent] } })).json()).id;
+  });
+}
+async function levelFolder(env, fy, key) {
+  const [, part, code, lv] = key.split('|'), dir = PART_DIR[part];
+  if (!dir) fail(400, 'ไม่รู้จักแบบฟอร์ม ' + part);
+  const { s } = await findLevel(env, fy, key), subPrefix = dir.split(' ')[0] + '.' + code;
+  const p = await childFolder(env, env.FILES_FOLDER_ID, dir, dir);
+  const sf = await childFolder(env, p, subPrefix, subPrefix + (s ? ' ' + s.name.replace(/\s+/g, ' ') : ''));
+  return childFolder(env, sf, 'เอกสารแนบค่าเกณฑ์ระดับ ' + lv, 'เอกสารแนบค่าเกณฑ์ระดับ ' + lv);
 }
 
 /* ---------- routes ---------- */
@@ -307,10 +347,11 @@ async function upload(req, env, fy) {
   if (!editable((await loadState(env, fy)).st, u.ind)) fail(409, 'รายงานนี้ส่งตรวจแล้ว แก้ไขได้เมื่อ กปม. ส่งกลับ');
   const data = await req.arrayBuffer();
   if (data.byteLength > MAX_FILE) fail(413, 'ไฟล์ใหญ่กว่า 10 MB');
-  const b = 'cbe' + crypto.randomUUID(), meta = { name, parents: [env.FILES_FOLDER_ID], mimeType: FILE_TYPES[ext], description: key + ' · ' + u.id };
-  const r = await g(env, 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id', { method: 'POST',
+  const b = 'cbe' + crypto.randomUUID(), meta = { name, parents: [await levelFolder(env, fy, key)], mimeType: FILE_TYPES[ext], description: key + ' · ' + u.id };
+  const r = await g(env, 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id', { method: 'POST', drive: true,
     headers: { 'content-type': 'multipart/related; boundary=' + b },
-    body: new Blob([`--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${b}\r\nContent-Type: ${FILE_TYPES[ext]}\r\n\r\n`, data, `\r\n--${b}--`]) });
+    body: new Blob([`--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${b}\r\nContent-Type: ${FILE_TYPES[ext]}\r\n\r\n`, data, `\r\n--${b}--`]) })
+    .catch(e => { if (/storageQuota/.test(e.message)) fail(507, 'Drive ไม่มีพื้นที่ให้บัญชีระบบ ต้องตั้งค่า DRIVE_OAUTH ของเจ้าของโฟลเดอร์'); throw e; });
   const { id } = await r.json();
   return { id, url: '/api/file/' + id };
 }
@@ -320,7 +361,7 @@ async function download(req, env, fy, id) {
   let file = null, key = null;
   Object.keys(st.patch).some(k => (st.patch[k].mr || []).some(m => (m[2] || []).some(f => { if (f && f.id === id) { file = f; key = k; } return file; })));
   if (!file || (u.role === 'reporter' && key.split('|')[0] !== u.ind)) fail(404, 'ไม่พบไฟล์');
-  const r = await g(env, `${DRIVE}${encodeURIComponent(id)}?alt=media&supportsAllDrives=true`).catch(e => { if (e.google === 404) fail(404, 'ไฟล์ถูกลบออกจาก Drive แล้ว'); throw e; });
+  const r = await g(env, `${DRIVE}${encodeURIComponent(id)}?alt=media&supportsAllDrives=true`, { drive: true }).catch(e => { if (e.google === 404) fail(404, 'ไฟล์ถูกลบออกจาก Drive แล้ว'); throw e; });
   const ext = extOf(file.name);
   return new Response(r.body, { headers: { 'content-type': INLINE.includes(ext) ? FILE_TYPES[ext] : 'application/octet-stream', 'x-content-type-options': 'nosniff',
     'content-disposition': (INLINE.includes(ext) ? 'inline' : 'attachment') + "; filename*=UTF-8''" + encodeURIComponent(file.name), 'cache-control': 'private, no-store' } });
