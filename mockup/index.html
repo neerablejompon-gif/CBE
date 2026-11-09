@@ -733,6 +733,73 @@ input.sr:focus-visible + .attach { outline: 2px solid var(--primary); outline-of
   .login-form { padding: 22px; }
   .ihead { padding: 18px 16px 0; } .panel { padding: 18px 16px; }
 }
+/* GAP plan/result */
+.gap-plan .meta-line { row-gap: 8px; }
+.gunit { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; }
+.gunit .input { width: 150px; min-height: 34px; padding: 4px 10px; }
+.gap-pct { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+.gap-pct b { font-size: 15px; }
+.gp-name .src-tag { margin-left: 4px; font-size: 11.5px; }
+.gp-name small.act-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; padding: 3px 7px; margin-top: 3px; white-space: normal; }
+.gp-name small.gp-gap { margin-top: 3px; -webkit-line-clamp: 1; }
+.pl .gp-name { width: 300px; min-width: 300px; max-width: 300px; }
+
+/* ===== Liquid glass + bento: translucent layered tiles over a soft colour field ===== */
+:root {
+  --glass: rgba(255, 255, 255, .58); --glass-solid: #F7F9FE;
+  --hair: rgba(255, 255, 255, .75); --hair-in: rgba(16, 40, 110, .09);
+  --field: rgba(255, 255, 255, .62);
+  --lg-shine: linear-gradient(140deg, rgba(255,255,255,.75) 0%, rgba(255,255,255,0) 38%);
+  --lg-shadow: inset 0 1px 0 rgba(255,255,255,.9), inset 0 -1px 0 rgba(255,255,255,.25), 0 12px 32px -20px rgba(12, 34, 100, .35), 0 2px 6px -2px rgba(12, 34, 100, .08);
+  --lg-blur: blur(22px) saturate(170%);
+  --r-lg: 24px; --r-md: 16px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --glass: rgba(22, 38, 92, .46); --glass-solid: #0E1C45;
+  --hair: rgba(170, 200, 255, .16); --hair-in: rgba(170, 195, 255, .1);
+  --field: rgba(8, 18, 50, .55);
+  --lg-shine: linear-gradient(140deg, rgba(160,190,255,.16) 0%, rgba(160,190,255,0) 40%);
+  --lg-shadow: inset 0 1px 0 rgba(190,210,255,.18), 0 18px 40px -22px rgba(0, 0, 0, .85);
+} }
+:root[data-theme="dark"] {
+  --glass: rgba(22, 38, 92, .46); --glass-solid: #0E1C45;
+  --hair: rgba(170, 200, 255, .16); --hair-in: rgba(170, 195, 255, .1);
+  --field: rgba(8, 18, 50, .55);
+  --lg-shine: linear-gradient(140deg, rgba(160,190,255,.16) 0%, rgba(160,190,255,0) 40%);
+  --lg-shadow: inset 0 1px 0 rgba(190,210,255,.18), 0 18px 40px -22px rgba(0, 0, 0, .85);
+}
+.ambient i { opacity: .32; filter: blur(90px); }
+.ambient i:nth-child(n+2) { display: block; }
+.ambient i:nth-child(3) { opacity: .22; }
+:root[data-theme="dark"] .ambient i { opacity: .42; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ambient i { opacity: .42; } }
+.glass, .kpi, .hero { background-color: var(--glass); background-image: var(--lg-shine); border: 1px solid var(--hair); box-shadow: var(--lg-shadow); -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur); border-radius: var(--r-lg); }
+.kpi { position: relative; transition: transform .2s, box-shadow .2s; }
+.kpi:hover { transform: translateY(-2px); }
+/* inner rows keep a quiet divider; sticky table parts need an opaque backing */
+td, th, .trow, .pl td, .doc, .lib-head { border-color: var(--hair-in) !important; }
+.pl th, .pl .pl-name, .pl-topic td { background: var(--glass-solid); }
+.pl-wrap, .mstep { border-color: var(--hair-in); background: color-mix(in srgb, var(--glass-solid) 45%, transparent); }
+.top { background: color-mix(in srgb, var(--bg) 55%, transparent); }
+.btn { border-radius: 999px; border-color: var(--hair); background: var(--field); box-shadow: inset 0 1px 0 rgba(255,255,255,.5); }
+.btn.primary { box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 8px 20px -10px var(--primary); }
+.seg { border-radius: 999px; background: var(--field); border: 1px solid var(--hair); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+.seg button { border-radius: 999px; }
+.input, textarea { background: var(--field); border-color: var(--hair-in); }
+.hero { position: relative; overflow: hidden; background-image: var(--lg-shine), linear-gradient(135deg, color-mix(in srgb, var(--primary) 22%, transparent) 0%, transparent 60%); }
+.hero-side { background: color-mix(in srgb, var(--glass-solid) 55%, transparent); border: 1px solid var(--hair); border-radius: var(--r-md); }
+/* bento: tiles of different sizes on one 12-column grid, rows stretch to equal height */
+.grid { gap: 16px; align-items: stretch; grid-auto-flow: row dense; }
+.grid > .glass, .grid > .panel { height: 100%; }
+.kpis { gap: 16px; }
+.bento { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; }
+.bento > .hero { grid-column: span 6; grid-row: span 2; margin: 0; }
+.bento > .kpis { display: contents; }
+.bento .kpi { grid-column: span 3; }
+.bento-kpis .kpi:first-child { background-image: var(--lg-shine), linear-gradient(135deg, color-mix(in srgb, var(--warn) 16%, transparent), transparent 70%); }
+@media (max-width: 1280px) { .bento > .hero { grid-column: span 12; grid-row: auto; } .bento .kpi { grid-column: span 6; } }
+@media (max-width: 560px) { .bento .kpi { grid-column: span 12; } }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .glass, .kpi, .hero { background: var(--glass-solid); } }
 </style>
 </head>
 <body>
@@ -936,7 +1003,7 @@ function applyPatches() {
   INDS.forEach(function (I) { I.subs.forEach(function (s) {
     if (P[s.uid + '|self'] != null) s.self = P[s.uid + '|self'];
     s.levels.forEach(function (L) { var p = P[lvKey(s, L)]; if (!p) return;
-      ['narrative', 'action', 'actionSrc', 'gapPct', 'gapNote', 'remark', 'note'].forEach(function (k) { if (k in p) L[k] = p[k]; });
+      ['narrative', 'action', 'actionSrc', 'gapPct', 'gapNote', 'gapPlan', 'gapRes', 'gapUnit', 'remark', 'note'].forEach(function (k) { if (k in p) L[k] = p[k]; });
       if (p.mr) p.mr.forEach(function (m, i) { if (L.mr[i]) { L.mr[i].has = m[0]; L.mr[i].evidence = m[1]; L.mr[i].files = m[2] || []; } });
       if (p.res) p.res.forEach(function (r, i) { if (L.steps[i]) L.steps[i].result = r; });
       if (p.chk) p.chk.forEach(function (k, i) { if (k && L.steps[i]) L.steps[i].chk = k; });
@@ -944,7 +1011,8 @@ function applyPatches() {
   }); });
 }
 function savePatch(s, L) {
-  P[lvKey(s, L)] = { narrative: L.narrative, action: L.action, actionSrc: L.actionSrc, gapPct: L.gapPct, gapNote: L.gapNote, remark: L.remark, note: L.note,
+  L.gapPct = gapPctOf(L);
+  P[lvKey(s, L)] = { narrative: L.narrative, action: L.action, actionSrc: L.actionSrc, gapPct: L.gapPct, gapNote: L.gapNote, gapPlan: L.gapPlan, gapRes: L.gapRes, gapUnit: L.gapUnit, remark: L.remark, note: L.note,
     mr: L.mr.map(function (m) { return [m.has, m.evidence, m.files]; }), res: L.steps.map(function (st) { return st.result; }), chk: L.steps.map(function (st) { return st.chk || null; }) };
   store('patch' + FY, P);
   delete RUNS[s.uid.split('|')[0]];
@@ -954,6 +1022,14 @@ function savePatch(s, L) {
 // Improvement actions: written by the unit itself (blue) or taken from สคร. recommendations (red)
 var ACT_SRC = { own: 'ส่วนงานกำหนดเอง', sepo: 'ตามข้อเสนอแนะ สคร.' }, ACT_SRC_KEYS = ['own', 'sepo'];
 function actSrc(L) { return ACT_SRC[L.actionSrc] ? L.actionSrc : 'own'; }
+// GAP plan/result: the unit sets its own monthly plan; % progress is derived from it (old slider values stay until a plan exists)
+function gapArr(L, k) { if (!Array.isArray(L[k]) || L[k].length !== 12) L[k] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; return L[k]; }
+function gapPctOf(L) { var tp = sum(L.gapPlan || []); return tp ? Math.min(100, Math.round(sum(L.gapRes || []) / tp * 100)) : typeof L.gapPct === 'number' ? L.gapPct : null; }
+function gapStat(L, m) {
+  var p = L.gapPlan || [], r = L.gapRes || [], tp = sum(p), cp = cum(p, m), cr = cum(r, m);
+  if (!tp) return null;
+  return cr >= tp ? 'done' : cp === 0 ? 'wait' : cr >= cp ? 'ontrack' : 'late';
+}
 function wfOf(I) { return I.fy !== CUR_FY ? 'approved' : WFS[I.code] || 'draft'; }
 function logIt(what) { LOG.unshift({ t: thDate(new Date()) + ' ' + new Date().toTimeString().slice(0, 5), who: userLabel(), what: what }); LOG = LOG.slice(0, 60); store('log', LOG); if (API) { OUTBOX.log.push(what); schedule(); } }
 applyPatches();
@@ -1220,12 +1296,12 @@ function vOrg() {
     '<div class="legend">' + Object.keys(WF).map(function (k) { return '<span class="' + WF[k].c + '">' + ico(WF[k].i, 14) + WF[k].t + '</span>'; }).join('') + '<span>' + (FY === CUR_FY ? ico(NOT_YET.i, 14) + NOT_YET.t : 'ปีบัญชี ' + FY + ' ปิดรอบแล้ว') + '</span></div>';
   var od = Math.floor((new Date() - deadline()) / 864e5);
   return '<section class="view"><div><div class="eyebrow">Core Business Enablers · ปีบัญชี ' + FY + '</div><h1>ภาพรวมผลการประเมิน 8 ตัวชี้วัด</h1><p class="lead">คะแนนเป้าหมายสิ้นปีถ่วงน้ำหนักตาม SE-AM ' + FY + ' เทียบเป้าหมาย สถานะการส่งรายงาน และความพร้อมของหลักฐาน ข้อมูลจากแบบฟอร์มรายงานผล ณ เดือน ' + MONTHS[m] + ' ' + FY + '</p></div>' +
-    '<div class="hero"><div style="position:relative;z-index:1"><div class="lbl">คะแนนเฉลี่ย 8 ตัวชี้วัด (คะแนนเป้าหมายสิ้นปี)</div><div class="big num">' + fmt(avg) + '<small>/ 5.00</small></div><div class="meta">เป้าหมายเฉลี่ย ' + fmt(avgT) + ' · ' + (avg >= avgT ? 'สูงกว่าเป้า ' : 'ต่ำกว่าเป้า ') + fmt(Math.abs(avg - avgT)) + ' คะแนน</div>' +
+    '<div class="bento"><div class="hero"><div style="position:relative;z-index:1"><div class="lbl">คะแนนเฉลี่ย 8 ตัวชี้วัด (คะแนนเป้าหมายสิ้นปี)</div><div class="big num">' + fmt(avg) + '<small>/ 5.00</small></div><div class="meta">เป้าหมายเฉลี่ย ' + fmt(avgT) + ' · ' + (avg >= avgT ? 'สูงกว่าเป้า ' : 'ต่ำกว่าเป้า ') + fmt(Math.abs(avg - avgT)) + ' คะแนน</div>' +
       '<div class="hbar"><span style="width:' + avg / 5 * 100 + '%"></span><i style="left:' + avgT / 5 * 100 + '%"></i></div></div>' +
       '<div class="hero-side"><div><span>ตัวชี้วัดที่ถึงเป้าหมาย</span><b class="num">' + met + '<small> / 8</small></b></div><div><span>คาดว่าถึงเป้า ณ สิ้นปี</span><b class="num">' + INDS.filter(function (I) { return forecast(I, m).status === 'ok'; }).length + '<small> / 8 · เสี่ยง ' + INDS.filter(function (I) { return forecast(I, m).status === 'risk'; }).length + '</small></b></div><div><span>รอบรายงาน ' + MONTHS[m] + ' ครบกำหนด</span><b style="font-size:16px">' + thDate(deadline()) + (od > 0 ? ' · เลย ' + od + ' วัน' : '') + '</b></div></div></div>' +
     '<div class="kpis">' + kpi('รอ กปม. ตรวจ', 'inbox', queue.length, 'ตัวชี้วัด', 'ส่งแล้ว ' + rows.filter(function (r) { return ['submitted', 'approved'].indexOf(wfOf(r.I)) > -1; }).length + '/8 ในรอบนี้') +
       kpi('หลักฐานครบ', 'folder', pct(has / need, 1), '', has + ' / ' + need + ' เอกสาร Minimum Requirement', has / need, 'ok') +
-      kpi('ระดับที่ล่าช้าตามแผน', 'alert', late, 'ระดับ', 'ผลสะสมต่ำกว่าแผนสะสม') + kpi('ไม่ผ่าน Quality Gate', 'shield', issues, 'รายการ', 'ระดับที่อ้างคะแนนแต่ข้อมูลไม่ครบ') + '</div>' +
+      kpi('ระดับที่ล่าช้าตามแผน', 'alert', late, 'ระดับ', 'ผลสะสมต่ำกว่าแผนสะสม') + kpi('ไม่ผ่าน Quality Gate', 'shield', issues, 'รายการ', 'ระดับที่อ้างคะแนนแต่ข้อมูลไม่ครบ') + '</div></div>' +
     '<div class="grid"><div class="panel glass c8"><div class="panel-head"><div><h2>ผลรายตัวชี้วัด</h2><p class="sub">แถบ = คะแนนจาก 5 · ขีดดำ = เป้าหมาย · คลิกเพื่อเปิด workspace</p></div></div>' + list + '</div>' +
       '<div class="panel glass c4"><div class="panel-head"><div><h2>' + (isAudit() ? 'รอตรวจในพื้นที่ผู้ตรวจสอบ' : 'ต่ำกว่าเป้าหมาย') + '</h2><p class="sub">' + (isAudit() ? 'ผลตรวจเบื้องต้นจากระบบ' : 'ตัวชี้วัดที่ต้องติดตาม') + '</p></div></div><div class="alist">' +
         (isAudit() ? (queue.length ? queue.map(function (r) { var cnt = runFor(r.I).res.count; return '<button class="aitem" data-rv="' + r.I.code + '"><span class="ai chip info">' + ico('shield') + '</span><span><p>' + r.I.no + ' ' + esc(r.I.name) + '</p><span class="small"><span class="bad">ต้องแก้ไข ' + cnt.critical + '</span> · <span class="warn">ควรตรวจ ' + cnt.warning + '</span></span></span>' + ico('chev') + '</button>'; }).join('') : '<div class="empty">' + ico('check') + 'ไม่มีงานรอตรวจ</div>')
@@ -1606,7 +1682,7 @@ function vReport(I) {
       '<div class="act-head"><label class="label" for="ac">แนวทางปรับปรุง / กิจกรรม</label><div class="seg src-seg" role="group" aria-label="ที่มาของแนวทางปรับปรุง">' +
         ACT_SRC_KEYS.map(function (k) { return '<button type="button" class="src-' + k + '" data-asrc="' + k + '" aria-pressed="' + (src === k) + '"' + dis + '><i></i>' + ACT_SRC[k] + '</button>'; }).join('') + '</div></div>' +
       '<textarea id="ac" class="act-box src-' + src + '" data-f="action" rows="3" placeholder="' + (src === 'sepo' ? 'แนวทางตามข้อเสนอแนะของ สคร.' : 'แนวทางที่ส่วนงานกำหนดเอง') + '"' + dis + '>' + esc(L.action) + '</textarea>' +
-      '<label class="label" for="gpct">ร้อยละความก้าวหน้า</label><div class="range-row"><input type="range" id="gpct" min="0" max="100" step="5" value="' + (L.gapPct || 0) + '"' + dis + '><span class="pct num" id="gpctv">' + (typeof L.gapPct === 'number' ? L.gapPct + '%' : '–') + '</span></div>' +
+      gapTable(L, m, ed, live) +
       '<label class="label" for="gn">รายงานผลการดำเนินงานตามแนวทางปรับปรุง</label><textarea id="gn" data-f="gapNote" rows="4" placeholder="สิ่งที่ดำเนินการแล้วตามแนวทางข้างต้น ผลที่ได้ และเอกสารอ้างอิง"' + dis + '>' + esc(L.gapNote) + '</textarea>';
   }
   var req = stSt.filter(function (x) { return !x.opt; }), reqDone = req.filter(function (x) { return x.done; }).length;
@@ -1726,23 +1802,55 @@ function refreshSteps() {
   var r = document.getElementById('lvReady'); if (r) r.textContent = req.filter(function (x) { return x.done; }).length + '/' + req.length;
 }
 
+// Same plan/result grid as the progress step; plan cells are editable, result only in the live report month
+function gapTable(L, m, ed, live) {
+  var p = gapArr(L, 'gapPlan'), r = gapArr(L, 'gapRes'), tp = sum(p), cp = cum(p, m), cr = cum(r, m), gs = gapStat(L, m), u = L.gapUnit || '';
+  var cell = function (k, v, i, on) {
+    var c = i === m ? 'cur' : '';
+    if (on) return '<td class="' + c + '"><input type="number" min="0" step="any" inputmode="decimal" data-gp="' + k + ':' + i + '" value="' + (v || '') + '" aria-label="' + (k === 'p' ? 'แผน' : 'ผล') + ' ' + MONTHS[i] + '"></td>';
+    return '<td class="num ' + c + '">' + (v || '<span class="muted">·</span>') + '</td>';
+  };
+  return '<div class="mstep gap-plan"><div class="step-h"><p><b>แผน / ผลการดำเนินงานตามแนวทางปรับปรุง</b></p>' + (gs ? chip(STATUS[gs]) : '<span class="chip mute">' + ico('clock') + 'ยังไม่มีแผน</span>') + '</div>' +
+    '<div class="meta-line" style="margin:0"><span>แผนทั้งปี <b class="num">' + fmt(tp, tp % 1 ? 1 : 0) + '</b></span><span>แผนสะสมถึง ' + MONTHS[m] + ' <b class="num">' + fmt(cp, cp % 1 ? 1 : 0) + '</b></span><span>ผลสะสม <b class="num">' + fmt(cr, cr % 1 ? 1 : 0) + '</b></span>' +
+      '<label class="gunit"><span>หน่วย</span><input class="input" data-f="gapUnit" value="' + esc(u) + '" placeholder="เช่น ครั้ง, ขั้นตอน" maxlength="20"' + (ed ? '' : ' disabled') + '></label></div>' +
+    (ed && !live ? '<p class="small warn" style="margin:0">' + ico('lock', 13) + ' ลงผลได้เฉพาะรอบรายงานปัจจุบัน (' + MONTHS[curMonth()] + ') · วางแผนได้ทุกเดือน</p>' : ed ? '<p class="small muted" style="margin:0">' + ico('info', 13) + ' กรอกแผนรายเดือน แล้วลงผลในช่องเดือน ' + MONTHS[m] + ' · ร้อยละความก้าวหน้าคำนวณจากผลรวม ÷ แผนทั้งปี</p>' : '') +
+    '<div class="scroll-x"><table class="months"><thead><tr><th></th>' + MONTHS.map(function (mm, i) { return '<th class="' + (i === m ? 'cur' : '') + '">' + mm + '</th>'; }).join('') + '<th>รวม</th></tr></thead><tbody>' +
+      '<tr><td class="muted">แผน</td>' + p.map(function (v, i) { return cell('p', v, i, ed); }).join('') + '<td class="num"><b>' + fmt(tp, tp % 1 ? 1 : 0) + '</b></td></tr>' +
+      '<tr><td><b>ผล</b></td>' + r.map(function (v, i) { return cell('r', v, i, live && i === m); }).join('') + '<td class="num"><b>' + fmt(sum(r), sum(r) % 1 ? 1 : 0) + '</b></td></tr></tbody></table></div>' +
+    (tp ? '<div class="gap-pct"><div class="bar' + (gs === 'done' ? ' ok' : '') + '"><span style="width:' + gapPctOf(L) + '%"></span></div><b class="num">' + gapPctOf(L) + '%</b></div>' : '') + '</div>';
+}
 function vGap(I) {
-  var m = S.month, rows = [];
-  I.subs.forEach(function (s, si) { s.levels.forEach(function (L, li) {
-    var st = lvStatus(L, m);
-    if (S.filter === 'gap' && !L.gap) return; if (S.filter === 'late' && st !== 'late') return;
-    rows.push({ s: s, L: L, si: si, li: li, st: STATUS[st] });
+  var m = S.month, gf = ['gap', 'noact', 'late'].indexOf(S.filter) > -1 ? S.filter : 'all', rows = [], other = 0, cnt = { all: 0, gap: 0, noact: 0, late: 0, plan: 0, act: 0 };
+  I.subs.forEach(function (s) { s.levels.forEach(function (L) {
+    if (!L.gap && !(L.action || '').trim() && !sum(L.gapPlan || [])) { other++; return; }
+    var gs = gapStat(L, m), hasAct = !!(L.action || '').trim();
+    cnt.all++; if (L.gap) cnt.gap++; if (!hasAct) cnt.noact++; else cnt.act++; if (gs === 'late') cnt.late++; if (gs) cnt.plan++;
+    if ((gf === 'gap' && !L.gap) || (gf === 'noact' && hasAct) || (gf === 'late' && gs !== 'late')) return;
+    rows.push({ s: s, L: L, gs: gs });
   }); });
-  var f = function (k, t) { return '<button data-filter="' + k + '" aria-pressed="' + (S.filter === k) + '">' + t + '</button>'; };
-  return '<div class="panel glass"><div class="panel-head"><div><h2>แผนปรับปรุงตาม GAP</h2><p class="sub">GAP จากผลประเมินปีก่อน แนวทางปรับปรุง และความก้าวหน้าที่ส่วนงานกรอก</p></div><div class="seg" role="group" aria-label="กรอง">' + f('all', 'ทั้งหมด') + f('gap', 'มี GAP') + f('late', 'ล่าช้า') + '</div></div>' +
-    '<div class="scroll-x"><table style="min-width:900px"><thead><tr><th>ประเด็น · ระดับ</th><th>สถานะ</th><th>GAP ที่พบ</th><th>แนวทางปรับปรุง</th><th style="width:150px">ความก้าวหน้า</th></tr></thead><tbody>' +
-    (rows.length ? rows.map(function (r) {
-      var g = typeof r.L.gapPct === 'number' ? r.L.gapPct : null;
-      return '<tr class="link" data-open="' + r.s.uid + '|' + r.L.level + '"><td><span class="code">' + esc(r.s.label) + '</span> <b>ระดับ ' + r.L.level + '</b><div class="small muted" style="max-width:26ch">' + esc(r.s.name) + '</div></td><td>' + chip(r.st) + '</td>' +
-        '<td style="max-width:40ch" class="small">' + (r.L.gap ? esc(r.L.gap.slice(0, 220)) + (r.L.gap.length > 220 ? '…' : '') : '<span class="muted">–</span>') + '</td><td style="max-width:30ch" class="small">' + (r.L.action ? '<span class="src-tag src-' + actSrc(r.L) + '"><i></i>' + ACT_SRC[actSrc(r.L)] + '</span><div class="act-text src-' + actSrc(r.L) + '">' + esc(r.L.action) + '</div>' : '<span class="muted">ยังไม่ระบุ</span>') +
-          (r.L.gapNote ? '<div class="muted" style="margin-top:4px">ผล: ' + esc(r.L.gapNote.slice(0, 160)) + (r.L.gapNote.length > 160 ? '…' : '') + '</div>' : '') + '</td>' +
-        '<td>' + (g == null ? '<span class="muted">–</span>' : '<div class="bar"><span style="width:' + g + '%"></span></div><span class="num small">' + g + '%</span>') + '</td></tr>';
-    }).join('') : '<tr><td colspan="5"><div class="empty">' + ico('check') + 'ไม่มีรายการตามตัวกรองนี้</div></td></tr>') + '</tbody></table></div></div>';
+  var f = function (k, t, n) { return '<button data-filter="' + k + '" aria-pressed="' + (gf === k) + '">' + t + ' <span class="num">' + n + '</span></button>'; };
+  var body = rows.map(function (r) {
+    var L = r.L, p = L.gapPlan || [], v = L.gapRes || [], tp = sum(p), tr = sum(v), src = actSrc(L);
+    var cells = MONTHS.map(function (mm, i) {
+      var a = +p[i] || 0, b = +v[i] || 0, cls = (a ? ' p' : '') + (b ? ' r' : '') + (i === m ? ' cur' : '') + (i < m && a && !b ? ' miss' : '');
+      return '<td class="pl-m' + cls + '" title="' + mm + ' · แผน ' + a + ' · ผล ' + b + '">' + (a || b ? '<span>' + (b ? (b % 1 ? fmt(b, 1) : b) : a % 1 ? fmt(a, 1) : a) + '</span>' : '') + '</td>';
+    }).join('');
+    return '<tr class="link pl-row" data-open="' + r.s.uid + '|' + L.level + '"><td class="pl-name gp-name"><span class="code">' + esc(r.s.label) + '</span><span><b>ระดับ ' + L.level + '</b>' +
+        ((L.action || '').trim() ? ' <span class="src-tag src-' + src + '"><i></i>' + ACT_SRC[src] + '</span><small class="act-text src-' + src + '">' + esc(L.action.replace(/\s+/g, ' ').slice(0, 120)) + '</small>' : ' <span class="small warn">ยังไม่ระบุแนวทาง</span>') +
+        (L.gap ? '<small class="gp-gap" title="' + esc(L.gap) + '">GAP: ' + esc(L.gap.replace(/\s+/g, ' ').slice(0, 110)) + '</small>' : '') + '</span></td>' +
+      cells + '<td class="num pl-sum">' + (tp ? fmt(tr, tr % 1 ? 1 : 0) + '<span class="muted">/' + fmt(tp, tp % 1 ? 1 : 0) + '</span><small>' + esc(L.gapUnit || '') + (tp ? ' · ' + gapPctOf(L) + '%' : '') + '</small>' : '<span class="muted">–</span>') + '</td>' +
+      '<td>' + (r.gs ? chip(STATUS[r.gs]) : '<span class="chip mute">' + ico('clock') + 'ยังไม่มีแผน</span>') + '</td></tr>';
+  }).join('');
+  return '<div class="kpis bento-kpis">' + kpi('ระดับที่มี GAP จากปีก่อน', 'alert', cnt.gap, 'ระดับ', 'จากผลประเมินของ สคร.') +
+      kpi('มีแนวทางปรับปรุงแล้ว', 'check', cnt.act, '/ ' + cnt.all, 'ยังไม่ระบุ ' + cnt.noact + ' ระดับ', cnt.all ? cnt.act / cnt.all : 0, 'ok') +
+      kpi('มีแผนรายเดือนแล้ว', 'calendar', cnt.plan, '/ ' + cnt.all, 'กรอกในขั้น "แผนปรับปรุง GAP" ของหน้ารายงานผล', cnt.all ? cnt.plan / cnt.all : 0) +
+      kpi('ล่าช้ากว่าแผน', 'clock', cnt.late, 'ระดับ', 'ผลสะสมต่ำกว่าแผนสะสม ณ ' + MONTHS[m]) + '</div>' +
+    '<div class="panel glass"><div class="panel-head" style="flex-wrap:wrap"><div><h2>' + ico('trend', 18) + ' แผน/ผลการปรับปรุงตาม GAP ปีบัญชี ' + FY + '</h2><p class="sub">แนวทางปรับปรุง แผนรายเดือน และผลที่ลงไว้ · ข้อมูล ณ ' + MONTHS[m] + ' · กดแถวเพื่อไปกรอก</p></div>' +
+      '<div class="seg" role="group" aria-label="กรอง">' + f('all', 'ทั้งหมด', cnt.all) + f('gap', 'มี GAP', cnt.gap) + f('noact', 'ยังไม่มีแนวทาง', cnt.noact) + f('late', 'ล่าช้า', cnt.late) + '</div></div>' +
+    '<div class="lg" style="margin:4px 0 12px"><span><i class="sw pl-sw-p"></i>มีแผน</span><span><i class="sw pl-sw-r"></i>ลงผลแล้ว (ตัวเลข = ผล)</span><span><i class="sw pl-sw-miss"></i>ถึงกำหนดแต่ยังไม่มีผล</span><span><i class="sw pl-sw-cur"></i>เดือนที่ติดตาม</span></div>' +
+    '<div class="scroll-x pl-wrap"><table class="pl"><thead><tr><th class="pl-name">ประเด็น · ระดับ · แนวทางปรับปรุง</th>' + MONTHS.map(function (mm, i) { return '<th class="pl-m' + (i === m ? ' cur' : '') + '">' + mm + '</th>'; }).join('') + '<th>ผล/แผน</th><th>สถานะ</th></tr></thead><tbody>' +
+      (body || '<tr><td colspan="15"><div class="empty">' + ico('check') + 'ไม่มีรายการตามตัวกรองนี้</div></td></tr>') + '</tbody></table></div>' +
+    (other ? '<p class="small muted" style="margin:12px 0 0">' + ico('info', 13) + ' อีก ' + other + ' ระดับไม่มี GAP และยังไม่มีแนวทางหรือแผนปรับปรุง จึงไม่แสดงในตาราง</p>' : '') + '</div>';
 }
 
 /* ================= action plan: every planned activity of the indicator on a 12-month timeline ================= */
@@ -1962,7 +2070,6 @@ document.addEventListener('input', function (e) {
   var t = e.target, d = t.dataset;
   if (d.f) { var c = curLv(); c.L[d.f] = t.value; savePatch(c.s, c.L); return refreshSteps(); }
   if (d.ev != null) { var c2 = curLv(); c2.L.mr[+d.ev].evidence = t.value; savePatch(c2.s, c2.L); return refreshSteps(); }
-  if (t.id === 'gpct') { $('#gpctv').textContent = t.value + '%'; return; }
   if (d.tnote) { TRI_NOTE[d.tnote] = t.value; return store('trinote' + FY, TRI_NOTE); }
   if (t.id === 'q') { S.q = t.value; var pos = t.selectionStart; render(); var n = $('#q'); n.focus(); n.setSelectionRange(pos, pos); }
 });
@@ -1988,7 +2095,13 @@ document.addEventListener('change', function (e) {
     if (!bookProgress(+q[0], arr.filter(Boolean).length)) { stp.chk = old; render(); }
     return;
   }
-  if (t.id === 'gpct') { var c3 = curLv(); c3.L.gapPct = +t.value; savePatch(c3.s, c3.L); return render(); }
+  if (d.gp) {
+    var c3 = curLv(), g = d.gp.split(':'), arr2 = gapArr(c3.L, g[0] === 'p' ? 'gapPlan' : 'gapRes'), nv = Math.max(0, Math.round((+t.value || 0) * 100) / 100);
+    if (!canEdit(c3.I, c3.s) || (g[0] === 'r' && +g[1] !== curMonth())) return render();
+    arr2[+g[1]] = nv; savePatch(c3.s, c3.L);
+    logIt((g[0] === 'p' ? 'วางแผน' : 'ลงผล') + 'ปรับปรุง GAP ' + c3.s.label + ' ระดับ ' + c3.L.level + ' เดือน ' + MONTHS[+g[1]] + ' = ' + nv);
+    return render();
+  }
   if (d.f || d.ev != null) logIt('แก้ไข ' + curLv().s.label + ' ระดับ ' + curLv().L.level);
 });
 document.addEventListener('keydown', function (e) {
