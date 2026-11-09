@@ -1140,6 +1140,44 @@ td, th, .trow, .pl td, .doc, .lib-head { border-color: var(--hair-in) !important
   .app.mini .side-foot { border-top: 0; padding: 8px 0 4px; }
 }
 @media (max-width: 960px) { .side-tog { display: none; } }
+/* ===== mobile bottom bar: liquid-glass capsule, sliding highlight, tap bounce ===== */
+.mbar, .msheet, .ms-scrim { display: none; }
+@media (max-width: 760px) {
+  .main > .top .menu-btn { display: none !important; }
+  .main { padding-bottom: calc(108px + env(safe-area-inset-bottom, 0px)); }
+  .savebar { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
+  .mbar { --pad: 6px; display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); position: fixed; z-index: 28; left: 12px; right: 12px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); height: 66px; padding: var(--pad); border-radius: 26px;
+    background: linear-gradient(160deg, rgba(36, 76, 190, .9), rgba(10, 30, 96, .94)); -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.28), inset 0 -1px 0 rgba(255,255,255,.06), 0 1px 0 rgba(255,255,255,.08), 0 18px 40px -14px rgba(4, 12, 50, .75); border: 1px solid rgba(255,255,255,.16); }
+  .mbar::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,0) 45%); }
+  .mb-pill { position: absolute; top: var(--pad); bottom: var(--pad); left: var(--pad); width: calc((100% - 2 * var(--pad)) / var(--n)); transform: translateX(calc(var(--x, 0) * 100%)); border-radius: 20px;
+    background: linear-gradient(160deg, rgba(255,255,255,.32), rgba(255,255,255,.12)); box-shadow: inset 0 1px 0 rgba(255,255,255,.55), inset 0 0 0 1px rgba(255,255,255,.22), 0 6px 16px -6px rgba(0, 10, 60, .6);
+    transition: transform .42s cubic-bezier(.34, 1.4, .5, 1), opacity .2s; }
+  .mb-it { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 0; background: none; color: rgba(222, 234, 255, .86); font-size: 11px; font-weight: 500; cursor: pointer; border-radius: 20px; -webkit-tap-highlight-color: transparent; transition: color .25s; }
+  .mb-it svg { transition: transform .3s cubic-bezier(.34, 1.6, .5, 1); }
+  .mb-it:active svg { transform: scale(.82); }
+  .mb-it.on { color: #fff; font-weight: 700; }
+  .mb-it.on svg { animation: mbpop .5s cubic-bezier(.34, 1.6, .5, 1) both; }
+  .mb-it:focus-visible { outline: 2px solid #9CC4FF; outline-offset: -3px; }
+  .mb-t { white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .mb-n { position: absolute; top: 4px; left: calc(50% + 6px); min-width: 17px; height: 17px; padding: 0 5px; border-radius: 99px; background: #FF5A6E; color: #fff; font-size: 10px; font-weight: 700; line-height: 17px; text-align: center; box-shadow: 0 0 0 2px rgba(16, 40, 120, .9); }
+  .ms-scrim { display: block; position: fixed; inset: 0; z-index: 40; background: rgba(4, 12, 40, .4); animation: dwfade .2s ease both; }
+  .msheet { display: flex; flex-direction: column; position: fixed; z-index: 41; left: 0; right: 0; bottom: 0; max-height: 78vh; overflow-y: auto; padding: 8px 16px calc(22px + env(safe-area-inset-bottom, 0px)); border-radius: 26px 26px 0 0; background: var(--glass-solid); box-shadow: 0 -20px 50px -20px rgba(0, 0, 40, .5); animation: msup .32s cubic-bezier(.2, .9, .3, 1) both; }
+  .ms-grab { width: 40px; height: 5px; border-radius: 5px; background: var(--hair-in); margin: 4px auto 10px; flex: none; }
+  .msheet h3 { margin: 10px 4px 4px; font-size: 12.5px; font-weight: 600; color: var(--ink-3); }
+  .ms-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 50px; padding: 8px 8px; border: 0; border-top: 1px solid var(--hair-in); background: none; color: var(--ink); font-size: 15px; font-weight: 600; text-align: left; cursor: pointer; border-radius: 10px; }
+  .ms-row:first-of-type, h3 + .ms-row { border-top: 0; }
+  .ms-row:active { background: var(--primary-soft); }
+  .ms-row > svg { color: var(--primary); flex: none; } .ms-row > span:not(.ms-no) { flex: 1; min-width: 0; }
+  .ms-row.danger, .ms-row.danger > svg { color: var(--bad); }
+  .ms-no { width: 28px; height: 28px; flex: none; border-radius: 9px; display: grid; place-items: center; font-size: 13px; font-weight: 800; color: #fff; background: linear-gradient(145deg, #5B8CFF, #1F4BE0); }
+  .ms-who { display: flex; gap: 10px; align-items: center; padding: 8px; } .ms-who .av { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font: 700 12px var(--num); color: #fff; background: linear-gradient(145deg, #8DB2FF, #2E59E6); }
+  .ms-who b { display: block; font-size: 14px; } .ms-who small { font-size: 12px; color: var(--ink-3); }
+  .drawer { z-index: 45; } .dw-scrim { z-index: 44; }
+}
+@keyframes mbpop { 0% { transform: scale(.7) translateY(3px); } 60% { transform: scale(1.18) translateY(-2px); } 100% { transform: none; } }
+@keyframes msup { from { transform: translateY(100%); } }
+@media (prefers-reduced-motion: reduce) { .mb-pill, .mb-it svg { transition: none !important; animation: none !important; } }
 </style>
 </head>
 <body>
@@ -1195,6 +1233,7 @@ var ICONS = {
   undo: 'M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3',
   target: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 12h.01',
   calendar: 'M4 5h16v16H4zM4 10h16M9 3v4M15 3v4',
+  more: 'M4 12a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0M10.4 12a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0M16.8 12a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0',
   sliders: 'M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6',
   shield: 'M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6zM9 12l2 2 4-4',
   save: 'M5 3h11l3 3v15H5zM8 3v5h7M8 21v-7h8v7',
@@ -1614,6 +1653,37 @@ function userMenu() {
     '<div class="udrop glass" id="udrop" role="menu" aria-label="บัญชีผู้ใช้">' + whoCard('u-head') +
       '<button class="u-item danger" role="menuitem" data-act="logout">' + ico('logout', 17) + 'ออกจากระบบ</button></div></div>';
 }
+// Mobile bottom bar (≤760px): 4 main items + "more" sheet; glass pill slides to the tapped item
+function mbItems() {
+  if (U.role === 'reporter') return [
+    { k: 'score', t: 'ภาพรวม', i: 'target', a: 'data-tab="score"', on: S.view === 'ind' && (S.tab === 'score' || S.tab === 'history') },
+    { k: 'dash', t: 'งานของฉัน', i: 'home', a: 'data-tab="dash"', on: S.view === 'ind' && S.tab === 'dash', n: myWork(indBy(U.ind), S.month).todo },
+    { k: 'plan', t: 'แผน', i: 'calendar', a: 'data-tab="plan"', on: S.view === 'ind' && S.tab === 'plan' },
+    { k: 'report', t: 'รายงานผล', i: 'report', a: 'data-tab="report"', on: S.view === 'ind' && S.tab === 'report' }];
+  var q = INDS.filter(function (I) { return wfOf(I) === 'submitted'; }).length;
+  return [{ k: 'home', t: 'ภาพรวม', i: 'grid', a: 'data-go="home"', on: S.view === 'home' }]
+    .concat(isAudit() ? [{ k: 'review', t: 'ตรวจสอบ', i: 'shield', a: 'data-go="review"', on: S.view === 'review', n: q }] : [])
+    .concat([{ k: 'inds', t: 'ตัวชี้วัด', i: 'report', a: 'data-act="mb-sheet" data-sheet="inds"', on: S.view === 'ind' }]);
+}
+function mobileBar() {
+  var it = mbItems().concat([{ k: 'more', t: 'เพิ่มเติม', i: 'more', a: 'data-act="mb-sheet" data-sheet="more"', on: !!S.sheet && S.sheet === 'more' }]);
+  var cur = -1; it.forEach(function (x, i) { if (x.on && cur < 0) cur = i; });
+  var from = S.mbPrev != null && S.mbPrev !== cur ? S.mbPrev : cur;
+  return '<nav class="mbar" aria-label="เมนูหลัก" style="--n:' + it.length + '"><span class="mb-pill" data-to="' + cur + '" style="--x:' + from + (cur < 0 ? ';opacity:0' : '') + '"></span>' + it.map(function (x, i) {
+    return '<button class="mb-it' + (i === cur ? ' on' : '') + '" ' + x.a + ' data-mbi="' + i + '"' + (i === cur ? ' aria-current="page"' : '') + '>' + ico(x.i, 21) + (x.n ? '<span class="mb-n num">' + x.n + '</span>' : '') + '<span class="mb-t">' + x.t + '</span></button>';
+  }).join('') + '</nav>' + mobileSheet();
+}
+function mobileSheet() {
+  if (!S.sheet) return '';
+  var row = function (attrs, icon, label, extra) { return '<button class="ms-row" ' + attrs + '>' + icon + '<span>' + label + '</span>' + (extra || '') + '</button>'; }, b = '';
+  if (S.sheet === 'inds') b = '<h3>ตัวชี้วัด</h3>' + INDS.map(function (I) { return row('data-ind="' + I.code + '"', '<span class="ms-no num">' + I.no + '</span>', esc(I.name), '<span class="num muted">' + fmt(indCalc(I, S.month).score) + '</span>'); }).join('');
+  else {
+    if (U.role === 'reporter') b += '<h3>เมนูอื่น</h3>' + row('data-tab="gap"', ico('trend', 19), 'แผนปรับปรุง GAP') + row('data-tab="evidence"', ico('folder', 19), 'ทะเบียนหลักฐาน') + row('data-tab="history"', ico('history', 19), 'ผลการดำเนินงานที่ผ่านมา');
+    else if (isAudit()) b += '<h3>ระบบ</h3>' + row('data-go="config"', ico('sliders', 19), 'Config การกรอกแผน') + row('data-go="users"', ico('users', 19), 'ผู้ใช้และสิทธิ์') + row('data-go="log"', ico('log', 19), 'Audit trail');
+    b += '<h3>บัญชี</h3>' + whoCard('ms-who') + row('data-act="logout"', ico('logout', 19), 'ออกจากระบบ').replace('class="ms-row"', 'class="ms-row danger"');
+  }
+  return '<div class="ms-scrim" data-act="mb-close"></div><div class="msheet" role="dialog" aria-modal="true" aria-label="' + (S.sheet === 'inds' ? 'ตัวชี้วัด' : 'เมนูเพิ่มเติม') + '"><div class="ms-grab"></div>' + b + '</div>';
+}
 function closeUmenu() { var m = document.querySelector('.umenu.open'); if (m) { m.classList.remove('open'); m.querySelector('.ubtn').setAttribute('aria-expanded', 'false'); } }
 function render() {
   var dwb = document.querySelector('.drawer .pe-panel'), dwTop = dwb ? dwb.scrollTop : 0;
@@ -1641,7 +1711,9 @@ function render() {
         : MONTHS.map(function (mm, i) { return '<option value="' + i + '"' + (i === S.month ? ' selected' : '') + '>' + mm + '</option>'; }).join('')) + '</select></label>' +
     '<i class="tb-sep"></i><button class="icon-btn" data-act="theme" aria-label="สลับเป็นธีม' + (dark ? 'สว่าง' : 'มืด') + '">' + ico(dark ? 'sun' : 'moon') + '</button></div>' + userMenu() + '</header>' +
     (FY !== CUR_FY ? '<div class="yearbar" role="status">' + ico('lock', 16) + '<span><b>ปีบัญชี ' + FY + ' · ปิดรอบแล้ว</b> ดูได้อย่างเดียว ข้อมูลผลการดำเนินงานตามแบบฟอร์มเดิม</span><button class="btn sm" data-act="back-current">กลับไปปีบัญชี ' + CUR_FY + '</button></div>' : '') +
-    '<main id="view">' + body + '</main></div></div>' + planDrawer();
+    '<main id="view">' + body + '</main></div></div>' + mobileBar() + planDrawer();
+  var pill = document.querySelector('.mb-pill'); if (pill && pill.dataset.to !== String(pill.style.getPropertyValue('--x'))) requestAnimationFrame(function () { requestAnimationFrame(function () { pill.style.setProperty('--x', pill.dataset.to); }); });
+  S.mbPrev = null;
   animateDv();
   var dwn = document.querySelector('.drawer .pe-panel'); if (dwn && !S.plEnter) dwn.scrollTop = dwTop;
   S.plEnter = false;
@@ -2703,8 +2775,12 @@ document.addEventListener('click', function (e) {
     if (op) um.querySelector('.u-item').focus();
     return;
   }
-  var b = e.target.closest('button, tr.link, .scrim, .dw-scrim'); if (!b || b.disabled) return;
+  var b = e.target.closest('button, tr.link, .scrim, .dw-scrim, .ms-scrim'); if (!b || b.disabled) return;
   var d = b.dataset;
+  if (d.mbi != null) { var pl = document.querySelector('.mb-pill'); S.mbPrev = pl ? +pl.dataset.to : null; }
+  if (d.act === 'mb-sheet') { S.sheet = S.sheet === d.sheet ? null : d.sheet; return render(); }
+  if (d.act === 'mb-close') { S.sheet = null; return render(); }
+  if (S.sheet && (d.tab || d.go || d.ind || d.act === 'logout')) S.sheet = null;
   if (d.login) { var p = d.login.split(':'); U = { role: p[0], ind: p[1] || null, part: p[2] || null }; store('user', U); S = { view: 'home', ind: U.ind, tab: 'dash', sub: 0, level: 0, month: 11, filter: 'all', q: '', yr: 2568, theme: S.theme, mini: S.mini }; logIt('เข้าสู่ระบบ'); render(); return; }
   if (d.act === 'pwtoggle') {
     var pw = $('#pw'), show = pw.type === 'password';
@@ -2903,6 +2979,7 @@ document.addEventListener('change', function (e) {
   if (d.f || d.ev != null) logIt('แก้ไข ' + curLv().s.label + ' ระดับ ' + curLv().L.level);
 });
 document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && S.sheet) { S.sheet = null; render(); return; }
   if (e.key === 'Escape' && S.pl && document.querySelector('.drawer')) { S.pl = null; S.delStep = null; render(); return; }
   if (e.key === 'Escape' && document.querySelector('.umenu.open')) { closeUmenu(); var ub = document.querySelector('.ubtn'); if (ub) ub.focus(); return; }
   if (e.key === 'Escape') { document.body.classList.remove('nav-open'); if (S.keysHelp) { S.keysHelp = false; render(); } return; }
