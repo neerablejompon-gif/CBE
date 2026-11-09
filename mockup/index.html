@@ -4,7 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CBE Report Platform</title>
-<link rel="icon" type="image/png" href="assets/cbe-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png">
+<link rel="icon" type="image/png" sizes="256x256" href="assets/cbe-icon.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -400,18 +403,8 @@ input[type="range"] { flex: 1; accent-color: var(--primary); height: 28px; }
 @keyframes lgspin { to { transform: rotate(360deg); } }
 .lg-hero { display: flex; flex-direction: column; gap: 22px; max-width: 640px; animation: lgin .9s cubic-bezier(.2,.8,.2,1) both; }
 .lg-logo { width: min(440px, 100%); height: auto; filter: drop-shadow(0 18px 44px rgba(40, 110, 255, .5)); }
-.lg-eyebrow { align-self: flex-start; display: inline-flex; align-items: center; gap: 9px; padding: 6px 14px 6px 11px; border-radius: 999px; font-size: 13px; font-weight: 600; color: #CFE0FF; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
-.lg-eyebrow i { width: 8px; height: 8px; border-radius: 50%; background: #5FE3B0; box-shadow: 0 0 0 4px rgba(95,227,176,.18); }
 .lg-hero h1 { margin: 0; font-size: clamp(30px, 3.3vw, 46px); line-height: 1.22; font-weight: 700; letter-spacing: -.01em; }
 .lg-hero h1 em { font-style: normal; background: linear-gradient(90deg, #A8CBFF, #5FD3FF 52%, #B9A8FF); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.lg-hero p { margin: 0; color: var(--lg-ink2); font-size: 16px; max-width: 52ch; }
-.lg-inds { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
-.lg-inds li { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 12px; font: 700 13px var(--num); background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.13); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); animation: lgin .7s both; animation-delay: calc(.35s + var(--i) * 60ms); }
-.lg-inds li b { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; font-size: 11.5px; background: linear-gradient(145deg, #5B8CFF, #1F4BE0); box-shadow: inset 0 1px 0 rgba(255,255,255,.5); }
-.lg-feats { list-style: none; margin: 4px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-.lg-feats li { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; line-height: 1.45; color: var(--lg-ink2); }
-.lg-feats b { display: block; color: var(--lg-ink); font-weight: 600; }
-.lg-feats svg { flex: none; color: #7FD3FF; margin-top: 2px; }
 .lg-card { --mx: 25%; --my: 0%; position: relative; display: flex; flex-direction: column; gap: 16px; padding: 38px 34px 30px; border-radius: 30px; background: linear-gradient(150deg, rgba(255,255,255,.17), rgba(255,255,255,.06) 46%, rgba(255,255,255,.035)); -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%); box-shadow: inset 0 1px 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(255,255,255,.1), 0 40px 90px -30px rgba(0,6,40,.9); animation: lgin 1s .12s cubic-bezier(.2,.8,.2,1) both; }
 /* gradient rim, then a specular glow that follows the pointer */
 .lg-card::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.2px; pointer-events: none; background: linear-gradient(140deg, rgba(255,255,255,.8), rgba(255,255,255,.1) 28%, rgba(255,255,255,0) 55%, rgba(127,211,255,.6) 86%, rgba(255,255,255,.3)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
@@ -448,7 +441,6 @@ input[type="range"] { flex: 1; accent-color: var(--primary); height: 28px; }
 .signin .acc b { color: #A8CBFF; } .signin .acc span { color: rgba(214,228,255,.66); }
 .signin .acc.wide b { color: #fff; } .signin .acc.wide svg { color: #7FD3FF; }
 .signin .acc-grid.rep { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.lg-foot { position: absolute; left: 0; right: 0; bottom: 18px; text-align: center; font-size: 12px; color: rgba(200,215,255,.45); }
 @supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) { .lg-card { background: rgba(12,30,88,.95); } }
 @media (prefers-reduced-transparency: reduce) { .lg-card { background: rgba(12,30,88,.97); -webkit-backdrop-filter: none; backdrop-filter: none; } }
 @media (max-width: 900px) {
@@ -823,6 +815,80 @@ td, th, .trow, .pl td, .doc, .lib-head { border-color: var(--hair-in) !important
   .tb-ctrl { flex: 1 1 100%; justify-content: space-between; }
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .glass, .kpi, .hero { background: var(--glass-solid); } }
+/* ===== sign-in: hero and card sit as one centred pair ===== */
+@media (min-width: 901px) { .signin { grid-template-columns: minmax(0, 560px) minmax(0, 440px); gap: clamp(28px, 4vw, 64px); padding: 40px clamp(20px, 4vw, 56px); } }
+.lg-hero { align-items: center; justify-content: center; text-align: center; gap: 14px; max-width: 560px; align-self: start; position: sticky; top: 0; min-height: calc(100vh - 80px); }
+.lg-logo { width: min(340px, 100%); }
+.lg-hero h1 { font-size: clamp(26px, 2.6vw, 38px); }
+.lg-head { text-align: center; }
+.lg-head h2 { font-size: 26px; }
+.lg-head .lg-sys { margin-top: 6px; font: 800 15px var(--num); letter-spacing: .04em; color: #A8CBFF; }
+.lg-head p + p { margin-top: 0; }
+.lg-credit { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 4px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.12); font-size: 12.5px; line-height: 1.45; color: var(--lg-ink2); text-align: left; }
+.lg-credit img { width: 44px; height: 44px; flex: none; border-radius: 50%; background: #fff; padding: 2px; box-shadow: 0 6px 18px -6px rgba(0,0,0,.5); }
+.lg-credit b { color: var(--lg-ink); font-weight: 600; }
+/* hero graphic: RAOT at the centre, 8 indicators exchanging data */
+.lg-orbit { width: min(100%, 470px, max(260px, calc(100vh - 330px))); aspect-ratio: 1; }
+.lg-hero h1 em { white-space: nowrap; }
+.lg-card { gap: 13px; }
+.signin .acc-grid.rep { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.signin .acc { padding: 8px 4px; }
+.signin .acc.wide { padding: 10px 12px; }
+@media (max-width: 520px) { .signin .acc-grid.rep { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.lg-orbit svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.ob-ring { fill: none; stroke: rgba(160, 200, 255, .32); stroke-width: 1.2; stroke-dasharray: 2 7; }
+.ob-ring.o2 { stroke: rgba(160, 200, 255, .14); stroke-dasharray: 1 10; }
+.ob-ring.o3 { stroke: rgba(242, 181, 68, .28); stroke-dasharray: 3 6; }
+.ob-spin { transform-origin: 260px 260px; animation: obspin 90s linear infinite; }
+.ob-spoke { fill: none; stroke: rgba(140, 190, 255, .2); stroke-width: 1; }
+.ob-arc { fill: none; stroke: rgba(95, 227, 176, .18); stroke-width: 1.4; }
+.ob-pk.in { fill: #8FE6FF; filter: drop-shadow(0 0 5px #5FD3FF); }
+.ob-pk.out { fill: #F6C35A; filter: drop-shadow(0 0 5px #E5A023); }
+.ob-pk.peer { fill: #7DF0C2; filter: drop-shadow(0 0 4px #5FE3B0); }
+.ob-nc { fill: rgba(14, 36, 112, .72); stroke: rgba(170, 205, 255, .5); stroke-width: 1.3; }
+.ob-glow { fill: rgba(95, 211, 255, .35); opacity: 0; transform-box: fill-box; transform-origin: center; animation: obping 3.2s ease-out infinite; animation-delay: var(--d, 0s); }
+.ob-no { font: 700 11px var(--num); fill: #8FB0FF; text-anchor: middle; }
+.ob-code { font: 800 14px var(--num); fill: #fff; text-anchor: middle; letter-spacing: .01em; }
+.ob-core { fill: #fff; filter: drop-shadow(0 10px 30px rgba(40, 110, 255, .6)); }
+.ob-pulse { fill: none; stroke: rgba(246, 195, 90, .55); stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: obpulse 3.2s ease-out infinite; }
+.ob-pulse.p2 { animation-delay: 1.6s; }
+.ob-node { animation: obfloat 6s ease-in-out infinite alternate; animation-delay: var(--d, 0s); }
+@keyframes obspin { to { transform: rotate(360deg); } }
+@keyframes obpulse { from { transform: scale(1); opacity: .8; } to { transform: scale(1.75); opacity: 0; } }
+@keyframes obping { 0% { opacity: .9; transform: scale(.85); } 60%, 100% { opacity: 0; transform: scale(1.35); } }
+@keyframes obfloat { to { translate: 0 -4px; } }
+@media (max-height: 800px) { .lg-logo { width: min(280px, 100%); } }
+
+/* ===== sidebar brand: full-width CBE mark + organisation ===== */
+.brand { flex-direction: column; align-items: center; gap: 4px; padding: 10px 8px 14px; text-align: center; }
+.brand-logo { display: block; width: 100%; height: auto; filter: drop-shadow(0 6px 18px rgba(40, 110, 255, .35)); }
+.brand-org { font-size: 13px; font-weight: 600; letter-spacing: .02em; color: var(--rail-ink-2); }
+
+/* ===== plan entry: window banner, inline plan inputs, config ===== */
+.win-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 12px; padding: 10px 14px; border-radius: var(--r-md); border: 1px solid var(--hair-in); font-size: 13.5px; }
+.win-bar.ok { background: var(--ok-bg); } .win-bar.mute { background: var(--mute-bg); }
+.win-bar span { flex: 1; min-width: 200px; color: var(--ink-2); } .win-bar b { color: var(--ink); }
+.pl td.pl-in { padding: 3px 2px; }
+.pl td.pl-in input, table.months td input { width: 100%; min-width: 40px; min-height: 32px; padding: 2px 4px; border: 1px solid var(--hair-in); border-radius: 8px; background: var(--field); text-align: center; font: 600 13px var(--num); }
+.pl td.pl-in input { -moz-appearance: textfield; }
+.pl td.pl-in input::-webkit-inner-spin-button, .pl td.pl-in input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.pl td.pl-in input:focus, table.months td input:focus { outline: 2px solid var(--primary); outline-offset: 0; border-color: transparent; }
+.cfg-card { display: flex; flex-direction: column; gap: 14px; }
+.switch { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switch .sw-track { position: relative; flex: none; width: 46px; height: 26px; border-radius: 99px; background: var(--mute-bg); border: 1px solid var(--hair-in); transition: background .2s; }
+.switch .sw-track i { position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.25); transition: transform .2s; }
+.switch input:checked + .sw-track { background: var(--ok); }
+.switch input:checked + .sw-track i { transform: translateX(20px); }
+.switch input:focus-visible + .sw-track { outline: 2px solid var(--primary); outline-offset: 2px; }
+.switch input:disabled ~ * { opacity: .55; cursor: not-allowed; }
+.switch small { display: block; font-size: 12.5px; color: var(--ink-3); }
+.cfg-dates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.cfg-dates .label { margin-top: 0; } .cfg-dates .input { width: 100%; }
+.cfg-state { margin: 0; display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: var(--r-sm); font-weight: 600; font-size: 13.5px; }
+.cfg-state.ok { background: var(--ok-bg); } .cfg-state.mute { background: var(--mute-bg); }
+@media (max-width: 960px) { .cfg-card { grid-column: span 12; } }
+@media (max-width: 520px) { .cfg-dates { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -876,6 +942,7 @@ var ICONS = {
   undo: 'M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3',
   target: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 12h.01',
   calendar: 'M4 5h16v16H4zM4 10h16M9 3v4M15 3v4',
+  sliders: 'M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6',
   shield: 'M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6zM9 12l2 2 4-4',
   save: 'M5 3h11l3 3v15H5zM8 3v5h7M8 21v-7h8v7',
   gap: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
@@ -914,7 +981,7 @@ function store(k, v) {
 }
 
 /* ================= live system: _worker.js serves data-2570.js with CBE_API, edits sync to Google Sheets ================= */
-var API = window.CBE_API || null, API_STORES = { patch: 1, wf: 1, wfnote: 1, tri: 1, trinote: 1, unlock: 1 };
+var API = window.CBE_API || null, API_STORES = { patch: 1, wf: 1, wfnote: 1, tri: 1, trinote: 1, unlock: 1, cfg: 1 };
 var OUTBOX = { ops: {}, log: [] }, SENDING = Promise.resolve(), flushT;
 // Send only the keys that changed since the last save; the server checks each one against the user's rights
 function queueDiff(name, obj) {
@@ -1029,6 +1096,7 @@ function applyPatches() {
       ['narrative', 'action', 'actionSrc', 'gapPct', 'gapNote', 'gapPlan', 'gapRes', 'gapUnit', 'remark', 'note'].forEach(function (k) { if (k in p) L[k] = p[k]; });
       if (p.mr) p.mr.forEach(function (m, i) { if (L.mr[i]) { L.mr[i].has = m[0]; L.mr[i].evidence = m[1]; L.mr[i].files = m[2] || []; } });
       if (p.res) p.res.forEach(function (r, i) { if (L.steps[i]) L.steps[i].result = r; });
+      if (p.plan) p.plan.forEach(function (a, i) { if (L.steps[i] && Array.isArray(a)) L.steps[i].plan = arr12(a); });
       if (p.chk) p.chk.forEach(function (k, i) { if (k && L.steps[i]) L.steps[i].chk = k; });
     });
   }); });
@@ -1036,7 +1104,7 @@ function applyPatches() {
 function savePatch(s, L) {
   L.gapPct = gapPctOf(L);
   P[lvKey(s, L)] = { narrative: L.narrative, action: L.action, actionSrc: L.actionSrc, gapPct: L.gapPct, gapNote: L.gapNote, gapPlan: L.gapPlan, gapRes: L.gapRes, gapUnit: L.gapUnit, remark: L.remark, note: L.note,
-    mr: L.mr.map(function (m) { return [m.has, m.evidence, m.files]; }), res: L.steps.map(function (st) { return st.result; }), chk: L.steps.map(function (st) { return st.chk || null; }) };
+    mr: L.mr.map(function (m) { return [m.has, m.evidence, m.files]; }), res: L.steps.map(function (st) { return st.result; }), plan: L.steps.map(function (st) { return st.plan; }), chk: L.steps.map(function (st) { return st.chk || null; }) };
   store('patch' + FY, P);
   delete RUNS[s.uid.split('|')[0]];
   S.savedAt = new Date().toTimeString().slice(0, 5);
@@ -1191,11 +1259,32 @@ function precheck(I, m) {
 var RUNS = {}; // code → { at, res } (in memory; re-run is cheap)
 var TRI = store('tri' + FY) || {}; // finding id → 'confirm' | 'dismiss'
 var TRI_NOTE = store('trinote' + FY) || {}; // finding id → auditor note sent with a return
-var UNLOCK = store('unlock' + FY) || {}; // level key → กปม. allowed correcting months already booked (until relock or submit)
+var UNLOCK = store('unlock' + FY) || {};
+// Plan-entry windows set by กปม.: when open (and today is within the dates) reporters may change monthly plans; results stay editable either way
+var CFG = store('cfg' + FY) || {};
+var WIN_DEF = { plan: ['แผนการดำเนินงาน', 'แผนรายเดือนของกิจกรรมตามค่าเกณฑ์แต่ละระดับ · หน้า "แผนการดำเนินงาน" และขั้น ① ของหน้ารายงานผล', 'calendar'],
+  gap: ['แผนปรับปรุง GAP', 'แผนรายเดือนตามแนวทางปรับปรุง GAP · หน้า "แผนปรับปรุง GAP" และขั้น ④ ของหน้ารายงานผล', 'trend'] };
+function win(k) { var c = CFG[k] || {}; return { open: c.open !== false, from: c.from || '', to: c.to || '' }; }
+function isoDay(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+function isoTh(v) { var a = v.split('-'); return thDate(new Date(+a[0], +a[1] - 1, +a[2])); }
+function winOpen(k) { var w = win(k), t = isoDay(new Date()); return FY === CUR_FY && w.open && (!w.from || t >= w.from) && (!w.to || t <= w.to); }
+function winText(k) {
+  var w = win(k), t = isoDay(new Date());
+  if (FY !== CUR_FY) return 'ปีบัญชีนี้ปิดรอบแล้ว';
+  if (!w.open) return 'ปิดรับการแก้ไขแผน';
+  if (w.from && t < w.from) return 'เปิดรับ ' + isoTh(w.from) + (w.to ? ' – ' + isoTh(w.to) : '');
+  if (w.to && t > w.to) return 'ปิดรับแล้วเมื่อ ' + isoTh(w.to);
+  return 'เปิดให้กรอกแผน' + (w.to ? ' ถึง ' + isoTh(w.to) : ' (ไม่กำหนดวันปิด)');
+}
+function winBar(k) {
+  var on = winOpen(k);
+  return '<div class="win-bar ' + (on ? 'ok' : 'mute') + '">' + ico(on ? 'edit' : 'lock', 15) + '<span><b>' + WIN_DEF[k][0] + ':</b> ' + winText(k) + '</span>' +
+    (isAudit() ? '<button class="btn sm" data-go="config">' + ico('sliders', 15) + 'ตั้งค่า</button>' : '') + '</div>';
+} // level key → กปม. allowed correcting months already booked (until relock or submit)
 // Switch the whole app to another fiscal year; only the current year takes edits
 function setYear(fy) {
   FY = fy; INDS = yearInds(fy);
-  P = store('patch' + fy) || {}; UNLOCK = store('unlock' + fy) || {}; WFS = store('wf' + fy) || {}; WF_NOTE = store('wfnote' + fy) || {}; TRI = store('tri' + fy) || {}; TRI_NOTE = store('trinote' + fy) || {};
+  P = store('patch' + fy) || {}; UNLOCK = store('unlock' + fy) || {}; WFS = store('wf' + fy) || {}; WF_NOTE = store('wfnote' + fy) || {}; TRI = store('tri' + fy) || {}; TRI_NOTE = store('trinote' + fy) || {}; CFG = store('cfg' + fy) || {};
   if (fy === CUR_FY && !INDS.patched) { applyPatches(); INDS.patched = true; }
   RUNS = {}; S.month = fy === CUR_FY ? curMonth() : 11; S.rv = null; S.fid = null; S.returning = false;
 }
@@ -1226,7 +1315,7 @@ function applyTheme() {
 /* ================= shell ================= */
 function nav(attrs, label, icon, current, extra) { return '<button class="nav" ' + attrs + (current ? ' aria-current="page"' : '') + '>' + icon + '<span>' + label + '</span>' + (extra || '') + '</button>'; }
 function sidebar() {
-  var h = '<div class="brand"><img class="logo" src="assets/cbe-icon.png" width="44" height="44" alt=""><div><b>CBE Report</b><span>Core Business Enablers · SE-AM ' + FY + '</span></div></div>' +
+  var h = '<div class="brand"><img class="brand-logo" src="assets/cbe-logo-side.png" width="640" height="208" alt="CBE Core Business Enablers"><span class="brand-org">การยางแห่งประเทศไทย</span></div>' +
     '<div class="who"><div class="av">' + (isAudit() ? 'กป' : isExec() ? 'ผบ' : (U.part || indBy(U.ind).label).slice(0, 3)) + '</div><div><b>' + esc(userLabel()) + '</b><small>' + (isAudit() ? 'ตรวจ · ให้คะแนน · ดูแลระบบ' : isExec() ? 'ดูอย่างเดียว · ทุกตัวชี้วัด' : U.part ? 'แก้ไขเฉพาะส่วน ' + U.part + ' ของ ' + indBy(U.ind).label : 'เห็นเฉพาะตัวชี้วัดของตน') + '</small></div></div>';
   if (U.role !== 'reporter') {
     var q = INDS.filter(function (I) { return wfOf(I) === 'submitted'; }).length;
@@ -1235,7 +1324,7 @@ function sidebar() {
     h += '<div class="nav-label">ตัวชี้วัด</div>' + INDS.map(function (I) {
       return nav('data-ind="' + I.code + '"', esc(I.name), '<span class="no">' + I.no + '</span>', S.view === 'ind' && S.ind === I.code, '<span class="sc">' + fmt(indCalc(I, S.month).score) + '</span>');
     }).join('');
-    if (isAudit()) h += '<div class="nav-label">ระบบ</div>' + nav('data-go="users"', 'ผู้ใช้และสิทธิ์', ico('users', 19), S.view === 'users') + nav('data-go="log"', 'Audit trail', ico('log', 19), S.view === 'log');
+    if (isAudit()) h += '<div class="nav-label">ระบบ</div>' + nav('data-go="config"', 'Config การกรอกแผน', ico('sliders', 19), S.view === 'config') + nav('data-go="users"', 'ผู้ใช้และสิทธิ์', ico('users', 19), S.view === 'users') + nav('data-go="log"', 'Audit trail', ico('log', 19), S.view === 'log');
   } else {
     var I = indBy(U.ind);
     var todo = myWork(I, S.month).todo;
@@ -1259,7 +1348,8 @@ function render() {
   var body, crumb, badge, eye = 'Core Business Enablers';
   if (S.view === 'ind' && !canSee(S.ind)) { body = v403(); crumb = 'ไม่มีสิทธิ์'; badge = ico('lock', 18); }
   else if (S.view === 'ind') { body = vInd(I); crumb = esc(I.name); badge = I.no; eye += ' · ตัวชี้วัด ' + I.no + ' ' + esc(I.code); }
-  else { body = { home: vOrg, review: vReview, users: vUsers, log: vLog }[S.view](); crumb = { home: 'ภาพรวมองค์กร', review: 'พื้นที่ผู้ตรวจสอบ', users: 'ผู้ใช้และสิทธิ์', log: 'Audit trail' }[S.view]; badge = ico({ home: 'grid', review: 'shield', users: 'users', log: 'history' }[S.view], 18); }
+  else if (S.view === 'config' && !isAudit()) { body = v403(); crumb = 'ไม่มีสิทธิ์'; badge = ico('lock', 18); }
+  else { body = { home: vOrg, review: vReview, users: vUsers, log: vLog, config: vConfig }[S.view](); crumb = { home: 'ภาพรวมองค์กร', review: 'พื้นที่ผู้ตรวจสอบ', users: 'ผู้ใช้และสิทธิ์', log: 'Audit trail', config: 'Config การกรอกแผน' }[S.view]; badge = ico({ home: 'grid', review: 'shield', users: 'users', log: 'history', config: 'sliders' }[S.view], 18); }
   $('#root').innerHTML = '<div class="app"><aside class="side" aria-label="เมนูหลัก">' + sidebar() + '</aside><div class="scrim" data-act="close-nav"></div>' +
     '<div class="main"><header class="top"><button class="icon-btn menu-btn" data-act="open-nav" aria-label="เปิดเมนู">' + ico('menu') + '</button><div class="tb-title glass"><span class="tb-badge num">' + badge + '</span><div class="tb-txt"><span class="tb-eye">' + eye + '</span><p class="tb-h">' + crumb + '</p></div></div><div class="spacer"></div><div class="tb-ctrl glass">' +
     (U.role === 'reporter' ? '<span class="saved" id="saved" role="status">' + ico('check', 15) + '<span>' + (S.savedAt ? 'บันทึกแล้ว ' + S.savedAt : 'บันทึกอัตโนมัติ') + '</span></span><i class="tb-sep"></i>' : '') +
@@ -1274,28 +1364,67 @@ function render() {
 function v403() { return '<section class="view"><div class="panel glass empty">' + ico('lock') + '<h2>ไม่มีสิทธิ์เข้าถึงตัวชี้วัดนี้</h2><p>บัญชีของคุณเห็นได้เฉพาะตัวชี้วัดที่รับผิดชอบ</p></div></section>'; }
 
 /* ================= login ================= */
+var CREDIT = '<div class="lg-credit"><img src="assets/raot-logo.png" width="44" height="44" alt="ตราการยางแห่งประเทศไทย"><span>กองประเมินผล ฝ่ายยุทธศาสตร์องค์กร<br><b>การยางแห่งประเทศไทย</b></span></div>';
+// Hero graphic: the RAOT mark at the centre, the 8 indicators on an orbit, data packets flowing in (blue), back out (gold) and between neighbours (green)
+function heroOrbit() {
+  var C = 260, R = 194, n = IND_DEF.length, still = matchMedia('(prefers-reduced-motion: reduce)').matches, D = 3.2;
+  var pt = function (i) { var a = (-90 + i * 360 / n) * Math.PI / 180; return [+(C + R * Math.cos(a)).toFixed(1), +(C + R * Math.sin(a)).toFixed(1)]; };
+  var move = function (path, cls, r, begin, dur, back) {
+    return '<circle r="' + r + '" class="ob-pk ' + cls + '" opacity="0"><animateMotion dur="' + dur + 's" begin="' + begin + 's" repeatCount="indefinite" keyPoints="' + (back ? '1;0' : '0;1') + '" keyTimes="0;1" calcMode="linear"><mpath href="#' + path + '"/></animateMotion>' +
+      '<animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.12;.85;1" dur="' + dur + 's" begin="' + begin + 's" repeatCount="indefinite"/></circle>';
+  };
+  var lines = '', pk = '', nodes = '';
+  IND_DEF.forEach(function (d, i) {
+    var a = pt(i), b = pt((i + 1) % n);
+    lines += '<path id="obs' + i + '" class="ob-spoke" d="M' + a[0] + ' ' + a[1] + 'L' + C + ' ' + C + '"/>' +
+      '<path id="oba' + i + '" class="ob-arc" d="M' + a[0] + ' ' + a[1] + 'A' + R + ' ' + R + ' 0 0 1 ' + b[0] + ' ' + b[1] + '"/>';
+    if (!still) pk += move('obs' + i, 'in', 4.2, (i * D / n).toFixed(2), D) + move('obs' + i, 'out', 3.4, (D / 2 + i * D / n).toFixed(2), D, true) +
+      (i % 2 ? '' : move('oba' + i, 'peer', 3, (i * .35).toFixed(2), 2.6));
+    nodes += '<g class="ob-node" transform="translate(' + a[0] + ' ' + a[1] + ')" style="--d:' + (i * D / n + D * .9).toFixed(2) + 's"><circle class="ob-glow" r="40"/><circle class="ob-nc" r="35"/>' +
+      '<text class="ob-no" y="-9">' + d.no + '</text><text class="ob-code" y="10">' + esc(d.label || d.code) + '</text></g>';
+  });
+  return '<div class="lg-orbit" role="img" aria-label="ตราการยางแห่งประเทศไทยเป็นศูนย์กลาง เชื่อมโยงข้อมูลกับตัวชี้วัด CBE ทั้ง 8 ตัว">' +
+    '<svg viewBox="0 0 520 520" aria-hidden="true"><defs><radialGradient id="obHalo"><stop offset="0" stop-color="#5FD3FF" stop-opacity=".38"/><stop offset=".55" stop-color="#2F6BFF" stop-opacity=".12"/><stop offset="1" stop-color="#2F6BFF" stop-opacity="0"/></radialGradient></defs>' +
+    '<circle cx="' + C + '" cy="' + C + '" r="250" fill="url(#obHalo)"/>' +
+    '<g class="ob-spin"><circle class="ob-ring" cx="' + C + '" cy="' + C + '" r="' + R + '"/><circle class="ob-ring o2" cx="' + C + '" cy="' + C + '" r="' + (R + 44) + '"/></g>' +
+    '<circle class="ob-ring o3" cx="' + C + '" cy="' + C + '" r="112"/>' + lines +
+    '<circle class="ob-pulse" cx="' + C + '" cy="' + C + '" r="74"/><circle class="ob-pulse p2" cx="' + C + '" cy="' + C + '" r="74"/>' + pk + nodes +
+    '<circle class="ob-core" cx="' + C + '" cy="' + C + '" r="74"/><image href="assets/raot-logo.png" x="' + (C - 56) + '" y="' + (C - 56) + '" width="112" height="112"/></svg></div>';
+}
+
+/* ================= config: plan-entry windows (กปม.) ================= */
+function vConfig() {
+  var cards = Object.keys(WIN_DEF).map(function (k) {
+    var w = win(k), on = winOpen(k), dis = FY !== CUR_FY ? ' disabled' : '';
+    return '<div class="panel glass c6 cfg-card"><div class="panel-head"><div><h2>' + ico(WIN_DEF[k][2], 18) + ' ' + WIN_DEF[k][0] + '</h2><p class="sub">' + WIN_DEF[k][1] + '</p></div>' +
+        chip({ t: on ? 'เปิดอยู่' : 'ปิดอยู่', c: on ? 'ok' : 'mute', i: on ? 'edit' : 'lock' }) + '</div>' +
+      '<label class="switch"><input type="checkbox" role="switch" data-cfg="' + k + ':open"' + (w.open ? ' checked' : '') + dis + '><span class="sw-track" aria-hidden="true"><i></i></span><span><b>เปิดให้ผู้รายงานกรอกแผน</b><small>ปิดสวิตช์ = ผู้รายงานดูแผนได้อย่างเดียว</small></span></label>' +
+      '<div class="cfg-dates"><label><span class="label">ตั้งแต่วันที่</span><input class="input" type="date" data-cfg="' + k + ':from" value="' + w.from + '"' + dis + '></label>' +
+        '<label><span class="label">ถึงวันที่</span><input class="input" type="date" data-cfg="' + k + ':to" value="' + w.to + '"' + (w.from ? ' min="' + w.from + '"' : '') + dis + '></label></div>' +
+      '<p class="cfg-state ' + (on ? 'ok' : 'mute') + '">' + ico(on ? 'check' : 'clock', 15) + winText(k) + '</p>' +
+      '<p class="small muted" style="margin:0">' + ico('info', 13) + ' เว้นวันที่ว่าง = ไม่จำกัดช่วงเวลา · ผลรายเดือนลงได้ตามรอบรายงานเสมอ ไม่ขึ้นกับการตั้งค่านี้</p></div>';
+  }).join('');
+  return '<section class="view"><div><div class="eyebrow">ระบบ · ปีบัญชี ' + FY + '</div><h1>Config การกรอกแผน</h1><p class="lead">กำหนดการเปิด/ปิด และช่วงเวลาที่ผู้รายงานกรอกหรือแก้ไขแผนรายเดือนได้ การเปลี่ยนแปลงมีผลทันทีกับผู้รายงานทุกตัวชี้วัด และบันทึกใน Audit trail</p></div>' +
+    '<div class="grid">' + cards + '</div></section>';
+}
+
 function vLogin() {
-  var feats = [['lock', 'เห็นเฉพาะของตน', 'ผู้รายงานเข้าถึงเฉพาะตัวชี้วัดที่รับผิดชอบ'], ['shield', 'Quality Gate', 'ตรวจความพร้อมก่อนส่ง กปม.'], ['history', 'Audit trail', 'บันทึกทุกการแก้ไขย้อนหลังได้']];
   return '<main class="signin"><div class="lg-bg" aria-hidden="true"><i class="o1"></i><i class="o2"></i><i class="o3"></i><b></b></div>' +
     '<section class="lg-hero" aria-label="เกี่ยวกับระบบ"><img class="lg-logo" src="assets/cbe-logo.png" width="880" height="332" alt="CBE Core Business Enablers">' +
-      '<span class="lg-eyebrow"><i></i>ระบบรายงานผล · เกณฑ์ SE-AM ' + CUR_FY + '</span>' +
-      '<h1>รายงานผล <em>Core Business Enablers</em><br>ครบ 8 ตัวชี้วัด ในที่เดียว</h1>' +
-      '<p>ผู้รายงานกรอกแผน ผล และหลักฐานรายเดือน กองประเมินผล (กปม.) ตรวจ ให้คะแนน และส่งกลับได้ในระบบเดียว แทนแบบฟอร์ม Excel เดิม</p>' +
-      '<ul class="lg-inds">' + IND_DEF.map(function (d, i) { return '<li style="--i:' + i + '"><b>' + d.no + '</b>' + esc(d.label || d.code) + '</li>'; }).join('') + '</ul>' +
-      '<ul class="lg-feats">' + feats.map(function (f) { return '<li>' + ico(f[0], 20) + '<span><b>' + f[1] + '</b>' + f[2] + '</span></li>'; }).join('') + '</ul></section>' +
+      '<h1>รายงานผล <em>Core Business Enablers</em><br>ครบ 8 ตัวชี้วัด ในที่เดียว</h1>' + heroOrbit() + '</section>' +
     '<form class="lg-card" id="loginForm" novalidate><img class="lg-card-logo" src="assets/cbe-logo.png" width="880" height="332" alt="CBE Core Business Enablers">' +
-      '<div class="lg-head"><h2>เข้าสู่ระบบ</h2><p>ใช้รหัสพนักงานและรหัสผ่าน</p></div>' +
+      '<div class="lg-head"><h2>เข้าสู่ระบบ</h2><p class="lg-sys">CBE Reporting System</p><p>ระบบรายงานผล Core Business Enablers</p></div>' +
       '<div><label class="lg-label" for="em">รหัสพนักงาน</label><div class="lg-input">' + ico('users', 19) + '<input id="em" inputmode="numeric" maxlength="4" autocomplete="username" placeholder="รหัส 4 หลัก" autofocus></div></div>' +
       '<div><label class="lg-label" for="pw">รหัสผ่าน</label><div class="lg-input">' + ico('lock', 19) + '<input id="pw" type="password" autocomplete="current-password" placeholder="••••••••">' +
         '<button type="button" class="lg-eye" data-act="pwtoggle" aria-label="แสดงรหัสผ่าน" aria-pressed="false">' + ico('eye', 19) + '</button></div></div>' +
       '<p class="lg-caps" id="caps" hidden>' + ico('alert', 14) + 'Caps Lock เปิดอยู่</p>' +
       '<button class="lg-btn" type="submit"><span class="spin" aria-hidden="true"></span><span>เข้าสู่ระบบ</span><span class="arr">' + ico('chev', 18) + '</span></button>' +
-      (API ? '<p class="lg-msg" id="loginMsg" role="alert"></p></form><footer class="lg-foot">CBE Report · Core Business Enablers</footer></main>' :
+      (API ? '<p class="lg-msg" id="loginMsg" role="alert"></p>' + CREDIT + '</form></main>' :
       '<div class="lg-demo"><p class="note-demo" id="loginMsg">' + ico('info', 14) + 'Mockup: เลือกบัญชีทดลองด้านล่างเพื่อดูมุมมองตามสิทธิ์</p>' +
       '<div class="acc-grid top2"><button type="button" class="acc wide" data-login="audit">' + ico('shield', 22) + '<span><b>กองประเมินผล (กปม.)</b><span>ตรวจ อนุมัติ ส่งกลับ ทุกตัวชี้วัด</span></span></button>' +
       '<button type="button" class="acc wide" data-login="exec">' + ico('eye', 22) + '<span><b>ผู้บริหาร</b><span>ดูภาพรวมอย่างเดียว</span></span></button></div>' +
       '<p class="sub" style="margin:0">ผู้รายงานรายตัวชี้วัด · SM/CM และ KM/IM แยกผู้รายงาน แต่รวมคะแนนเป็นตัวชี้วัดเดียว</p><div class="acc-grid rep">' +
-      INDS.map(function (I) { return I.parts.map(function (p) { return '<button type="button" class="acc" data-login="reporter:' + I.code + (I.parts.length > 1 ? ':' + p.key : '') + '"><b>' + p.key + '</b><span>ตัวชี้วัด ' + I.no + (I.parts.length > 1 ? ' · ' + I.label : '') + '</span></button>'; }).join(''); }).join('') + '</div></div></form><footer class="lg-foot">CBE Report · Core Business Enablers</footer></main>');
+      INDS.map(function (I) { return I.parts.map(function (p) { return '<button type="button" class="acc" data-login="reporter:' + I.code + (I.parts.length > 1 ? ':' + p.key : '') + '"><b>' + p.key + '</b><span>ตัวชี้วัด ' + I.no + (I.parts.length > 1 ? ' · ' + I.label : '') + '</span></button>'; }).join(''); }).join('') + '</div></div>' + CREDIT + '</form></main>');
 }
 
 /* ================= org overview (audit / exec) ================= */
@@ -1431,7 +1560,7 @@ function vInd(I) {
   else if (isAudit()) acts = w === 'submitted' ? '<button class="btn danger" data-act="ask-return">' + ico('undo', 16) + 'ส่งกลับแก้ไข</button><button class="btn ok" data-wf="approved">' + ico('shield', 16) + 'อนุมัติผล</button>'
     : w === 'approved' ? '<button class="btn" data-wf="draft">' + ico('undo', 16) + 'ปลดล็อก</button>' : '<span class="chip mute">' + ico('clock') + 'รอผู้รายงานส่งตรวจ</span>';
   var rep = U.role === 'reporter';
-  var tabs = [['dash', 'ภาพรวมคะแนน', 'grid'], ['plan', 'แผนการดำเนินงาน', 'calendar'], ['report', 'รายงานผลตามเกณฑ์', 'report'], ['gap', 'แผนปรับปรุง GAP', 'trend'], ['evidence', 'ทะเบียนหลักฐาน', 'folder'], ['history', 'ผลที่ผ่านมา', 'history']];
+  var tabs = [['dash', 'ภาพรวมคะแนน', 'grid'], ['report', 'รายงานผลตามเกณฑ์', 'report'], ['plan', 'แผนการดำเนินงาน', 'calendar'], ['gap', 'แผนปรับปรุง GAP', 'trend'], ['evidence', 'ทะเบียนหลักฐาน', 'folder'], ['history', 'ผลที่ผ่านมา', 'history']];
   var returned = w === 'returned' && WF_NOTE[I.code] ? '<div class="return-box"><b class="bad" style="display:flex;gap:6px;align-items:center">' + ico('undo', 16) + 'กปม. ส่งกลับให้แก้ไข</b><span style="white-space:pre-line">' + esc(WF_NOTE[I.code]) + '</span></div>' : '';
   // Reporter home carries its own task header; other pages get a two-line header
   if (rep && S.tab === 'dash') return '<section class="view">' + returned + vMyWork(I, c) + '</section>';
@@ -1445,7 +1574,7 @@ function vInd(I) {
 }
 
 /* ================= reporter home: what is left to do this round ================= */
-var REP_TABS = [['dash', 'งานของฉัน', 'home'], ['score', 'คะแนน', 'target'], ['plan', 'แผนการดำเนินงาน', 'calendar'], ['report', 'รายงานผลตามเกณฑ์', 'report'], ['gap', 'แผนปรับปรุง GAP', 'trend'], ['evidence', 'ทะเบียนหลักฐาน', 'folder'], ['history', 'ผลที่ผ่านมา', 'history']];
+var REP_TABS = [['score', 'ภาพรวมคะแนน', 'target'], ['dash', 'งานของฉัน', 'home'], ['report', 'รายงานผลตามเกณฑ์', 'report'], ['plan', 'แผนการดำเนินงาน', 'calendar'], ['gap', 'แผนปรับปรุง GAP', 'trend'], ['evidence', 'ทะเบียนหลักฐาน', 'folder'], ['history', 'ผลที่ผ่านมา', 'history']];
 var TODO_KIND = [
   ['หลักฐานยังไม่ครบ', 'ยังแนบหลักฐานไม่ครบ', 'ติ๊กเอกสาร Minimum Requirement ที่มีแล้ว และแนบส่วนที่ขาด', 'bad', 'folder'],
   ['ยังไม่มีผลการดำเนินงาน', 'ยังไม่เขียนผลการดำเนินงาน', 'ระดับที่รายงานคะแนนไว้ต้องมีคำอธิบายผล', 'bad', 'report'],
@@ -1671,8 +1800,8 @@ function vReport(I) {
   }).join('') + '</div>';
   var body;
   // Progress: the reporter states the running total (or ticks activities); the system books the increase into the report month
-  var live = ed && S.month === curMonth(), ldis = live ? '' : ' disabled';
-  if (cur === 0) body = (L.steps.length ? (ed && !live ? '<p class="small warn" style="margin:0 0 10px">' + ico('lock', 13) + ' ลงผลได้เฉพาะรอบรายงานปัจจุบัน (' + MONTHS[curMonth()] + ') · เดือนอื่นดูได้อย่างเดียว</p>' : '') + L.steps.map(function (stp, si) {
+  var live = ed && S.month === curMonth(), ldis = live ? '' : ' disabled', pe = ed && winOpen('plan');
+  if (cur === 0) body = (L.steps.length ? (pe ? '<p class="small ok" style="margin:0 0 10px">' + ico('edit', 13) + ' ' + winText('plan') + ' · แก้ตัวเลขในแถว "แผน" ได้โดยตรง</p>' : '') + (ed && !live ? '<p class="small warn" style="margin:0 0 10px">' + ico('lock', 13) + ' ลงผลได้เฉพาะรอบรายงานปัจจุบัน (' + MONTHS[curMonth()] + ') · เดือนอื่นดูได้อย่างเดียว</p>' : '') + L.steps.map(function (stp, si) {
       var tg = stTarget(stp), cp = cum(stp.plan, m), cr = cum(stp.result, m), prev = m ? cum(stp.result, m - 1) : 0, items = checklist(s, L, stp), add = stp.result[m] || 0;
       var entry = items ? '<div class="chk-list" role="group" aria-label="ขั้นตอนที่ทำแล้ว">' + items.map(function (nm, k) {
           var on = stepChecks(stp, items.length, m)[k];
@@ -1685,7 +1814,7 @@ function vReport(I) {
         '<div class="autonote">' + ico('bolt', 14) + '<span>ระบบลงผลให้อัตโนมัติ: เดือน ' + MONTHS[m] + ' <b class="num">+' + fmt(add, add % 1 ? 1 : 0) + '</b>' + (prev ? ' · เดือนก่อนหน้าล็อกไว้ที่ <b class="num">' + fmt(prev, 0) + '</b>' : '') + '</span>' +
           (live && cr < tg ? '<button class="btn sm" data-full="' + si + '">' + ico('check', 15) + 'ทำครบตามเป้าแล้ว</button>' : '') + '</div>' +
         ('<div class="scroll-x"><table class="months"><thead><tr><th></th>' + MONTHS.map(function (mm, i) { return '<th class="' + (i === m ? 'cur' : '') + '">' + mm + '</th>'; }).join('') + '<th>รวม</th></tr></thead><tbody>' +
-          '<tr><td class="muted">แผน</td>' + stp.plan.map(function (v, i) { return '<td class="num ' + (i === m ? 'cur' : '') + '">' + (v || '<span class="muted">·</span>') + '</td>'; }).join('') + '<td class="num"><b>' + sum(stp.plan) + '</b></td></tr>' +
+          '<tr><td class="muted">แผน</td>' + stp.plan.map(function (v, i) { return pe ? '<td class="' + (i === m ? 'cur' : '') + '">' + planIn('data-sp="' + si + ':' + i + '"', v, 'แผน ' + MONTHS[i]) + '</td>' : '<td class="num ' + (i === m ? 'cur' : '') + '">' + (v || '<span class="muted">·</span>') + '</td>'; }).join('') + '<td class="num"><b>' + sum(stp.plan) + '</b></td></tr>' +
           '<tr><td><b>ผล</b></td>' + stp.result.map(function (v, i) { return '<td class="num ' + (i === m ? 'cur' : '') + '">' + (v || '<span class="muted">·</span>') + '</td>'; }).join('') + '<td class="num"><b>' + sum(stp.result) + '</b></td></tr></tbody></table></div>') + '</div>';
     }).join('') + unlockBar(s, L, m)
     : '<div class="empty" style="padding:16px">' + ico('info') + 'ระดับนี้ไม่มีแผน/ผลรายเดือนในแบบฟอร์ม · ข้ามไปขั้นถัดไปได้</div>');
@@ -1826,19 +1955,21 @@ function refreshSteps() {
 }
 
 // Same plan/result grid as the progress step; plan cells are editable, result only in the live report month
+function planIn(attrs, v, label) { return '<input type="number" min="0" step="any" inputmode="decimal" ' + attrs + ' value="' + (v || '') + '" aria-label="' + label + '">'; }
 function gapTable(L, m, ed, live) {
+  var pe = ed && winOpen('gap');
   var p = gapArr(L, 'gapPlan'), r = gapArr(L, 'gapRes'), tp = sum(p), cp = cum(p, m), cr = cum(r, m), gs = gapStat(L, m), u = L.gapUnit || '';
   var cell = function (k, v, i, on) {
     var c = i === m ? 'cur' : '';
-    if (on) return '<td class="' + c + '"><input type="number" min="0" step="any" inputmode="decimal" data-gp="' + k + ':' + i + '" value="' + (v || '') + '" aria-label="' + (k === 'p' ? 'แผน' : 'ผล') + ' ' + MONTHS[i] + '"></td>';
+    if (on) return '<td class="' + c + '">' + planIn('data-gp="' + k + ':' + i + '"', v, (k === 'p' ? 'แผน' : 'ผล') + ' ' + MONTHS[i]) + '</td>';
     return '<td class="num ' + c + '">' + (v || '<span class="muted">·</span>') + '</td>';
   };
   return '<div class="mstep gap-plan"><div class="step-h"><p><b>แผน / ผลการดำเนินงานตามแนวทางปรับปรุง</b></p>' + (gs ? chip(STATUS[gs]) : '<span class="chip mute">' + ico('clock') + 'ยังไม่มีแผน</span>') + '</div>' +
     '<div class="meta-line" style="margin:0"><span>แผนทั้งปี <b class="num">' + fmt(tp, tp % 1 ? 1 : 0) + '</b></span><span>แผนสะสมถึง ' + MONTHS[m] + ' <b class="num">' + fmt(cp, cp % 1 ? 1 : 0) + '</b></span><span>ผลสะสม <b class="num">' + fmt(cr, cr % 1 ? 1 : 0) + '</b></span>' +
       '<label class="gunit"><span>หน่วย</span><input class="input" data-f="gapUnit" value="' + esc(u) + '" placeholder="เช่น ครั้ง, ขั้นตอน" maxlength="20"' + (ed ? '' : ' disabled') + '></label></div>' +
-    (ed && !live ? '<p class="small warn" style="margin:0">' + ico('lock', 13) + ' ลงผลได้เฉพาะรอบรายงานปัจจุบัน (' + MONTHS[curMonth()] + ') · วางแผนได้ทุกเดือน</p>' : ed ? '<p class="small muted" style="margin:0">' + ico('info', 13) + ' กรอกแผนรายเดือน แล้วลงผลในช่องเดือน ' + MONTHS[m] + ' · ร้อยละความก้าวหน้าคำนวณจากผลรวม ÷ แผนทั้งปี</p>' : '') +
+    (ed && !live ? '<p class="small warn" style="margin:0">' + ico('lock', 13) + ' ลงผลได้เฉพาะรอบรายงานปัจจุบัน (' + MONTHS[curMonth()] + ') · ' + (pe ? 'วางแผนได้ทุกเดือน' : winText('gap')) + '</p>' : ed ? '<p class="small muted" style="margin:0">' + ico('info', 13) + ' กรอกแผนรายเดือน แล้วลงผลในช่องเดือน ' + MONTHS[m] + ' · ร้อยละความก้าวหน้าคำนวณจากผลรวม ÷ แผนทั้งปี</p>' : '') +
     '<div class="scroll-x"><table class="months"><thead><tr><th></th>' + MONTHS.map(function (mm, i) { return '<th class="' + (i === m ? 'cur' : '') + '">' + mm + '</th>'; }).join('') + '<th>รวม</th></tr></thead><tbody>' +
-      '<tr><td class="muted">แผน</td>' + p.map(function (v, i) { return cell('p', v, i, ed); }).join('') + '<td class="num"><b>' + fmt(tp, tp % 1 ? 1 : 0) + '</b></td></tr>' +
+      '<tr><td class="muted">แผน</td>' + p.map(function (v, i) { return cell('p', v, i, pe); }).join('') + '<td class="num"><b>' + fmt(tp, tp % 1 ? 1 : 0) + '</b></td></tr>' +
       '<tr><td><b>ผล</b></td>' + r.map(function (v, i) { return cell('r', v, i, live && i === m); }).join('') + '<td class="num"><b>' + fmt(sum(r), sum(r) % 1 ? 1 : 0) + '</b></td></tr></tbody></table></div>' +
     (tp ? '<div class="gap-pct"><div class="bar' + (gs === 'done' ? ' ok' : '') + '"><span style="width:' + gapPctOf(L) + '%"></span></div><b class="num">' + gapPctOf(L) + '%</b></div>' : '') + '</div>';
 }
@@ -1852,13 +1983,15 @@ function vGap(I) {
     rows.push({ s: s, L: L, gs: gs });
   }); });
   var f = function (k, t, n) { return '<button data-filter="' + k + '" aria-pressed="' + (gf === k) + '">' + t + ' <span class="num">' + n + '</span></button>'; };
+  var canG = winOpen('gap') && I.subs.some(function (s) { return canEdit(I, s); }), ge = canG && S.gedit;
   var body = rows.map(function (r) {
-    var L = r.L, p = L.gapPlan || [], v = L.gapRes || [], tp = sum(p), tr = sum(v), src = actSrc(L);
+    var L = r.L, p = L.gapPlan || [], v = L.gapRes || [], tp = sum(p), tr = sum(v), src = actSrc(L), rowEd = ge && canEdit(I, r.s);
     var cells = MONTHS.map(function (mm, i) {
       var a = +p[i] || 0, b = +v[i] || 0, cls = (a ? ' p' : '') + (b ? ' r' : '') + (i === m ? ' cur' : '') + (i < m && a && !b ? ' miss' : '');
+      if (rowEd) return '<td class="pl-m pl-in' + (i === m ? ' cur' : '') + '">' + planIn('data-gpl="' + i + '" data-uid="' + esc(r.s.uid) + '" data-lv="' + L.level + '"', a, 'แผน GAP ' + r.s.label + ' ระดับ ' + L.level + ' ' + mm) + '</td>';
       return '<td class="pl-m' + cls + '" title="' + mm + ' · แผน ' + a + ' · ผล ' + b + '">' + (a || b ? '<span>' + (b ? (b % 1 ? fmt(b, 1) : b) : a % 1 ? fmt(a, 1) : a) + '</span>' : '') + '</td>';
     }).join('');
-    return '<tr class="link pl-row" data-open="' + r.s.uid + '|' + L.level + '"><td class="pl-name gp-name"><span class="code">' + esc(r.s.label) + '</span><span><b>ระดับ ' + L.level + '</b>' +
+    return '<tr class="' + (rowEd ? '' : 'link ') + 'pl-row"' + (rowEd ? '' : ' data-open="' + r.s.uid + '|' + L.level + '"') + '><td class="pl-name gp-name"><span class="code">' + esc(r.s.label) + '</span><span><b>ระดับ ' + L.level + '</b>' +
         ((L.action || '').trim() ? ' <span class="src-tag src-' + src + '"><i></i>' + ACT_SRC[src] + '</span><small class="act-text src-' + src + '">' + esc(L.action.replace(/\s+/g, ' ').slice(0, 120)) + '</small>' : ' <span class="small warn">ยังไม่ระบุแนวทาง</span>') +
         (L.gap ? '<small class="gp-gap" title="' + esc(L.gap) + '">GAP: ' + esc(L.gap.replace(/\s+/g, ' ').slice(0, 110)) + '</small>' : '') + '</span></td>' +
       cells + '<td class="num pl-sum">' + (tp ? fmt(tr, tr % 1 ? 1 : 0) + '<span class="muted">/' + fmt(tp, tp % 1 ? 1 : 0) + '</span><small>' + esc(L.gapUnit || '') + (tp ? ' · ' + gapPctOf(L) + '%' : '') + '</small>' : '<span class="muted">–</span>') + '</td>' +
@@ -1866,10 +1999,10 @@ function vGap(I) {
   }).join('');
   return '<div class="kpis bento-kpis">' + kpi('ระดับที่มี GAP จากปีก่อน', 'alert', cnt.gap, 'ระดับ', 'จากผลประเมินของ สคร.') +
       kpi('มีแนวทางปรับปรุงแล้ว', 'check', cnt.act, '/ ' + cnt.all, 'ยังไม่ระบุ ' + cnt.noact + ' ระดับ', cnt.all ? cnt.act / cnt.all : 0, 'ok') +
-      kpi('มีแผนรายเดือนแล้ว', 'calendar', cnt.plan, '/ ' + cnt.all, 'กรอกในขั้น "แผนปรับปรุง GAP" ของหน้ารายงานผล', cnt.all ? cnt.plan / cnt.all : 0) +
+      kpi('มีแผนรายเดือนแล้ว', 'calendar', cnt.plan, '/ ' + cnt.all, 'กรอกที่ปุ่ม "แก้ไขแผน" หรือขั้น ④ ของหน้ารายงานผล', cnt.all ? cnt.plan / cnt.all : 0) +
       kpi('ล่าช้ากว่าแผน', 'clock', cnt.late, 'ระดับ', 'ผลสะสมต่ำกว่าแผนสะสม ณ ' + MONTHS[m]) + '</div>' +
     '<div class="panel glass"><div class="panel-head" style="flex-wrap:wrap"><div><h2>' + ico('trend', 18) + ' แผน/ผลการปรับปรุงตาม GAP ปีบัญชี ' + FY + '</h2><p class="sub">แนวทางปรับปรุง แผนรายเดือน และผลที่ลงไว้ · ข้อมูล ณ ' + MONTHS[m] + ' · กดแถวเพื่อไปกรอก</p></div>' +
-      '<div class="seg" role="group" aria-label="กรอง">' + f('all', 'ทั้งหมด', cnt.all) + f('gap', 'มี GAP', cnt.gap) + f('noact', 'ยังไม่มีแนวทาง', cnt.noact) + f('late', 'ล่าช้า', cnt.late) + '</div></div>' +
+      '<div class="toolbar">' + (canG ? '<button class="btn ' + (ge ? 'primary' : '') + ' sm" data-act="gedit">' + ico(ge ? 'check' : 'edit', 15) + (ge ? 'เสร็จสิ้นการแก้ไขแผน' : 'แก้ไขแผน') + '</button>' : '') + '<div class="seg" role="group" aria-label="กรอง">' + f('all', 'ทั้งหมด', cnt.all) + f('gap', 'มี GAP', cnt.gap) + f('noact', 'ยังไม่มีแนวทาง', cnt.noact) + f('late', 'ล่าช้า', cnt.late) + '</div></div></div>' + winBar('gap') +
     '<div class="lg" style="margin:4px 0 12px"><span><i class="sw pl-sw-p"></i>มีแผน</span><span><i class="sw pl-sw-r"></i>ลงผลแล้ว (ตัวเลข = ผล)</span><span><i class="sw pl-sw-miss"></i>ถึงกำหนดแต่ยังไม่มีผล</span><span><i class="sw pl-sw-cur"></i>เดือนที่ติดตาม</span></div>' +
     '<div class="scroll-x pl-wrap"><table class="pl"><thead><tr><th class="pl-name">ประเด็น · ระดับ · แนวทางปรับปรุง</th>' + MONTHS.map(function (mm, i) { return '<th class="pl-m' + (i === m ? ' cur' : '') + '">' + mm + '</th>'; }).join('') + '<th>ผล/แผน</th><th>สถานะ</th></tr></thead><tbody>' +
       (body || '<tr><td colspan="15"><div class="empty">' + ico('check') + 'ไม่มีรายการตามตัวกรองนี้</div></td></tr>') + '</tbody></table></div>' +
@@ -1893,23 +2026,26 @@ function vPlan(I) {
   }); }); });
   var f = function (key, txt, n) { return '<button data-pfilter="' + key + '" aria-pressed="' + (pf === key) + '">' + txt + ' <span class="num">' + n + '</span></button>'; };
   var parts = I.parts.length > 1 ? '<div class="seg" role="group" aria-label="แบบฟอร์ม">' + [{ key: 'all' }].concat(I.parts).map(function (p) { return '<button data-ppart="' + p.key + '" aria-pressed="' + (part === p.key) + '">' + (p.key === 'all' ? 'ทุกส่วน' : p.key) + '</button>'; }).join('') + '</div>' : '';
+  var canP = winOpen('plan') && I.subs.some(function (s) { return canEdit(I, s); }), pe = canP && S.pedit;
   var nowList = rows.filter(function (r) { return (r.st.plan[m] || 0) > 0; });
   var lastTopic = null, lastSub = null;
   var body = rows.map(function (r) {
     var head = '';
     if (r.t !== lastTopic) { lastTopic = r.t; head += '<tr class="pl-topic"><td colspan="15">' + (I.parts.length > 1 ? r.s.part + ' ' : '') + r.t.no + ' · ' + esc(r.t.name) + '</td></tr>'; }
     var first = r.s !== lastSub; lastSub = r.s;
+    var rowEd = pe && canEdit(I, r.s);
     var cells = MONTHS.map(function (mm, i) {
       var p = r.st.plan[i] || 0, v = r.st.result[i] || 0, cls = (p ? ' p' : '') + (v ? ' r' : '') + (i === m ? ' cur' : '') + (i < m && p && !v ? ' miss' : '');
+      if (rowEd) return '<td class="pl-m pl-in' + (i === m ? ' cur' : '') + '">' + planIn('data-spl="' + r.si + ':' + i + '" data-uid="' + esc(r.s.uid) + '" data-lv="' + r.L.level + '"', p, 'แผน ' + r.s.label + ' ระดับ ' + r.L.level + ' ' + mm) + '</td>';
       return '<td class="pl-m' + cls + '" title="' + mm + ' · แผน ' + p + ' · ผล ' + v + '">' + (p || v ? '<span>' + (v ? (v % 1 ? fmt(v, 1) : v) : p % 1 ? fmt(p, 1) : p) + '</span>' : '') + '</td>';
     }).join('');
-    return head + '<tr class="link pl-row" data-open="' + r.s.uid + '|' + r.L.level + '"><td class="pl-name"><span class="code">' + (first ? esc(r.s.label) : '') + '</span><span><b>ระดับ ' + r.L.level + '</b>' + (r.L.steps.length > 1 ? ' · ' + (r.si + 1) : '') +
+    return head + '<tr class="' + (rowEd ? '' : 'link ') + 'pl-row"' + (rowEd ? '' : ' data-open="' + r.s.uid + '|' + r.L.level + '"') + '><td class="pl-name"><span class="code">' + (first ? esc(r.s.label) : '') + '</span><span><b>ระดับ ' + r.L.level + '</b>' + (r.L.steps.length > 1 ? ' · ' + (r.si + 1) : '') +
         '<small>' + esc((first ? r.s.name + ' · ' : '') + (/^ดำเนินการตามค่าเกณฑ์/.test(r.st.name) ? r.L.criteria : r.st.name).replace(/\s+/g, ' ').slice(0, 110)) + '</small></span></td>' +
       cells + '<td class="num pl-sum">' + fmt(r.cr, r.cr % 1 ? 1 : 0) + '<span class="muted">/' + fmt(r.tg, r.tg % 1 ? 1 : 0) + '</span><small>' + esc(r.st.unit || '') + '</small></td><td>' + chip(STATUS[r.k]) + '</td></tr>';
   }).join('');
   return '<div class="panel glass"><div class="panel-head" style="flex-wrap:wrap"><div><h2>' + ico('calendar', 18) + ' แผนการดำเนินงาน ปีบัญชี ' + FY + '</h2><p class="sub">กิจกรรมตามค่าเกณฑ์แต่ละระดับ แผนรายเดือน และผลที่ลงไว้ · ข้อมูล ณ ' + MONTHS[m] + ' · กดแถวเพื่อไปหน้ารายงานผล</p></div>' +
-      '<div class="toolbar">' + parts + '<div class="seg" role="group" aria-label="กรองกิจกรรม">' + f('all', 'ทั้งหมด', cnt.all) + f('now', 'แผนเดือน ' + MONTHS[m], cnt.now) + f('late', 'ล่าช้า', cnt.late) + f('done', 'เสร็จแล้ว', cnt.done) + '</div></div></div>' +
-    (pf === 'all' && nowList.length ? '<div class="pl-now"><b>' + ico('target', 16) + ' เดือน ' + MONTHS[m] + ' มีแผน ' + nowList.length + ' กิจกรรม</b><div class="locs">' + nowList.slice(0, 10).map(function (r) {
+      '<div class="toolbar">' + (canP ? '<button class="btn ' + (pe ? 'primary' : '') + ' sm" data-act="pedit">' + ico(pe ? 'check' : 'edit', 15) + (pe ? 'เสร็จสิ้นการแก้ไขแผน' : 'แก้ไขแผน') + '</button>' : '') + parts + '<div class="seg" role="group" aria-label="กรองกิจกรรม">' + f('all', 'ทั้งหมด', cnt.all) + f('now', 'แผนเดือน ' + MONTHS[m], cnt.now) + f('late', 'ล่าช้า', cnt.late) + f('done', 'เสร็จแล้ว', cnt.done) + '</div></div></div>' +
+    winBar('plan') + (pf === 'all' && nowList.length && !pe ? '<div class="pl-now"><b>' + ico('target', 16) + ' เดือน ' + MONTHS[m] + ' มีแผน ' + nowList.length + ' กิจกรรม</b><div class="locs">' + nowList.slice(0, 10).map(function (r) {
       return '<button data-open="' + r.s.uid + '|' + r.L.level + '">' + esc(r.s.label) + ' ระดับ ' + r.L.level + ' · ' + fmt(r.st.plan[m], r.st.plan[m] % 1 ? 1 : 0) + ' ' + esc(r.st.unit || '') + '</button>'; }).join('') + (nowList.length > 10 ? '<span class="small muted" style="align-self:center">+' + (nowList.length - 10) + '</span>' : '') + '</div></div>' : '') +
     '<div class="lg" style="margin:4px 0 12px"><span><i class="sw pl-sw-p"></i>มีแผน</span><span><i class="sw pl-sw-r"></i>ลงผลแล้ว (ตัวเลข = ผล)</span><span><i class="sw pl-sw-miss"></i>ถึงกำหนดแต่ยังไม่มีผล</span><span><i class="sw pl-sw-cur"></i>เดือนที่ติดตาม</span></div>' +
     '<div class="scroll-x pl-wrap"><table class="pl"><thead><tr><th class="pl-name">ประเด็น · ระดับ · กิจกรรม</th>' + MONTHS.map(function (mm, i) { return '<th class="pl-m' + (i === m ? ' cur' : '') + '">' + mm + '</th>'; }).join('') + '<th>ผล/เป้า</th><th>สถานะ</th></tr></thead><tbody>' +
@@ -2025,6 +2161,7 @@ document.addEventListener('click', function (e) {
   if (d.fsel) { S.fid = d.fsel; return renderRv(); }
   if (d.sev) { S.sev = d.sev; S.fid = null; return render(); }
   if (d.act === 'keys') { S.keysHelp = !S.keysHelp; return render(); }
+  if (d.act === 'pedit' || d.act === 'gedit') { S[d.act] = !S[d.act]; return render(); }
   if (d.act === 'rerun') {
     var code = S.rv; delete RUNS[code];
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) { render(); return toast('ตรวจเบื้องต้นเสร็จแล้ว', 'bolt'); }
@@ -2096,8 +2233,38 @@ document.addEventListener('input', function (e) {
   if (d.tnote) { TRI_NOTE[d.tnote] = t.value; return store('trinote' + FY, TRI_NOTE); }
   if (t.id === 'q') { S.q = t.value; var pos = t.selectionStart; render(); var n = $('#q'); n.focus(); n.setSelectionRange(pos, pos); }
 });
+// Plan cells re-render on change; keep keyboard focus on the cell the user tabbed to
+function renderKeep() {
+  setTimeout(function () {
+    var a = document.activeElement, sel = a && a.tagName === 'INPUT' ? 'input' + [].map.call(a.attributes, function (x) { return /^data-/.test(x.name) ? '[' + x.name + '="' + CSS.escape(x.value) + '"]' : ''; }).join('') : null;
+    render();
+    var n = sel && sel !== 'input' && document.querySelector(sel); if (n) { n.focus(); if (n.select) n.select(); }
+  }, 0);
+}
+function lvOf(uid, level) { var I = indBy(uid.split('|')[0]), s = I && I.subs.filter(function (x) { return x.uid === uid; })[0]; return s ? { I: I, s: s, L: s.levels.filter(function (l) { return String(l.level) === String(level); })[0] } : null; }
+function setPlan(c, kind, si, i, raw) {
+  var v = Math.max(0, Math.round((+raw || 0) * 100) / 100);
+  if (!c || !c.L || !canEdit(c.I, c.s) || !winOpen(kind)) { toast(winText(kind), 'lock'); return render(); }
+  if (kind === 'plan') { if (!c.L.steps[si]) return render(); c.L.steps[si].plan[i] = v; } else gapArr(c.L, 'gapPlan')[i] = v;
+  savePatch(c.s, c.L);
+  logIt((kind === 'plan' ? 'แก้ไขแผนการดำเนินงาน ' : 'วางแผนปรับปรุง GAP ') + c.s.label + ' ระดับ ' + c.L.level + ' เดือน ' + MONTHS[i] + ' = ' + v);
+  renderKeep();
+}
 document.addEventListener('change', function (e) {
   var t = e.target, d = t.dataset;
+  if (d.sp) { var q1 = d.sp.split(':'); return setPlan(curLv(), 'plan', +q1[0], +q1[1], t.value); }
+  if (d.spl) { var q2 = d.spl.split(':'); return setPlan(lvOf(d.uid, d.lv), 'plan', +q2[0], +q2[1], t.value); }
+  if (d.gpl != null) return setPlan(lvOf(d.uid, d.lv), 'gap', 0, +d.gpl, t.value);
+  if (d.cfg) {
+    if (!isAudit() || FY !== CUR_FY) return render();
+    var q3 = d.cfg.split(':'), w = CFG[q3[0]] = win(q3[0]);
+    if (q3[1] === 'open') w.open = t.checked; else w[q3[1]] = t.value;
+    if (w.from && w.to && w.to < w.from) { toast('วันที่ปิดต้องไม่ก่อนวันที่เปิด', 'alert'); w[q3[1]] = ''; }
+    store('cfg' + FY, CFG);
+    logIt('ตั้งค่าการกรอก' + WIN_DEF[q3[0]][0] + ': ' + winText(q3[0]));
+    toast(WIN_DEF[q3[0]][0] + ' · ' + winText(q3[0]), winOpen(q3[0]) ? 'check' : 'lock');
+    return render();
+  }
   if (t.id === 'fyear') { setYear(+t.value); return render(); }
   if (t.id === 'month') { S.month = +t.value; RUNS = {}; return render(); }
   if (d.file != null) { addFiles(+d.file, t.files); return; }
@@ -2120,7 +2287,8 @@ document.addEventListener('change', function (e) {
   }
   if (d.gp) {
     var c3 = curLv(), g = d.gp.split(':'), arr2 = gapArr(c3.L, g[0] === 'p' ? 'gapPlan' : 'gapRes'), nv = Math.max(0, Math.round((+t.value || 0) * 100) / 100);
-    if (!canEdit(c3.I, c3.s) || (g[0] === 'r' && +g[1] !== curMonth())) return render();
+    if (g[0] === 'p') return setPlan(c3, 'gap', 0, +g[1], t.value);
+    if (!canEdit(c3.I, c3.s) || +g[1] !== curMonth()) return render();
     arr2[+g[1]] = nv; savePatch(c3.s, c3.L);
     logIt((g[0] === 'p' ? 'วางแผน' : 'ลงผล') + 'ปรับปรุง GAP ' + c3.s.label + ' ระดับ ' + c3.L.level + ' เดือน ' + MONTHS[+g[1]] + ' = ' + nv);
     return render();
