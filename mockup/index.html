@@ -816,8 +816,6 @@ td, th, .trow, .pl td, .doc, .lib-head { border-color: var(--hair-in) !important
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .glass, .kpi, .hero { background: var(--glass-solid); } }
 /* ===== sign-in: hero and card sit as one centred pair ===== */
-@media (min-width: 901px) { .signin { grid-template-columns: minmax(0, 560px) minmax(0, 440px); gap: clamp(28px, 4vw, 64px); padding: 40px clamp(20px, 4vw, 56px); } }
-.lg-hero { align-items: center; justify-content: center; text-align: center; gap: 14px; max-width: 560px; align-self: start; position: sticky; top: 0; min-height: calc(100vh - 80px); }
 .lg-logo { width: min(340px, 100%); }
 .lg-hero h1 { font-size: clamp(26px, 2.6vw, 38px); }
 .lg-head { text-align: center; }
@@ -827,36 +825,40 @@ td, th, .trow, .pl td, .doc, .lib-head { border-color: var(--hair-in) !important
 .lg-credit { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 4px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.12); font-size: 12.5px; line-height: 1.45; color: var(--lg-ink2); text-align: left; }
 .lg-credit img { width: 44px; height: 44px; flex: none; border-radius: 50%; background: #fff; padding: 2px; box-shadow: 0 6px 18px -6px rgba(0,0,0,.5); }
 .lg-credit b { color: var(--lg-ink); font-weight: 600; }
-/* hero graphic: RAOT at the centre, 8 indicators exchanging data */
-.lg-orbit { width: min(100%, 470px, max(260px, calc(100vh - 330px))); aspect-ratio: 1; }
 .lg-hero h1 em { white-space: nowrap; }
+@media (min-width: 901px) {
+  .signin { grid-template-columns: minmax(0, 1120px); padding: 32px clamp(16px, 4vw, 48px); }
+  /* hero and sign-in card share one glass shell: same top, same bottom */
+  /* hero and sign-in card side by side on one line, no frame around them */
+  .lg-shell { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 440px); align-items: center; gap: clamp(40px, 5vw, 88px); }
+  .lg-hero { max-width: none; align-items: flex-start; text-align: left; gap: 18px; padding: 0; }
+  .lg-hero h1 { font-size: clamp(32px, 3.4vw, 50px); line-height: 1.2; }
+}
+.lg-shell { min-width: 0; }
+.lg-logo { width: min(300px, 100%); }
+/* hero graphic: CBE score rising (8 bars + trend line), loops every 8s */
+.lg-chart { width: 100%; max-width: 560px; margin-top: 6px; }
+.lg-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.hc-grid { stroke: rgba(170, 200, 255, .13); stroke-width: 1; }
+.hc-ax { font: 600 11px var(--num); fill: rgba(200, 215, 255, .5); }
+.hc-lbl { font: 700 11.5px var(--num); fill: rgba(220, 232, 255, .85); }
+.hc-tgt { stroke: rgba(246, 195, 90, .7); stroke-width: 1.4; stroke-dasharray: 5 6; }
+.hc-bar { fill: url(#hcBar); stroke: rgba(160, 210, 255, .45); stroke-width: 1; transform-box: fill-box; transform-origin: 50% 100%; animation: hcbar 8s cubic-bezier(.2, .8, .2, 1) infinite both; animation-delay: calc(var(--i) * .12s); }
+.hc-area { fill: url(#hcArea); animation: hcarea 8s ease infinite both; }
+.hc-line { fill: none; stroke: url(#hcLine); stroke-width: 3.5; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 0; filter: drop-shadow(0 4px 10px rgba(95, 211, 255, .55)); animation: hcline 8s ease-in-out infinite both; }
+.hc-dot { fill: #F6C35A; stroke: #fff; stroke-width: 2.5; }
+.hc-ping { fill: rgba(246, 195, 90, .45); transform-box: fill-box; transform-origin: center; animation: hcping 1.6s ease-out infinite; }
+.hc-end { animation: hcend 8s ease infinite both; }
+@keyframes hcbar { 0% { transform: scaleY(0); opacity: 1; } 16% { transform: scaleY(1); } 88% { transform: scaleY(1); opacity: 1; } 97%, 100% { transform: scaleY(1); opacity: 0; } }
+@keyframes hcline { 0%, 22% { stroke-dashoffset: 1; opacity: 1; } 52% { stroke-dashoffset: 0; } 88% { opacity: 1; } 97%, 100% { stroke-dashoffset: 0; opacity: 0; } }
+@keyframes hcarea { 0%, 40% { opacity: 0; } 58%, 88% { opacity: 1; } 97%, 100% { opacity: 0; } }
+@keyframes hcend { 0%, 50% { opacity: 0; } 58%, 88% { opacity: 1; } 97%, 100% { opacity: 0; } }
+@keyframes hcping { from { transform: scale(.8); opacity: .9; } to { transform: scale(2.4); opacity: 0; } }
 .lg-card { gap: 13px; }
 .signin .acc-grid.rep { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .signin .acc { padding: 8px 4px; }
 .signin .acc.wide { padding: 10px 12px; }
 @media (max-width: 520px) { .signin .acc-grid.rep { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-.lg-orbit svg { display: block; width: 100%; height: 100%; overflow: visible; }
-.ob-ring { fill: none; stroke: rgba(160, 200, 255, .32); stroke-width: 1.2; stroke-dasharray: 2 7; }
-.ob-ring.o2 { stroke: rgba(160, 200, 255, .14); stroke-dasharray: 1 10; }
-.ob-ring.o3 { stroke: rgba(242, 181, 68, .28); stroke-dasharray: 3 6; }
-.ob-spin { transform-origin: 260px 260px; animation: obspin 90s linear infinite; }
-.ob-spoke { fill: none; stroke: rgba(140, 190, 255, .2); stroke-width: 1; }
-.ob-arc { fill: none; stroke: rgba(95, 227, 176, .18); stroke-width: 1.4; }
-.ob-pk.in { fill: #8FE6FF; filter: drop-shadow(0 0 5px #5FD3FF); }
-.ob-pk.out { fill: #F6C35A; filter: drop-shadow(0 0 5px #E5A023); }
-.ob-pk.peer { fill: #7DF0C2; filter: drop-shadow(0 0 4px #5FE3B0); }
-.ob-nc { fill: rgba(14, 36, 112, .72); stroke: rgba(170, 205, 255, .5); stroke-width: 1.3; }
-.ob-glow { fill: rgba(95, 211, 255, .35); opacity: 0; transform-box: fill-box; transform-origin: center; animation: obping 3.2s ease-out infinite; animation-delay: var(--d, 0s); }
-.ob-no { font: 700 11px var(--num); fill: #8FB0FF; text-anchor: middle; }
-.ob-code { font: 800 14px var(--num); fill: #fff; text-anchor: middle; letter-spacing: .01em; }
-.ob-core { fill: #fff; filter: drop-shadow(0 10px 30px rgba(40, 110, 255, .6)); }
-.ob-pulse { fill: none; stroke: rgba(246, 195, 90, .55); stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: obpulse 3.2s ease-out infinite; }
-.ob-pulse.p2 { animation-delay: 1.6s; }
-.ob-node { animation: obfloat 6s ease-in-out infinite alternate; animation-delay: var(--d, 0s); }
-@keyframes obspin { to { transform: rotate(360deg); } }
-@keyframes obpulse { from { transform: scale(1); opacity: .8; } to { transform: scale(1.75); opacity: 0; } }
-@keyframes obping { 0% { opacity: .9; transform: scale(.85); } 60%, 100% { opacity: 0; transform: scale(1.35); } }
-@keyframes obfloat { to { translate: 0 -4px; } }
 @media (max-height: 800px) { .lg-logo { width: min(280px, 100%); } }
 
 /* ===== sidebar brand: full-width CBE mark + organisation ===== */
@@ -891,6 +893,26 @@ td, th, .trow, .pl td, .doc, .lib-head { border-color: var(--hair-in) !important
 @media (max-width: 520px) { .cfg-dates { grid-template-columns: 1fr; } }
 .sec-h { margin: 12px 0 -4px; padding-top: 16px; border-top: 1px solid var(--hair-in); }
 .sec-h h2 { margin: 2px 0 0; }
+/* ===== header account menu ===== */
+.umenu { position: relative; z-index: 7; flex: none; border-radius: 20px; padding: 6px; }
+.ubtn { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 10px 0 4px; border: 0; border-radius: 14px; background: transparent; cursor: pointer; text-align: left; }
+.ubtn:hover, .umenu.open .ubtn { background: var(--primary-soft); }
+.ubtn > svg { transform: rotate(90deg); transition: transform .2s; color: var(--ink-3); }
+.umenu.open .ubtn > svg { transform: rotate(-90deg); }
+.umenu .av, .u-head .av { width: 34px; height: 34px; border-radius: 50%; flex: none; display: grid; place-items: center; font: 700 12px var(--num); background: linear-gradient(145deg, #8DB2FF, #2E59E6); color: #fff; }
+.u-txt { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+.u-txt b { font-size: 13.5px; font-weight: 600; white-space: nowrap; }
+.u-txt small { font-size: 11.5px; color: var(--ink-3); }
+.udrop { position: absolute; right: 0; top: calc(100% + 8px); z-index: 20; width: 280px; padding: 8px; border-radius: 18px; display: none; flex-direction: column; gap: 4px; background-color: var(--glass-solid) !important; box-shadow: var(--float) !important; }
+.umenu.open .udrop { display: flex; animation: in .18s ease both; }
+.u-head { display: flex; gap: 10px; align-items: center; padding: 10px; margin-bottom: 4px; border-bottom: 1px solid var(--hair-in); }
+.u-head b { display: block; font-size: 14px; line-height: 1.3; }
+.u-head small { font-size: 12px; color: var(--ink-3); }
+.u-item { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; padding: 8px 10px; border: 0; border-radius: 12px; background: none; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--ink); text-align: left; }
+.u-item:hover, .u-item:focus-visible { background: var(--primary-soft); outline: 0; }
+.u-item.danger { color: var(--bad); } .u-item.danger:hover, .u-item.danger:focus-visible { background: var(--bad-bg); }
+@media (max-width: 960px) { .u-txt { display: none; } .ubtn { padding-right: 6px; } }
+@media (max-width: 640px) { .main > .top .tb-title { order: 1; flex: 1 1 0; } .umenu { order: 2; } .main > .top .tb-ctrl { order: 3; } .udrop { width: min(280px, calc(100vw - 32px)); } }
 </style>
 </head>
 <body>
@@ -1316,9 +1338,10 @@ function applyTheme() {
 
 /* ================= shell ================= */
 function nav(attrs, label, icon, current, extra) { return '<button class="nav" ' + attrs + (current ? ' aria-current="page"' : '') + '>' + icon + '<span>' + label + '</span>' + (extra || '') + '</button>'; }
+function whoCard(cls) { return '<div class="' + cls + '"><div class="av">' + (isAudit() ? 'กป' : isExec() ? 'ผบ' : (U.part || indBy(U.ind).label).slice(0, 3)) + '</div><div><b>' + esc(userLabel()) + '</b><small>' + (isAudit() ? 'ตรวจ · ให้คะแนน · ดูแลระบบ' : isExec() ? 'ดูอย่างเดียว · ทุกตัวชี้วัด' : U.part ? 'แก้ไขเฉพาะส่วน ' + U.part + ' ของ ' + indBy(U.ind).label : 'เห็นเฉพาะตัวชี้วัดของตน') + '</small></div></div>'; }
 function sidebar() {
   var h = '<div class="brand"><img class="brand-logo" src="assets/cbe-logo-side.png" width="640" height="208" alt="CBE Core Business Enablers"><span class="brand-org">การยางแห่งประเทศไทย</span></div>' +
-    '<div class="who"><div class="av">' + (isAudit() ? 'กป' : isExec() ? 'ผบ' : (U.part || indBy(U.ind).label).slice(0, 3)) + '</div><div><b>' + esc(userLabel()) + '</b><small>' + (isAudit() ? 'ตรวจ · ให้คะแนน · ดูแลระบบ' : isExec() ? 'ดูอย่างเดียว · ทุกตัวชี้วัด' : U.part ? 'แก้ไขเฉพาะส่วน ' + U.part + ' ของ ' + indBy(U.ind).label : 'เห็นเฉพาะตัวชี้วัดของตน') + '</small></div></div>';
+    '';
   if (U.role !== 'reporter') {
     var q = INDS.filter(function (I) { return wfOf(I) === 'submitted'; }).length;
     h += '<div class="nav-label">องค์กร</div>' + nav('data-go="home"', 'ภาพรวม CBE', ico('grid', 19), S.view === 'home');
@@ -1335,8 +1358,16 @@ function sidebar() {
     }).join('');
   }
   var I0 = U.role === 'reporter' ? indBy(U.ind) : null;
-  return h + '<div class="side-foot"><span>' + ico('info', 14) + ' เกณฑ์ SE-AM ' + FY + (I0 ? ' · ' + I0.topics.length + ' หัวข้อ · ' + I0.subs.length + ' ประเด็นย่อย' : ' · 8 ตัวชี้วัด') + '</span>' + nav('data-act="logout"', 'ออกจากระบบ', ico('logout', 18), false) + '</div>';
+  return h + '<div class="side-foot"><span>' + ico('info', 14) + ' เกณฑ์ SE-AM ' + FY + (I0 ? ' · ' + I0.topics.length + ' หัวข้อ · ' + I0.subs.length + ' ประเด็นย่อย' : ' · 8 ตัวชี้วัด') + '</span>' + '</div>';
 }
+// Header account menu: who is signed in + account actions (room for profile / user settings later)
+function userMenu() {
+  var av = isAudit() ? 'กป' : isExec() ? 'ผบ' : (U.part || indBy(U.ind).label).slice(0, 3);
+  return '<div class="umenu glass"><button class="ubtn" data-act="umenu" aria-haspopup="menu" aria-expanded="false" aria-controls="udrop"><span class="av">' + esc(av) + '</span><span class="u-txt"><b>' + esc(userLabel()) + '</b><small>' + (isAudit() ? 'ผู้ดูแลระบบ' : isExec() ? 'ดูอย่างเดียว' : 'ผู้รายงาน') + '</small></span>' + ico('chev', 16) + '</button>' +
+    '<div class="udrop glass" id="udrop" role="menu" aria-label="บัญชีผู้ใช้">' + whoCard('u-head') +
+      '<button class="u-item danger" role="menuitem" data-act="logout">' + ico('logout', 17) + 'ออกจากระบบ</button></div></div>';
+}
+function closeUmenu() { var m = document.querySelector('.umenu.open'); if (m) { m.classList.remove('open'); m.querySelector('.ubtn').setAttribute('aria-expanded', 'false'); } }
 function render() {
   CACHE = {}; FCACHE = {};
   var dark = applyTheme();
@@ -1358,7 +1389,7 @@ function render() {
     '<label class="sr" for="fyear">ปีบัญชี</label><select id="fyear">' + [CUR_FY, CLOSED_FY].map(function (y) { return '<option value="' + y + '"' + (y === FY ? ' selected' : '') + '>ปีบัญชี ' + y + (y === CUR_FY ? '' : ' (ปิดรอบ)') + '</option>'; }).join('') + '</select>' +
     '<label style="display:inline-flex;align-items:center;gap:8px"><span class="small muted fy-chip" style="background:none;padding:0;color:var(--ink-3)">ข้อมูล ณ</span><span class="sr">เดือนที่ติดตาม</span><select id="month">' +
       MONTHS.map(function (mm, i) { return '<option value="' + i + '"' + (i === S.month ? ' selected' : '') + '>' + mm + '</option>'; }).join('') + '</select></label>' +
-    '<i class="tb-sep"></i><button class="icon-btn" data-act="theme" aria-label="สลับเป็นธีม' + (dark ? 'สว่าง' : 'มืด') + '">' + ico(dark ? 'sun' : 'moon') + '</button></div></header>' +
+    '<i class="tb-sep"></i><button class="icon-btn" data-act="theme" aria-label="สลับเป็นธีม' + (dark ? 'สว่าง' : 'มืด') + '">' + ico(dark ? 'sun' : 'moon') + '</button></div>' + userMenu() + '</header>' +
     (FY !== CUR_FY ? '<div class="yearbar" role="status">' + ico('lock', 16) + '<span><b>ปีบัญชี ' + FY + ' · ปิดรอบแล้ว</b> ดูได้อย่างเดียว ข้อมูลผลการดำเนินงานตามแบบฟอร์มเดิม</span><button class="btn sm" data-act="back-current">กลับไปปีบัญชี ' + CUR_FY + '</button></div>' : '') +
     '<main id="view">' + body + '</main></div></div>';
   animateDv();
@@ -1367,31 +1398,28 @@ function v403() { return '<section class="view"><div class="panel glass empty">'
 
 /* ================= login ================= */
 var CREDIT = '<div class="lg-credit"><img src="assets/raot-logo.png" width="44" height="44" alt="ตราการยางแห่งประเทศไทย"><span>กองประเมินผล ฝ่ายยุทธศาสตร์องค์กร<br><b>การยางแห่งประเทศไทย</b></span></div>';
-// Hero graphic: the RAOT mark at the centre, the 8 indicators on an orbit, data packets flowing in (blue), back out (gold) and between neighbours (green)
-function heroOrbit() {
-  var C = 260, R = 194, n = IND_DEF.length, still = matchMedia('(prefers-reduced-motion: reduce)').matches, D = 3.2;
-  var pt = function (i) { var a = (-90 + i * 360 / n) * Math.PI / 180; return [+(C + R * Math.cos(a)).toFixed(1), +(C + R * Math.sin(a)).toFixed(1)]; };
-  var move = function (path, cls, r, begin, dur, back) {
-    return '<circle r="' + r + '" class="ob-pk ' + cls + '" opacity="0"><animateMotion dur="' + dur + 's" begin="' + begin + 's" repeatCount="indefinite" keyPoints="' + (back ? '1;0' : '0;1') + '" keyTimes="0;1" calcMode="linear"><mpath href="#' + path + '"/></animateMotion>' +
-      '<animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.12;.85;1" dur="' + dur + 's" begin="' + begin + 's" repeatCount="indefinite"/></circle>';
-  };
-  var lines = '', pk = '', nodes = '';
-  IND_DEF.forEach(function (d, i) {
-    var a = pt(i), b = pt((i + 1) % n);
-    lines += '<path id="obs' + i + '" class="ob-spoke" d="M' + a[0] + ' ' + a[1] + 'L' + C + ' ' + C + '"/>' +
-      '<path id="oba' + i + '" class="ob-arc" d="M' + a[0] + ' ' + a[1] + 'A' + R + ' ' + R + ' 0 0 1 ' + b[0] + ' ' + b[1] + '"/>';
-    if (!still) pk += move('obs' + i, 'in', 4.2, (i * D / n).toFixed(2), D) + move('obs' + i, 'out', 3.4, (D / 2 + i * D / n).toFixed(2), D, true) +
-      (i % 2 ? '' : move('oba' + i, 'peer', 3, (i * .35).toFixed(2), 2.6));
-    nodes += '<g class="ob-node" transform="translate(' + a[0] + ' ' + a[1] + ')" style="--d:' + (i * D / n + D * .9).toFixed(2) + 's"><circle class="ob-glow" r="40"/><circle class="ob-nc" r="35"/>' +
-      '<text class="ob-no" y="-9">' + d.no + '</text><text class="ob-code" y="10">' + esc(d.label || d.code) + '</text></g>';
-  });
-  return '<div class="lg-orbit" role="img" aria-label="ตราการยางแห่งประเทศไทยเป็นศูนย์กลาง เชื่อมโยงข้อมูลกับตัวชี้วัด CBE ทั้ง 8 ตัว">' +
-    '<svg viewBox="0 0 520 520" aria-hidden="true"><defs><radialGradient id="obHalo"><stop offset="0" stop-color="#5FD3FF" stop-opacity=".38"/><stop offset=".55" stop-color="#2F6BFF" stop-opacity=".12"/><stop offset="1" stop-color="#2F6BFF" stop-opacity="0"/></radialGradient></defs>' +
-    '<circle cx="' + C + '" cy="' + C + '" r="250" fill="url(#obHalo)"/>' +
-    '<g class="ob-spin"><circle class="ob-ring" cx="' + C + '" cy="' + C + '" r="' + R + '"/><circle class="ob-ring o2" cx="' + C + '" cy="' + C + '" r="' + (R + 44) + '"/></g>' +
-    '<circle class="ob-ring o3" cx="' + C + '" cy="' + C + '" r="112"/>' + lines +
-    '<circle class="ob-pulse" cx="' + C + '" cy="' + C + '" r="74"/><circle class="ob-pulse p2" cx="' + C + '" cy="' + C + '" r="74"/>' + pk + nodes +
-    '<circle class="ob-core" cx="' + C + '" cy="' + C + '" r="74"/><image href="assets/raot-logo.png" x="' + (C - 56) + '" y="' + (C - 56) + '" width="112" height="112"/></svg></div>';
+// Hero graphic: CBE score rising — 8 indicator bars grow in turn, a trend line draws across their tops toward the target
+function heroChart() {
+  var W = 560, H = 330, L = 34, R = 18, T = 24, B = 40, n = IND_DEF.length, vals = [2.1, 2.45, 2.8, 3.05, 3.35, 3.65, 4.0, 4.45];
+  var bw = (W - L - R) / n, y = function (v) { return T + (1 - v / 5) * (H - T - B); }, cx = function (i) { return L + bw * (i + .5); };
+  var grid = [1, 2, 3, 4, 5].map(function (g) { return '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(g) + '" y2="' + y(g) + '" class="hc-grid"/><text x="' + (L - 10) + '" y="' + (y(g) + 4) + '" class="hc-ax" text-anchor="end">' + g + '</text>'; }).join('');
+  var bars = IND_DEF.map(function (d, i) {
+    var x = L + bw * i + bw * .2, w = bw * .6, top = y(vals[i]);
+    return '<rect class="hc-bar" style="--i:' + i + '" x="' + x.toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + (H - B - top).toFixed(1) + '" rx="7"/>' +
+      '<text class="hc-lbl" x="' + cx(i).toFixed(1) + '" y="' + (H - B + 20) + '" text-anchor="middle">' + esc(d.label || d.code) + '</text>';
+  }).join('');
+  var pts = vals.map(function (v, i) { return [cx(i), y(v) - 12]; }), d = 'M' + pts[0][0].toFixed(1) + ' ' + pts[0][1].toFixed(1);
+  for (var i = 1; i < n; i++) { var p0 = pts[i - 1], p1 = pts[i], mx = (p0[0] + p1[0]) / 2; d += 'C' + mx.toFixed(1) + ' ' + p0[1].toFixed(1) + ' ' + mx.toFixed(1) + ' ' + p1[1].toFixed(1) + ' ' + p1[0].toFixed(1) + ' ' + p1[1].toFixed(1); }
+  var last = pts[n - 1], area = d + 'L' + last[0].toFixed(1) + ' ' + (H - B) + 'L' + pts[0][0].toFixed(1) + ' ' + (H - B) + 'Z';
+  return '<div class="lg-chart" role="img" aria-label="กราฟคะแนน Core Business Enablers ทั้ง 8 ตัวชี้วัดกำลังเพิ่มขึ้น">' +
+    '<svg viewBox="0 0 ' + W + ' ' + H + '" aria-hidden="true"><defs>' +
+      '<linearGradient id="hcBar" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#1F4BE0" stop-opacity=".35"/><stop offset="1" stop-color="#5FB8FF"/></linearGradient>' +
+      '<linearGradient id="hcLine" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7FD3FF"/><stop offset=".7" stop-color="#9DF0D0"/><stop offset="1" stop-color="#F6C35A"/></linearGradient>' +
+      '<linearGradient id="hcArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7FD3FF" stop-opacity=".28"/><stop offset="1" stop-color="#7FD3FF" stop-opacity="0"/></linearGradient></defs>' +
+    grid + '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(4.6) + '" y2="' + y(4.6) + '" class="hc-tgt"/>' +
+    bars + '<path class="hc-area" d="' + area + '"/><path class="hc-line" d="' + d + '" pathLength="1"/>' +
+    '<g class="hc-end" transform="translate(' + last[0].toFixed(1) + ' ' + last[1].toFixed(1) + ')"><circle class="hc-ping" r="9"/><circle class="hc-dot" r="6"/></g>' +
+    '</svg></div>';
 }
 
 /* ================= config: plan-entry windows (กปม.) ================= */
@@ -1411,9 +1439,9 @@ function vConfig() {
 }
 
 function vLogin() {
-  return '<main class="signin"><div class="lg-bg" aria-hidden="true"><i class="o1"></i><i class="o2"></i><i class="o3"></i><b></b></div>' +
+  return '<main class="signin"><div class="lg-bg" aria-hidden="true"><i class="o1"></i><i class="o2"></i><i class="o3"></i><b></b></div><div class="lg-shell">' +
     '<section class="lg-hero" aria-label="เกี่ยวกับระบบ"><img class="lg-logo" src="assets/cbe-logo.png" width="880" height="332" alt="CBE Core Business Enablers">' +
-      '<h1>รายงานผล <em>Core Business Enablers</em><br>ครบ 8 ตัวชี้วัด ในที่เดียว</h1>' + heroOrbit() + '</section>' +
+      '<h1>รายงานผล <em>Core Business Enablers</em><br>ครบ 8 ตัวชี้วัด ในที่เดียว</h1>' + heroChart() + '</section>' +
     '<form class="lg-card" id="loginForm" novalidate><img class="lg-card-logo" src="assets/cbe-logo.png" width="880" height="332" alt="CBE Core Business Enablers">' +
       '<div class="lg-head"><h2>เข้าสู่ระบบ</h2><p class="lg-sys">CBE Reporting System</p><p>ระบบรายงานผล Core Business Enablers</p></div>' +
       '<div><label class="lg-label" for="em">รหัสพนักงาน</label><div class="lg-input">' + ico('users', 19) + '<input id="em" inputmode="numeric" maxlength="4" autocomplete="username" placeholder="รหัส 4 หลัก" autofocus></div></div>' +
@@ -1421,12 +1449,12 @@ function vLogin() {
         '<button type="button" class="lg-eye" data-act="pwtoggle" aria-label="แสดงรหัสผ่าน" aria-pressed="false">' + ico('eye', 19) + '</button></div></div>' +
       '<p class="lg-caps" id="caps" hidden>' + ico('alert', 14) + 'Caps Lock เปิดอยู่</p>' +
       '<button class="lg-btn" type="submit"><span class="spin" aria-hidden="true"></span><span>เข้าสู่ระบบ</span><span class="arr">' + ico('chev', 18) + '</span></button>' +
-      (API ? '<p class="lg-msg" id="loginMsg" role="alert"></p>' + CREDIT + '</form></main>' :
+      (API ? '<p class="lg-msg" id="loginMsg" role="alert"></p>' + CREDIT + '</form></div></main>' :
       '<div class="lg-demo"><p class="note-demo" id="loginMsg">' + ico('info', 14) + 'Mockup: เลือกบัญชีทดลองด้านล่างเพื่อดูมุมมองตามสิทธิ์</p>' +
       '<div class="acc-grid top2"><button type="button" class="acc wide" data-login="audit">' + ico('shield', 22) + '<span><b>กองประเมินผล (กปม.)</b><span>ตรวจ อนุมัติ ส่งกลับ ทุกตัวชี้วัด</span></span></button>' +
       '<button type="button" class="acc wide" data-login="exec">' + ico('eye', 22) + '<span><b>ผู้บริหาร</b><span>ดูภาพรวมอย่างเดียว</span></span></button></div>' +
       '<p class="sub" style="margin:0">ผู้รายงานรายตัวชี้วัด · SM/CM และ KM/IM แยกผู้รายงาน แต่รวมคะแนนเป็นตัวชี้วัดเดียว</p><div class="acc-grid rep">' +
-      INDS.map(function (I) { return I.parts.map(function (p) { return '<button type="button" class="acc" data-login="reporter:' + I.code + (I.parts.length > 1 ? ':' + p.key : '') + '"><b>' + p.key + '</b><span>ตัวชี้วัด ' + I.no + (I.parts.length > 1 ? ' · ' + I.label : '') + '</span></button>'; }).join(''); }).join('') + '</div></div>' + CREDIT + '</form></main>');
+      INDS.map(function (I) { return I.parts.map(function (p) { return '<button type="button" class="acc" data-login="reporter:' + I.code + (I.parts.length > 1 ? ':' + p.key : '') + '"><b>' + p.key + '</b><span>ตัวชี้วัด ' + I.no + (I.parts.length > 1 ? ' · ' + I.label : '') + '</span></button>'; }).join(''); }).join('') + '</div></div>' + CREDIT + '</form></div></main>');
 }
 
 /* ================= org overview (audit / exec) ================= */
@@ -2134,6 +2162,13 @@ document.addEventListener('submit', function (e) {
       .catch(function (j) { btn.disabled = false; btn.classList.remove('busy'); m.innerHTML = ico('alert', 14) + esc((j && j.error) || 'เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง'); });
   } if (m) m.innerHTML = ico('info', 14) + 'Mockup นี้ยังไม่เชื่อมระบบยืนยันตัวตน · เลือกบัญชีทดลองด้านล่าง'; });
 document.addEventListener('click', function (e) {
+  if (!e.target.closest || !e.target.closest('.umenu')) closeUmenu();
+  else if (e.target.closest('[data-act="umenu"]')) {
+    var um = e.target.closest('.umenu'), op = um.classList.toggle('open');
+    um.querySelector('.ubtn').setAttribute('aria-expanded', op);
+    if (op) um.querySelector('.u-item').focus();
+    return;
+  }
   var b = e.target.closest('button, tr.link, .scrim'); if (!b || b.disabled) return;
   var d = b.dataset;
   if (d.login) { var p = d.login.split(':'); U = { role: p[0], ind: p[1] || null, part: p[2] || null }; store('user', U); S = { view: 'home', ind: U.ind, tab: 'dash', sub: 0, level: 0, month: 11, filter: 'all', q: '', yr: 2568, theme: S.theme }; logIt('เข้าสู่ระบบ'); render(); return; }
@@ -2295,6 +2330,7 @@ document.addEventListener('change', function (e) {
   if (d.f || d.ev != null) logIt('แก้ไข ' + curLv().s.label + ' ระดับ ' + curLv().L.level);
 });
 document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && document.querySelector('.umenu.open')) { closeUmenu(); var ub = document.querySelector('.ubtn'); if (ub) ub.focus(); return; }
   if (e.key === 'Escape') { document.body.classList.remove('nav-open'); if (S.keysHelp) { S.keysHelp = false; render(); } return; }
   // Triage shortcuts: only on the auditor workspace and never while typing
   if (!U || !isAudit() || S.view !== 'review' || e.ctrlKey || e.metaKey || e.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
