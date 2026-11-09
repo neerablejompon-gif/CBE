@@ -833,7 +833,6 @@ td, th, .trow, .pl td, .doc, .lib-head { border-color: var(--hair-in) !important
   .lg-shell { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 440px); align-items: center; gap: clamp(40px, 5vw, 88px); }
   .lg-hero { max-width: none; align-items: flex-start; text-align: left; gap: 18px; padding: 0; }
   .lg-hero h1 { font-size: clamp(32px, 3.4vw, 50px); line-height: 1.2; }
-  .lg-card-logo { display: block; width: 230px; height: auto; margin: -6px auto 0; filter: drop-shadow(0 10px 26px rgba(40,110,255,.5)); }
 }
 .lg-shell { min-width: 0; }
 .lg-logo { width: min(300px, 100%); }
@@ -1441,7 +1440,7 @@ function vConfig() {
 
 function vLogin() {
   return '<main class="signin"><div class="lg-bg" aria-hidden="true"><i class="o1"></i><i class="o2"></i><i class="o3"></i><b></b></div><div class="lg-shell">' +
-    '<section class="lg-hero" aria-label="เกี่ยวกับระบบ">' +
+    '<section class="lg-hero" aria-label="เกี่ยวกับระบบ"><img class="lg-logo" src="assets/cbe-logo.png" width="880" height="332" alt="CBE Core Business Enablers">' +
       '<h1>รายงานผล <em>Core Business Enablers</em><br>ครบ 8 ตัวชี้วัด ในที่เดียว</h1>' + heroChart() + '</section>' +
     '<form class="lg-card" id="loginForm" novalidate><img class="lg-card-logo" src="assets/cbe-logo.png" width="880" height="332" alt="CBE Core Business Enablers">' +
       '<div class="lg-head"><h2>เข้าสู่ระบบ</h2><p class="lg-sys">CBE Reporting System</p><p>ระบบรายงานผล Core Business Enablers</p></div>' +
