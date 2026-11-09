@@ -830,30 +830,12 @@ td, th, .trow, .pl td, .doc, .lib-head { border-color: var(--hair-in) !important
   .signin { grid-template-columns: minmax(0, 1120px); padding: 32px clamp(16px, 4vw, 48px); }
   /* hero and sign-in card share one glass shell: same top, same bottom */
   /* hero and sign-in card side by side on one line, no frame around them */
-  .lg-shell { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 440px); align-items: center; gap: clamp(40px, 5vw, 88px); }
+  .lg-shell { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 440px); align-items: start; gap: clamp(40px, 5vw, 88px); }
   .lg-hero { max-width: none; align-items: flex-start; text-align: left; gap: 18px; padding: 0; }
   .lg-hero h1 { font-size: clamp(32px, 3.4vw, 50px); line-height: 1.2; }
 }
 .lg-shell { min-width: 0; }
 .lg-logo { width: min(300px, 100%); }
-/* hero graphic: CBE score rising (8 bars + trend line), loops every 8s */
-.lg-chart { width: 100%; max-width: 560px; margin-top: 6px; }
-.lg-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
-.hc-grid { stroke: rgba(170, 200, 255, .13); stroke-width: 1; }
-.hc-ax { font: 600 11px var(--num); fill: rgba(200, 215, 255, .5); }
-.hc-lbl { font: 700 11.5px var(--num); fill: rgba(220, 232, 255, .85); }
-.hc-tgt { stroke: rgba(246, 195, 90, .7); stroke-width: 1.4; stroke-dasharray: 5 6; }
-.hc-bar { fill: url(#hcBar); stroke: rgba(160, 210, 255, .45); stroke-width: 1; transform-box: fill-box; transform-origin: 50% 100%; animation: hcbar 8s cubic-bezier(.2, .8, .2, 1) infinite both; animation-delay: calc(var(--i) * .12s); }
-.hc-area { fill: url(#hcArea); animation: hcarea 8s ease infinite both; }
-.hc-line { fill: none; stroke: url(#hcLine); stroke-width: 3.5; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 0; filter: drop-shadow(0 4px 10px rgba(95, 211, 255, .55)); animation: hcline 8s ease-in-out infinite both; }
-.hc-dot { fill: #F6C35A; stroke: #fff; stroke-width: 2.5; }
-.hc-ping { fill: rgba(246, 195, 90, .45); transform-box: fill-box; transform-origin: center; animation: hcping 1.6s ease-out infinite; }
-.hc-end { animation: hcend 8s ease infinite both; }
-@keyframes hcbar { 0% { transform: scaleY(0); opacity: 1; } 16% { transform: scaleY(1); } 88% { transform: scaleY(1); opacity: 1; } 97%, 100% { transform: scaleY(1); opacity: 0; } }
-@keyframes hcline { 0%, 22% { stroke-dashoffset: 1; opacity: 1; } 52% { stroke-dashoffset: 0; } 88% { opacity: 1; } 97%, 100% { stroke-dashoffset: 0; opacity: 0; } }
-@keyframes hcarea { 0%, 40% { opacity: 0; } 58%, 88% { opacity: 1; } 97%, 100% { opacity: 0; } }
-@keyframes hcend { 0%, 50% { opacity: 0; } 58%, 88% { opacity: 1; } 97%, 100% { opacity: 0; } }
-@keyframes hcping { from { transform: scale(.8); opacity: .9; } to { transform: scale(2.4); opacity: 0; } }
 .lg-card { gap: 13px; }
 .signin .acc-grid.rep { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .signin .acc { padding: 8px 4px; }
@@ -913,6 +895,48 @@ td, th, .trow, .pl td, .doc, .lib-head { border-color: var(--hair-in) !important
 .u-item.danger { color: var(--bad); } .u-item.danger:hover, .u-item.danger:focus-visible { background: var(--bad-bg); }
 @media (max-width: 960px) { .u-txt { display: none; } .ubtn { padding-right: 6px; } }
 @media (max-width: 640px) { .main > .top .tb-title { order: 1; flex: 1 1 0; } .umenu { order: 2; } .main > .top .tb-ctrl { order: 3; } .udrop { width: min(280px, calc(100vw - 32px)); } }
+/* hero graphic: isometric reporting desk (servers → dashboard → apps), loops quietly */
+.lg-art { width: min(100%, 560px, max(320px, calc((100vh - 400px) * 1.15))); margin-top: 4px; }
+.lg-art svg { display: block; width: 100%; height: auto; overflow: visible; }
+.ha-srv.ft { fill: #EEF3FB; } .ha-srv.fl { fill: #A9B8D2; } .ha-srv.fr { fill: #C9D5E8; }
+.ha-srv { stroke: rgba(255,255,255,.35); stroke-width: .8; stroke-linejoin: round; }
+.ha-slot { fill: #5E6E8E; }
+.ha-led { fill: #5FD3FF; animation: haled 1.6s ease-in-out infinite; animation-delay: var(--d, 0s); }
+.ha-led.g { fill: #5FE3B0; }
+.ha-cl { fill: #F4F7FD; } .ha-cl-b { fill: #A9B8D2; }
+.ha-wire { fill: none; stroke: #1B2D5C; stroke-width: 3; stroke-linecap: round; }
+.ha-cloud { animation: hafloat 5s ease-in-out infinite alternate; }
+.ha-mon-e { fill: #8FA2C4; }
+.ha-bezel { fill: #15295E; stroke: rgba(160,195,255,.35); stroke-width: 1.2; }
+.ha-scr { fill: url(#haScr); }
+.ha-dot { fill: #4C7BFF; opacity: .7; }
+.ha-axis { fill: none; stroke: #F06A2A; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.ha-bar { fill: url(#haBar); transform-box: fill-box; transform-origin: 50% 100%; animation: habar 6s cubic-bezier(.2,.8,.2,1) infinite both; animation-delay: calc(var(--i) * .14s); }
+.ha-txt { fill: #FFFFFF; opacity: .95; } .ha-txt.d { fill: #9DB4D8; }
+.ha-area.w { fill: url(#haBar); opacity: .95; } .ha-area.b { fill: url(#haBlue); }
+.ha-dev-e { fill: #8FA2C4; } .ha-dev { fill: #E9EEF7; } .ha-scr2 { fill: #CDE7FB; }
+.ha-ring-bg { fill: none; stroke: #FFFFFF; stroke-width: 8; }
+.ha-ring { fill: none; stroke: #4C7BFF; stroke-width: 8; stroke-dasharray: 72 100; stroke-linecap: round; animation: haring 6s ease-in-out infinite; }
+.ha-pie { fill: #F06A2A; }
+.ha-paper { fill: #DDEBFA; } .ha-img { fill: #FFFFFF; }
+.ha-gear { animation: haspin 10s linear infinite; }
+.ha-gearf { fill: #D7DFEC; } .ha-gear-e { fill: #8FA2C4; } .ha-gear-h { fill: #0B1D52; }
+.ha-tile.light { fill: #EEF3FB; } .ha-tile-e.light { fill: #9FB0CC; }
+.ha-tile.gold { fill: url(#haGold); } .ha-tile-e.gold { fill: #C9860F; }
+.ha-ic { fill: none; stroke: #FFFFFF; stroke-width: 3.5; stroke-linejoin: round; }
+.ha-cal { fill: #5B86E8; opacity: .85; }
+.ha-play { fill: #FFFFFF; }
+.ha-check { fill: none; stroke: #2F6BFF; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; animation: hacheck 6s ease-in-out infinite; }
+.ha-mini { fill: url(#haBar); transform-box: fill-box; transform-origin: 50% 100%; animation: habar 6s cubic-bezier(.2,.8,.2,1) infinite both; animation-delay: calc(1s + var(--i) * .1s); }
+.ha-float { animation: hafloat 4.5s ease-in-out infinite alternate; animation-delay: var(--d, 0s); }
+.ha-link { fill: none; stroke: rgba(127, 211, 255, .35); stroke-width: 1.4; stroke-dasharray: 3 5; }
+.ha-pk { fill: #8FE6FF; filter: drop-shadow(0 0 5px #5FD3FF); }
+@keyframes habar { 0% { transform: scaleY(.05); } 22%, 88% { transform: scaleY(1); } 100% { transform: scaleY(.05); } }
+@keyframes hafloat { to { transform: translateY(-9px); } }
+@keyframes haspin { to { transform: rotate(360deg); } }
+@keyframes haled { 50% { opacity: .25; } }
+@keyframes haring { 0% { stroke-dasharray: 0 100; } 40%, 90% { stroke-dasharray: 72 100; } 100% { stroke-dasharray: 0 100; } }
+@keyframes hacheck { 0%, 30% { stroke-dashoffset: 1; } 50%, 90% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 1; } }
 </style>
 </head>
 <body>
@@ -1398,27 +1422,83 @@ function v403() { return '<section class="view"><div class="panel glass empty">'
 
 /* ================= login ================= */
 var CREDIT = '<div class="lg-credit"><img src="assets/raot-logo.png" width="44" height="44" alt="ตราการยางแห่งประเทศไทย"><span>กองประเมินผล ฝ่ายยุทธศาสตร์องค์กร<br><b>การยางแห่งประเทศไทย</b></span></div>';
-// Hero graphic: CBE score rising — 8 indicator bars grow in turn, a trend line draws across their tops toward the target
-function heroChart() {
-  var W = 560, H = 330, L = 34, R = 18, T = 24, B = 40, n = IND_DEF.length, vals = [2.1, 2.45, 2.8, 3.05, 3.35, 3.65, 4.0, 4.45];
-  var bw = (W - L - R) / n, y = function (v) { return T + (1 - v / 5) * (H - T - B); }, cx = function (i) { return L + bw * (i + .5); };
-  var grid = [1, 2, 3, 4, 5].map(function (g) { return '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(g) + '" y2="' + y(g) + '" class="hc-grid"/><text x="' + (L - 10) + '" y="' + (y(g) + 4) + '" class="hc-ax" text-anchor="end">' + g + '</text>'; }).join('');
-  var bars = IND_DEF.map(function (d, i) {
-    var x = L + bw * i + bw * .2, w = bw * .6, top = y(vals[i]);
-    return '<rect class="hc-bar" style="--i:' + i + '" x="' + x.toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + (H - B - top).toFixed(1) + '" rx="7"/>' +
-      '<text class="hc-lbl" x="' + cx(i).toFixed(1) + '" y="' + (H - B + 20) + '" text-anchor="middle">' + esc(d.label || d.code) + '</text>';
-  }).join('');
-  var pts = vals.map(function (v, i) { return [cx(i), y(v) - 12]; }), d = 'M' + pts[0][0].toFixed(1) + ' ' + pts[0][1].toFixed(1);
-  for (var i = 1; i < n; i++) { var p0 = pts[i - 1], p1 = pts[i], mx = (p0[0] + p1[0]) / 2; d += 'C' + mx.toFixed(1) + ' ' + p0[1].toFixed(1) + ' ' + mx.toFixed(1) + ' ' + p1[1].toFixed(1) + ' ' + p1[0].toFixed(1) + ' ' + p1[1].toFixed(1); }
-  var last = pts[n - 1], area = d + 'L' + last[0].toFixed(1) + ' ' + (H - B) + 'L' + pts[0][0].toFixed(1) + ' ' + (H - B) + 'Z';
-  return '<div class="lg-chart" role="img" aria-label="กราฟคะแนน Core Business Enablers ทั้ง 8 ตัวชี้วัดกำลังเพิ่มขึ้น">' +
-    '<svg viewBox="0 0 ' + W + ' ' + H + '" aria-hidden="true"><defs>' +
-      '<linearGradient id="hcBar" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#1F4BE0" stop-opacity=".35"/><stop offset="1" stop-color="#5FB8FF"/></linearGradient>' +
-      '<linearGradient id="hcLine" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7FD3FF"/><stop offset=".7" stop-color="#9DF0D0"/><stop offset="1" stop-color="#F6C35A"/></linearGradient>' +
-      '<linearGradient id="hcArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7FD3FF" stop-opacity=".28"/><stop offset="1" stop-color="#7FD3FF" stop-opacity="0"/></linearGradient></defs>' +
-    grid + '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(4.6) + '" y2="' + y(4.6) + '" class="hc-tgt"/>' +
-    bars + '<path class="hc-area" d="' + area + '"/><path class="hc-line" d="' + d + '" pathLength="1"/>' +
-    '<g class="hc-end" transform="translate(' + last[0].toFixed(1) + ' ' + last[1].toFixed(1) + ')"><circle class="hc-ping" r="9"/><circle class="hc-dot" r="6"/></g>' +
+// Hero graphic: isometric reporting desk — server + cloud feed a dashboard monitor, phone and report lie in front,
+// app tiles float around; bars grow, charts draw, data dots travel, gear turns
+function heroArt() {
+  var still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var W = 'matrix(.866 .5 0 1 ', G = 'matrix(.866 -.5 .866 .5 ';
+  var pt = function (p) { return p.map(function (q) { return q[0].toFixed(1) + ',' + q[1].toFixed(1); }).join(' '); };
+  // isometric box: F = bottom-front corner on screen; a = width (right-up), b = depth (left-up), h = height
+  var box = function (x, y, w, d, h, cls) {
+    var ax = .866 * w, ay = -.5 * w, bx = -.866 * d, by = -.5 * d;
+    var F = [x, y], R = [x + ax, y + ay], L = [x + bx, y + by], Ft = [x, y - h], Rt = [x + ax, y + ay - h], Lt = [x + bx, y + by - h], Bt = [x + ax + bx, y + ay + by - h];
+    return '<polygon class="' + cls + ' fl" points="' + pt([L, F, Ft, Lt]) + '"/><polygon class="' + cls + ' fr" points="' + pt([F, R, Rt, Ft]) + '"/><polygon class="' + cls + ' ft" points="' + pt([Ft, Rt, Bt, Lt]) + '"/>';
+  };
+  // a tile standing on a wall plane, with a thickness edge
+  var tile = function (x, y, w, h, kind, inner, i) {
+    return '<g class="ha-float" style="--d:' + (i * .45).toFixed(2) + 's"><g transform="translate(7 3)"><rect transform="' + W + x + ' ' + y + ')" width="' + w + '" height="' + h + '" rx="12" class="ha-tile-e ' + kind + '"/></g>' +
+      '<g transform="' + W + x + ' ' + y + ')"><rect width="' + w + '" height="' + h + '" rx="12" class="ha-tile ' + kind + '"/>' + inner + '</g></g>';
+  };
+  var move = function (path, begin, dur) {
+    return still ? '' : '<circle r="3.6" class="ha-pk" opacity="0"><animateMotion dur="' + dur + 's" begin="' + begin + 's" repeatCount="indefinite"><mpath href="#' + path + '"/></animateMotion>' +
+      '<animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.15;.8;1" dur="' + dur + 's" begin="' + begin + 's" repeatCount="indefinite"/></circle>';
+  };
+  // --- server stack + cloud (behind the monitor)
+  var srv = '';
+  for (var k = 0; k < 3; k++) {
+    var yy = 318 - k * 44;
+    srv += box(112, yy, 84, 84, 40, 'ha-srv') +
+      '<g transform="matrix(.866 -.5 0 1 112 ' + (yy - 40) + ')"><rect x="10" y="9" width="44" height="7" rx="3.5" class="ha-slot"/><rect x="10" y="22" width="44" height="7" rx="3.5" class="ha-slot"/>' +
+      '<circle cx="66" cy="13" r="3.4" class="ha-led" style="--d:' + (k * .5) + 's"/><circle cx="66" cy="26" r="3.4" class="ha-led g" style="--d:' + (k * .5 + .25) + 's"/></g>';
+  }
+  var cloud = '<g class="ha-cloud"><path d="M70 150h56a22 22 0 0 0 -6 -43a30 30 0 0 0 -56 -6a24 24 0 0 0 6 49z" class="ha-cl-b" transform="translate(6 5)"/>' +
+    '<path d="M70 150h56a22 22 0 0 0 -6 -43a30 30 0 0 0 -56 -6a24 24 0 0 0 6 49z" class="ha-cl"/>' +
+    '<path d="M84 150v18M100 150v22M116 150v16M84 168h32" class="ha-wire"/></g>';
+  // --- monitor (screen content in local coordinates 330 × 220)
+  var bars = [46, 70, 54, 92, 78, 118].map(function (h, i) { return '<rect class="ha-bar" style="--i:' + i + '" x="' + (40 + i * 22) + '" y="' + (168 - h) + '" width="14" height="' + h + '" rx="3"/>'; }).join('');
+  var screen = '<rect width="330" height="220" rx="20" class="ha-bezel"/><rect x="12" y="12" width="306" height="196" rx="11" class="ha-scr"/>' +
+    [0, 1, 2].map(function (i) { return '<circle cx="' + (34 + i * 20) + '" cy="32" r="6.5" class="ha-dot"/>'; }).join('') +
+    '<path d="M32 52v118h140" class="ha-axis"/>' + bars +
+    '<rect x="32" y="182" width="66" height="7" rx="3.5" class="ha-txt"/><rect x="32" y="194" width="44" height="6" rx="3" class="ha-txt"/>' +
+    '<rect x="192" y="40" width="96" height="7" rx="3.5" class="ha-txt"/><rect x="192" y="54" width="70" height="6" rx="3" class="ha-txt"/>' +
+    '<clipPath id="haClip1"><rect x="186" y="66" width="0" height="64">' + (still ? '' : '<animate attributeName="width" values="0;120;120;0" keyTimes="0;.35;.9;1" dur="6s" repeatCount="indefinite"/>') + '</rect></clipPath>' +
+    '<path clip-path="url(#haClip1)" d="M190 126l14 -20l12 14l14 -30l14 22l14 -18l14 12l16 -24v44z" class="ha-area w"/>' +
+    '<clipPath id="haClip2"><rect x="186" y="140" width="0" height="60">' + (still ? '' : '<animate attributeName="width" values="0;120;120;0" keyTimes="0;.35;.9;1" dur="6s" begin="1.2s" repeatCount="indefinite"/>') + '</rect></clipPath>' +
+    '<path clip-path="url(#haClip2)" d="M190 196l12 -16l12 8l14 -24l14 18l12 -12l16 10l16 -30v46z" class="ha-area b"/>';
+  if (still) screen = screen.replace('width="0" height="64"', 'width="120" height="64"').replace('width="0" height="60"', 'width="120" height="60"');
+  var monitor = '<g transform="translate(9 5)"><rect transform="matrix(.866 .5 -.22 .96 168 86)" width="330" height="220" rx="20" class="ha-mon-e"/></g>' +
+    '<g transform="matrix(.866 .5 -.22 .96 168 86)">' + screen + '</g>';
+  // --- phone + report lying in front
+  var phone = '<g transform="translate(0 7)"><rect transform="' + G + '36 404)" width="168" height="86" rx="14" class="ha-dev-e"/></g>' +
+    '<g transform="' + G + '36 404)"><rect width="168" height="86" rx="14" class="ha-dev"/><rect x="8" y="8" width="152" height="70" rx="9" class="ha-scr2"/>' +
+      '<circle cx="44" cy="43" r="20" class="ha-ring-bg"/><circle cx="44" cy="43" r="20" class="ha-ring" pathLength="100"/>' +
+      '<path d="M120 43v-22a22 22 0 1 1 -21 15z" class="ha-pie"/><rect x="74" y="26" width="34" height="5" rx="2.5" class="ha-txt"/><rect x="74" y="36" width="26" height="5" rx="2.5" class="ha-txt"/><rect x="74" y="56" width="30" height="5" rx="2.5" class="ha-txt"/></g>';
+  var doc = '<g transform="translate(0 6)"><rect transform="' + G + '196 438)" width="160" height="84" rx="10" class="ha-dev-e"/></g>' +
+    '<g transform="' + G + '196 438)"><rect width="160" height="84" rx="10" class="ha-paper"/><rect x="12" y="12" width="54" height="34" rx="4" class="ha-img"/>' +
+      [0, 1, 2, 3].map(function (i) { return '<rect x="76" y="' + (14 + i * 9) + '" width="' + (68 - i * 8) + '" height="5" rx="2.5" class="ha-txt d"/>'; }).join('') +
+      '<rect x="12" y="56" width="132" height="5" rx="2.5" class="ha-txt d"/><rect x="12" y="66" width="100" height="5" rx="2.5" class="ha-txt d"/></g>';
+  // --- gear
+  var gear = '<g transform="translate(62 352)"><g class="ha-gear"><path d="M-6 -34h12l2 8l7 3l7 -4l8 8l-4 7l3 7l8 2v12l-8 2l-3 7l4 7l-8 8l-7 -4l-7 3l-2 8h-12l-2 -8l-7 -3l-7 4l-8 -8l4 -7l-3 -7l-8 -2v-12l8 -2l3 -7l-4 -7l8 -8l7 4l7 -3z" class="ha-gear-e" transform="translate(4 3)"/>' +
+    '<path d="M-6 -34h12l2 8l7 3l7 -4l8 8l-4 7l3 7l8 2v12l-8 2l-3 7l4 7l-8 8l-7 -4l-7 3l-2 8h-12l-2 -8l-7 -3l-7 4l-8 -8l4 -7l-3 -7l-8 -2v-12l8 -2l3 -7l-4 -7l8 -8l7 4l7 -3z" class="ha-gearf"/><circle r="11" class="ha-gear-h"/></g></g>';
+  // --- floating tiles
+  var tiles = tile(262, 18, 78, 58, 'gold', '<path d="M12 14h54v34h-54zM12 14l27 20l27 -20" class="ha-ic"/>', 0) +
+    '<g class="ha-float" style="--d:.9s">' + [18, 30, 24, 40, 52, 34, 64].map(function (h, i) { return '<g transform="' + W + (380 + i * 13) + ' 86)"><rect y="' + (64 - h) + '" width="9" height="' + h + '" rx="2" class="ha-mini" style="--i:' + i + '"/></g>'; }).join('') + '</g>' +
+    tile(492, 150, 76, 70, 'light', [0, 1, 2].map(function (r) { return [0, 1, 2].map(function (c) { return '<rect x="' + (12 + c * 19) + '" y="' + (20 + r * 15) + '" width="14" height="11" rx="2.5" class="ha-cal"/>'; }).join(''); }).join('') + '<rect x="12" y="8" width="52" height="6" rx="3" class="ha-cal"/>', 1) +
+    tile(500, 290, 74, 56, 'gold', '<path d="M30 16l20 12l-20 12z" class="ha-play"/>', 2) +
+    tile(478, 404, 74, 62, 'light', '<path d="M18 30l12 13l26 -26" class="ha-check" pathLength="1"/>', 3);
+  // --- data paths
+  var paths = '<path id="haP1" d="M150 172C200 150 230 150 262 170" class="ha-link"/><path id="haP2" d="M440 236C470 220 480 205 492 196" class="ha-link"/>' +
+    '<path id="haP3" d="M420 330C460 336 480 330 500 322" class="ha-link"/><path id="haP4" d="M330 70C320 92 312 108 300 132" class="ha-link"/>';
+  return '<div class="lg-art" role="img" aria-label="ภาพประกอบระบบรายงานผล: ข้อมูลจากเซิร์ฟเวอร์และแอปต่าง ๆ ไหลเข้าแดชบอร์ด กราฟกำลังเพิ่มขึ้น">' +
+    '<svg viewBox="0 0 600 520" aria-hidden="true"><defs>' +
+      '<linearGradient id="haScr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E4F3FF"/><stop offset="1" stop-color="#B7DBF7"/></linearGradient>' +
+      '<linearGradient id="haBar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFB547"/><stop offset="1" stop-color="#F06A2A"/></linearGradient>' +
+      '<linearGradient id="haGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD66B"/><stop offset="1" stop-color="#F2A81D"/></linearGradient>' +
+      '<linearGradient id="haBlue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4C7BFF"/><stop offset="1" stop-color="#9EC2FF" stop-opacity=".5"/></linearGradient>' +
+      '<radialGradient id="haGlow"><stop offset="0" stop-color="#4F86FF" stop-opacity=".45"/><stop offset="1" stop-color="#4F86FF" stop-opacity="0"/></radialGradient></defs>' +
+    '<ellipse cx="310" cy="300" rx="270" ry="190" fill="url(#haGlow)"/>' +
+    srv + cloud + paths + monitor + gear + phone + doc + tiles +
+    move('haP1', 0, 2.4) + move('haP1', 1.2, 2.4) + move('haP2', .4, 2) + move('haP3', 1, 2.2) + move('haP4', .7, 2.2) +
     '</svg></div>';
 }
 
@@ -1441,7 +1521,7 @@ function vConfig() {
 function vLogin() {
   return '<main class="signin"><div class="lg-bg" aria-hidden="true"><i class="o1"></i><i class="o2"></i><i class="o3"></i><b></b></div><div class="lg-shell">' +
     '<section class="lg-hero" aria-label="เกี่ยวกับระบบ"><img class="lg-logo" src="assets/cbe-logo.png" width="880" height="332" alt="CBE Core Business Enablers">' +
-      '<h1>รายงานผล <em>Core Business Enablers</em><br>ครบ 8 ตัวชี้วัด ในที่เดียว</h1>' + heroChart() + '</section>' +
+      '<h1>รายงานผล <em>Core Business Enablers</em><br>ครบ 8 ตัวชี้วัด ในที่เดียว</h1>' + heroArt() + '</section>' +
     '<form class="lg-card" id="loginForm" novalidate><img class="lg-card-logo" src="assets/cbe-logo.png" width="880" height="332" alt="CBE Core Business Enablers">' +
       '<div class="lg-head"><h2>เข้าสู่ระบบ</h2><p class="lg-sys">CBE Reporting System</p><p>ระบบรายงานผล Core Business Enablers</p></div>' +
       '<div><label class="lg-label" for="em">รหัสพนักงาน</label><div class="lg-input">' + ico('users', 19) + '<input id="em" inputmode="numeric" maxlength="4" autocomplete="username" placeholder="รหัส 4 หลัก" autofocus></div></div>' +
