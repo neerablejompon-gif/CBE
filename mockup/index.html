@@ -799,6 +799,29 @@ td, th, .trow, .pl td, .doc, .lib-head { border-color: var(--hair-in) !important
 .bento-kpis .kpi:first-child { background-image: var(--lg-shine), linear-gradient(135deg, color-mix(in srgb, var(--warn) 16%, transparent), transparent 70%); }
 @media (max-width: 1280px) { .bento > .hero { grid-column: span 12; grid-row: auto; } .bento .kpi { grid-column: span 6; } }
 @media (max-width: 560px) { .bento .kpi { grid-column: span 12; } }
+/* header: floating bento row — title tile on the left, one capsule of controls on the right */
+.main > .top { background: none; -webkit-backdrop-filter: none; backdrop-filter: none; padding: calc(14px + env(safe-area-inset-top, 0px)) 0 4px; gap: 12px; align-items: stretch; }
+.tb-title { display: flex; align-items: center; gap: 12px; padding: 7px 18px 7px 7px; border-radius: 20px; min-width: 0; flex: 0 1 auto; }
+.tb-badge { width: 42px; height: 42px; flex: none; display: grid; place-items: center; border-radius: 14px; font-size: 18px; font-weight: 800; color: #fff; background: linear-gradient(140deg, color-mix(in srgb, var(--primary) 85%, #fff) 0%, var(--primary) 45%, color-mix(in srgb, var(--primary) 45%, #061447) 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 8px 18px -8px var(--primary); }
+.tb-txt { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.tb-eye { font: 700 10.5px/1.4 var(--num); letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tb-h { margin: 0; font-size: 16px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tb-ctrl { display: flex; align-items: center; gap: 2px; padding: 6px; border-radius: 20px; flex: none; }
+.tb-ctrl select { border: 0; background-color: transparent; min-height: 40px; border-radius: 14px; font-weight: 600; cursor: pointer; }
+.tb-ctrl select:hover, .tb-ctrl .icon-btn:hover { background-color: var(--primary-soft); }
+.tb-ctrl .icon-btn { border: 0; background: transparent; width: 40px; height: 40px; border-radius: 14px; }
+.tb-ctrl .saved { padding: 0 8px 0 10px; }
+.tb-ctrl .fy-chip { padding-left: 6px !important; }
+.tb-sep { width: 1px; height: 24px; background: var(--hair-in); margin: 0 4px; flex: none; }
+.main > .top .menu-btn { align-self: center; }
+.main > .top::before { content: ""; position: absolute; z-index: -1; inset: 0 -24px -18px; background: linear-gradient(to bottom, color-mix(in srgb, var(--bg) 92%, transparent) 55%, transparent); pointer-events: none; }
+@media (max-width: 960px) { .tb-ctrl .saved, .tb-ctrl .saved + .tb-sep { display: none; } }
+@media (max-width: 640px) {
+  .main > .top { flex-wrap: wrap; }
+  .tb-title { flex: 1 1 calc(100% - 52px); }
+  .main > .top .spacer { display: none; }
+  .tb-ctrl { flex: 1 1 100%; justify-content: space-between; }
+}
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .glass, .kpi, .hero { background: var(--glass-solid); } }
 </style>
 </head>
@@ -1233,17 +1256,17 @@ function render() {
   if (!U) { $('#root').innerHTML = vLogin(); return; }
   if (U.role === 'reporter') { S.view = 'ind'; S.ind = U.ind; }
   var I = S.ind && indBy(S.ind);
-  var body, crumb;
-  if (S.view === 'ind' && !canSee(S.ind)) { body = v403(); crumb = 'ไม่มีสิทธิ์'; }
-  else if (S.view === 'ind') { body = vInd(I); crumb = 'Core Business Enablers / <b>' + I.no + ' · ' + esc(I.name) + '</b>'; }
-  else { body = { home: vOrg, review: vReview, users: vUsers, log: vLog }[S.view](); crumb = 'Core Business Enablers / <b>' + { home: 'ภาพรวมองค์กร', review: 'พื้นที่ผู้ตรวจสอบ', users: 'ผู้ใช้และสิทธิ์', log: 'Audit trail' }[S.view] + '</b>'; }
+  var body, crumb, badge, eye = 'Core Business Enablers';
+  if (S.view === 'ind' && !canSee(S.ind)) { body = v403(); crumb = 'ไม่มีสิทธิ์'; badge = ico('lock', 18); }
+  else if (S.view === 'ind') { body = vInd(I); crumb = esc(I.name); badge = I.no; eye += ' · ตัวชี้วัด ' + I.no + ' ' + esc(I.code); }
+  else { body = { home: vOrg, review: vReview, users: vUsers, log: vLog }[S.view](); crumb = { home: 'ภาพรวมองค์กร', review: 'พื้นที่ผู้ตรวจสอบ', users: 'ผู้ใช้และสิทธิ์', log: 'Audit trail' }[S.view]; badge = ico({ home: 'grid', review: 'shield', users: 'users', log: 'history' }[S.view], 18); }
   $('#root').innerHTML = '<div class="app"><aside class="side" aria-label="เมนูหลัก">' + sidebar() + '</aside><div class="scrim" data-act="close-nav"></div>' +
-    '<div class="main"><header class="top"><button class="icon-btn menu-btn" data-act="open-nav" aria-label="เปิดเมนู">' + ico('menu') + '</button><div class="crumb">' + crumb + '</div><div class="spacer"></div>' +
-    (U.role === 'reporter' ? '<span class="saved" id="saved" role="status">' + ico('check', 15) + '<span>' + (S.savedAt ? 'บันทึกแล้ว ' + S.savedAt : 'บันทึกอัตโนมัติ') + '</span></span>' : '') +
+    '<div class="main"><header class="top"><button class="icon-btn menu-btn" data-act="open-nav" aria-label="เปิดเมนู">' + ico('menu') + '</button><div class="tb-title glass"><span class="tb-badge num">' + badge + '</span><div class="tb-txt"><span class="tb-eye">' + eye + '</span><p class="tb-h">' + crumb + '</p></div></div><div class="spacer"></div><div class="tb-ctrl glass">' +
+    (U.role === 'reporter' ? '<span class="saved" id="saved" role="status">' + ico('check', 15) + '<span>' + (S.savedAt ? 'บันทึกแล้ว ' + S.savedAt : 'บันทึกอัตโนมัติ') + '</span></span><i class="tb-sep"></i>' : '') +
     '<label class="sr" for="fyear">ปีบัญชี</label><select id="fyear">' + [CUR_FY, CLOSED_FY].map(function (y) { return '<option value="' + y + '"' + (y === FY ? ' selected' : '') + '>ปีบัญชี ' + y + (y === CUR_FY ? '' : ' (ปิดรอบ)') + '</option>'; }).join('') + '</select>' +
     '<label style="display:inline-flex;align-items:center;gap:8px"><span class="small muted fy-chip" style="background:none;padding:0;color:var(--ink-3)">ข้อมูล ณ</span><span class="sr">เดือนที่ติดตาม</span><select id="month">' +
       MONTHS.map(function (mm, i) { return '<option value="' + i + '"' + (i === S.month ? ' selected' : '') + '>' + mm + '</option>'; }).join('') + '</select></label>' +
-    '<button class="icon-btn" data-act="theme" aria-label="สลับเป็นธีม' + (dark ? 'สว่าง' : 'มืด') + '">' + ico(dark ? 'sun' : 'moon') + '</button></header>' +
+    '<i class="tb-sep"></i><button class="icon-btn" data-act="theme" aria-label="สลับเป็นธีม' + (dark ? 'สว่าง' : 'มืด') + '">' + ico(dark ? 'sun' : 'moon') + '</button></div></header>' +
     (FY !== CUR_FY ? '<div class="yearbar" role="status">' + ico('lock', 16) + '<span><b>ปีบัญชี ' + FY + ' · ปิดรอบแล้ว</b> ดูได้อย่างเดียว ข้อมูลผลการดำเนินงานตามแบบฟอร์มเดิม</span><button class="btn sm" data-act="back-current">กลับไปปีบัญชี ' + CUR_FY + '</button></div>' : '') +
     '<main id="view">' + body + '</main></div></div>';
   animateDv();
