@@ -300,6 +300,10 @@ async function check(env, fy, u, st, op) {
       if (op.v.plan.some((a, si) => !same12(a, old[si]))) fail(409, 'ปิดรับการแก้ไขแผนการดำเนินงานแล้ว');
     }
     if (op.v && Array.isArray(op.v.gapPlan) && planClosed(st, 'gap') && !same12(op.v.gapPlan, prev.gapPlan)) fail(409, 'ปิดรับการแก้ไขแผนปรับปรุง GAP แล้ว');
+    // sub-plans: steps the unit added (cs) and GAP steps (gs) keep their monthly plans while the window is closed; results stay open
+    const plans = a => JSON.stringify((a || []).map(x => (x.p || []).slice(0, 12).map(v => +v || 0)));
+    if (op.v && Array.isArray(op.v.cs) && planClosed(st, 'plan') && plans(op.v.cs) !== plans(prev.cs)) fail(409, 'ปิดรับการแก้ไขแผนการดำเนินงานแล้ว');
+    if (op.v && Array.isArray(op.v.gs) && planClosed(st, 'gap') && plans(op.v.gs) !== plans(prev.gs || (Array.isArray(prev.gapPlan) && prev.gapPlan.some(Number) ? [{ p: prev.gapPlan }] : []))) fail(409, 'ปิดรับการแก้ไขแผนปรับปรุง GAP แล้ว');
   } else if (op.s === 'wf') {
     if (audit ? !WF.includes(op.v) : !(reporter && op.k === u.ind && op.v === 'submitted' && editable(st, u.ind))) fail(403, 'ไม่มีสิทธิ์เปลี่ยนสถานะรายงานนี้');
   } else if (op.s === 'wfnote') {
