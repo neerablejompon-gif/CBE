@@ -829,8 +829,11 @@ td, th, .trow, .pl td, .doc, .lib-head { border-color: var(--hair-in) !important
 @media (min-width: 901px) {
   .signin { grid-template-columns: minmax(0, 1120px); padding: 32px clamp(16px, 4vw, 48px); }
   /* hero and sign-in card share one glass shell: same top, same bottom */
-  .lg-shell { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 440px); align-items: stretch; border-radius: 36px; padding: 10px; background: linear-gradient(150deg, rgba(255,255,255,.09), rgba(255,255,255,.025)); border: 1px solid rgba(255,255,255,.14); box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 40px 90px -40px rgba(0,0,30,.8); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
-  .lg-hero { max-width: none; align-items: flex-start; justify-content: center; text-align: left; gap: 16px; padding: 36px 40px 30px 42px; }
+  /* hero and sign-in card side by side on one line, no frame around them */
+  .lg-shell { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 440px); align-items: center; gap: clamp(40px, 5vw, 88px); }
+  .lg-hero { max-width: none; align-items: flex-start; text-align: left; gap: 18px; padding: 0; }
+  .lg-hero h1 { font-size: clamp(32px, 3.4vw, 50px); line-height: 1.2; }
+  .lg-card-logo { display: block; width: 230px; height: auto; margin: -6px auto 0; filter: drop-shadow(0 10px 26px rgba(40,110,255,.5)); }
 }
 .lg-shell { min-width: 0; }
 .lg-logo { width: min(300px, 100%); }
@@ -841,15 +844,12 @@ td, th, .trow, .pl td, .doc, .lib-head { border-color: var(--hair-in) !important
 .hc-ax { font: 600 11px var(--num); fill: rgba(200, 215, 255, .5); }
 .hc-lbl { font: 700 11.5px var(--num); fill: rgba(220, 232, 255, .85); }
 .hc-tgt { stroke: rgba(246, 195, 90, .7); stroke-width: 1.4; stroke-dasharray: 5 6; }
-.hc-tgtl { font: 600 11.5px var(--font); fill: #F6C35A; }
 .hc-bar { fill: url(#hcBar); stroke: rgba(160, 210, 255, .45); stroke-width: 1; transform-box: fill-box; transform-origin: 50% 100%; animation: hcbar 8s cubic-bezier(.2, .8, .2, 1) infinite both; animation-delay: calc(var(--i) * .12s); }
 .hc-area { fill: url(#hcArea); animation: hcarea 8s ease infinite both; }
 .hc-line { fill: none; stroke: url(#hcLine); stroke-width: 3.5; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 0; filter: drop-shadow(0 4px 10px rgba(95, 211, 255, .55)); animation: hcline 8s ease-in-out infinite both; }
 .hc-dot { fill: #F6C35A; stroke: #fff; stroke-width: 2.5; }
 .hc-ping { fill: rgba(246, 195, 90, .45); transform-box: fill-box; transform-origin: center; animation: hcping 1.6s ease-out infinite; }
-.hc-end, .hc-badge { animation: hcend 8s ease infinite both; }
-.hc-badge rect { fill: rgba(246, 195, 90, .16); stroke: rgba(246, 195, 90, .6); }
-.hc-badge text { font: 700 13px var(--font); fill: #FFD98A; }
+.hc-end { animation: hcend 8s ease infinite both; }
 @keyframes hcbar { 0% { transform: scaleY(0); opacity: 1; } 16% { transform: scaleY(1); } 88% { transform: scaleY(1); opacity: 1; } 97%, 100% { transform: scaleY(1); opacity: 0; } }
 @keyframes hcline { 0%, 22% { stroke-dashoffset: 1; opacity: 1; } 52% { stroke-dashoffset: 0; } 88% { opacity: 1; } 97%, 100% { stroke-dashoffset: 0; opacity: 0; } }
 @keyframes hcarea { 0%, 40% { opacity: 0; } 58%, 88% { opacity: 1; } 97%, 100% { opacity: 0; } }
@@ -1417,10 +1417,9 @@ function heroChart() {
       '<linearGradient id="hcBar" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#1F4BE0" stop-opacity=".35"/><stop offset="1" stop-color="#5FB8FF"/></linearGradient>' +
       '<linearGradient id="hcLine" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7FD3FF"/><stop offset=".7" stop-color="#9DF0D0"/><stop offset="1" stop-color="#F6C35A"/></linearGradient>' +
       '<linearGradient id="hcArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7FD3FF" stop-opacity=".28"/><stop offset="1" stop-color="#7FD3FF" stop-opacity="0"/></linearGradient></defs>' +
-    grid + '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(4.6) + '" y2="' + y(4.6) + '" class="hc-tgt"/><text x="' + (L + 4) + '" y="' + (y(4.6) - 8) + '" class="hc-tgtl">เป้าหมาย</text>' +
+    grid + '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(4.6) + '" y2="' + y(4.6) + '" class="hc-tgt"/>' +
     bars + '<path class="hc-area" d="' + area + '"/><path class="hc-line" d="' + d + '" pathLength="1"/>' +
     '<g class="hc-end" transform="translate(' + last[0].toFixed(1) + ' ' + last[1].toFixed(1) + ')"><circle class="hc-ping" r="9"/><circle class="hc-dot" r="6"/></g>' +
-    '<g class="hc-badge" transform="translate(' + (last[0] - 140).toFixed(1) + ' ' + (last[1] - 30).toFixed(1) + ')"><rect width="118" height="34" rx="17"/><text x="59" y="22" text-anchor="middle">▲ คะแนน CBE</text></g>' +
     '</svg></div>';
 }
 
@@ -1442,7 +1441,7 @@ function vConfig() {
 
 function vLogin() {
   return '<main class="signin"><div class="lg-bg" aria-hidden="true"><i class="o1"></i><i class="o2"></i><i class="o3"></i><b></b></div><div class="lg-shell">' +
-    '<section class="lg-hero" aria-label="เกี่ยวกับระบบ"><img class="lg-logo" src="assets/cbe-logo.png" width="880" height="332" alt="CBE Core Business Enablers">' +
+    '<section class="lg-hero" aria-label="เกี่ยวกับระบบ">' +
       '<h1>รายงานผล <em>Core Business Enablers</em><br>ครบ 8 ตัวชี้วัด ในที่เดียว</h1>' + heroChart() + '</section>' +
     '<form class="lg-card" id="loginForm" novalidate><img class="lg-card-logo" src="assets/cbe-logo.png" width="880" height="332" alt="CBE Core Business Enablers">' +
       '<div class="lg-head"><h2>เข้าสู่ระบบ</h2><p class="lg-sys">CBE Reporting System</p><p>ระบบรายงานผล Core Business Enablers</p></div>' +
