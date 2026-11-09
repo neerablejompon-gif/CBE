@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # CBE Reporting launch video v2 (2:16): new narration timing, LINE mock-up scene, QR close, RAOT logo badge
 # Run ../build.sh steps 0-2 first (synthetic data, local server on :8790, screen recordings in /home/claude/cbe-rec2).
-# Usage: bash build_v2.sh /path/to/music.mp3 [/path/to/new-voice.wav]
+# Usage: bash build_v2.sh /path/to/music.mp3 [/path/to/voice2.wav]
+# Scene times follow VO in script.py (measured from voice2.wav); re-measure if the voice is re-recorded
 set -euo pipefail
 MUSIC="${1:?music mp3}"; VO="${2:-}"
 V2="$(cd "$(dirname "$0")" && pwd)"; W=/home/claude/cbe-v2

@@ -27,3 +27,8 @@ def timeline(start=9.5):
     return out
 if __name__ == '__main__':
     for sc, a, b, tx in timeline(): print(f'{sc:9} {a:6.2f} {b:6.2f} {b-a:5.2f}  {tx[:40]}')
+
+# Measured paragraph times in the recorded voice (voice2.wav, silencedetect -38 dB / 0.3 s); placed at VO_OFFSET in the video
+VO_OFFSET = 9.5
+VO = [(0.00, 2.11), (2.80, 9.46), (10.38, 17.91), (18.63, 23.45), (24.27, 32.47), (33.36, 41.55), (42.28, 48.90),
+      (49.78, 59.21), (60.09, 67.22), (67.86, 75.35), (75.91, 87.69), (88.11, 96.67), (97.46, 101.82), (102.28, 106.14), (106.53, 109.04)]

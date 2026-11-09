@@ -5,7 +5,7 @@ from PIL import Image, ImageDraw, ImageFont
 sys.path.insert(0, '/home/claude/cbe-final'); sys.path.insert(0, '/home/claude/cbe-v2')
 import compose as C
 import opening as O
-from script import LINES, RATE, GAP
+from script import LINES, RATE, GAP, VO, VO_OFFSET
 import re
 
 C.OUT = '/home/claude/cbe-v2/out/'
@@ -21,16 +21,8 @@ def dur(path):
 
 # ---------------------------------------------------------------- narration timeline
 def paragraphs():
-    """Start/end of each paragraph; first two lines reuse the measured timing of the old voice"""
-    P, t = [], None
-    for i, (sc, tx) in enumerate(LINES):
-        d = len(re.sub(r'[\s…?,.]', '', tx)) / RATE
-        if i == 0: a, b = 9.5, 11.46
-        elif i == 1: a, b = 12.18, 18.66
-        elif i == 2: a = 19.75; b = a + d
-        else: a = t + GAP; b = a + d
-        P.append((sc, a, b, tx)); t = b
-    return P
+    """Paragraph start/end in video time, measured from the recorded voice"""
+    return [(sc, VO_OFFSET + a, VO_OFFSET + b, tx) for (sc, tx), (a, b) in zip(LINES, VO)]
 
 
 P = paragraphs()
@@ -64,8 +56,8 @@ def seg_line(name, t0, t1, owner_at):
     p = C.pill('แจ้งเตือนผ่าน LINE · ภาพจำลองฟีเจอร์ถัดไป')
     def fn(t, i):
         u = t - t0; im = C.BGI.copy()
-        if u >= 1.2: ce.next()
-        if u >= 1.3: co.next()
+        if u >= 0.8: ce.next()
+        co.next()
         e = C.smooth((t - owner_at) / .6)          # 0 = exec emphasised, 1 = owner emphasised
         for k, (clip, x, act) in enumerate(((ce, W / 2 - 300, 1 - e), (co, W / 2 + 300, e))):
             b = C.spring((u - .15 * k) / .7)
@@ -135,14 +127,14 @@ C.pill = lambda text, size=34: _pill(text.replace('ธีมสว่าง / �
 JOBS = {
     'a_open': lambda: C.seg_open('a_open', *SEG['a_open']),
     'b_reveal': lambda: C.seg_reveal('b_reveal', *SEG['b_reveal']),
-    'c_login': lambda: C.seg_login('c_login', *SEG['c_login'], ps(3) + 2.3),
+    'c_login': lambda: C.seg_login('c_login', *SEG['c_login'], ps(3) + 1.6),
     'd_over': lambda: C.seg_window('d_over', *SEG['d_over'], 'r_over.mp4', 0.4, 'ผู้บริหาร · ภาพรวม 8 ตัวชี้วัด เทียบเป้าหมาย', slow_for('r_over.mp4', .4, win('d_over'))),
     'f_score': lambda: C.seg_window('f_score', *SEG['f_score'], 'r_score.mp4', 0.9, 'คะแนนคาดการณ์สิ้นปี 3 ระดับ · ขยับระดับไหนคุ้มที่สุด', slow_for('r_score.mp4', .9, win('f_score'))),
     'e_mhome': lambda: C.seg_phone('e_mhome', *SEG['e_mhome'], 'r_mhome.mp4', 0.3, 'ผู้รายงาน · งานของฉัน รู้ว่าต้องทำอะไรต่อ'),
     'g_wiz': lambda: C.seg_window('g_wiz', *SEG['g_wiz'], 'r_wiz.mp4', 0.4, 'รายงานผลทีละขั้น · ลงผลรายเดือนอัตโนมัติ', slow_for('r_wiz.mp4', .4, win('g_wiz'))),
     'h_gate': lambda: C.seg_window('h_gate', *SEG['h_gate'], 'r_gate.mp4', 0.0, 'ตรวจความพร้อมก่อนส่ง (Quality Gate)', slow_for('r_gate.mp4', 0, win('h_gate'))),
     'i_review': lambda: C.seg_window('i_review', *SEG['i_review'], 'r_review.mp4', 0.0, 'พื้นที่ผู้ตรวจสอบ · ตรวจเบื้องต้นอัตโนมัติ 10 กฎ', slow_for('r_review.mp4', 0, win('i_review'))),
-    'm_line': lambda: seg_line('m_line', *SEG['m_line'], ps(10) + 8.6),
+    'm_line': lambda: seg_line('m_line', *SEG['m_line'], ps(10) + 6.9),
     'j_users': lambda: C.seg_window('j_users', *SEG['j_users'], 'r_users.mp4', 0.0, 'สิทธิ์ตามบทบาท · ล็อกผลย้อนหลัง · Audit trail', slow_for('r_users.mp4', 0, win('j_users'))),
     'k_dark': lambda: C.seg_dark('k_dark', *SEG['k_dark'], SEG['k_dark'][0] + 1.2),
     'l_close': lambda: seg_close('l_close', *SEG['l_close'], SEG['l_close'][0] + .7, ps(13), ps(14) - .3),

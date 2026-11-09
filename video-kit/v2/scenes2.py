@@ -22,18 +22,18 @@ async def line_page(B, v):
 
 async def sc_line_exec(B):
     ctx, pg = await line_page(B, 'exec'); r = RT(pg, 'r_line_exec.mp4')
-    await r.hold(2.0); await pg.evaluate("step('banner')"); await r.hold(2.4)
-    await pg.evaluate("step('unbanner');step('msg')"); await r.hold(1.8)
-    await r.scroll(560, 2.4, '#chat'); await r.hold(7.8)
+    await r.hold(2.0); await pg.evaluate("step('banner')"); await r.hold(2.2)
+    await pg.evaluate("step('unbanner');step('msg')"); await r.hold(1.3)
+    await r.scroll(560, 2.0, '#chat'); await r.hold(5.5)
     print('line_exec', await r.close()); await ctx.close()
 
 async def sc_line_owner(B):
     ctx, pg = await line_page(B, 'owner'); r = RT(pg, 'r_line_owner.mp4', 'f'); r.x, r.y = 300, 760
     await r.ov(); await pg.evaluate("__fhide()")
-    await r.hold(7.6); await pg.evaluate("step('banner')"); await r.hold(1.8)
-    await pg.evaluate("step('unbanner');step('msg')"); await r.hold(1.4)
-    await r.scroll(260, 1.2, '#chat'); await r.hold(0.3)
-    await r.to(pg.locator('#go'), 0.7); await pg.evaluate(f"__rip({r.x},{r.y})"); await r.hold(4.0)
+    await r.hold(7.0); await pg.evaluate("step('banner')"); await r.hold(1.4)
+    await pg.evaluate("step('unbanner');step('msg')"); await r.hold(1.0)
+    await r.scroll(260, 1.0, '#chat'); await r.hold(0.2)
+    await r.to(pg.locator('#go'), 0.6); await pg.evaluate(f"__rip({r.x},{r.y})"); await r.hold(1.6)
     print('line_owner', await r.close()); await ctx.close()
 
 async def sc_users(B):
