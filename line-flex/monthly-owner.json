@@ -1,0 +1,281 @@
+{
+  "type": "flex",
+  "altText": "งานเดือน พ.ย. ของ SP: เหลือ 20 ประเด็น · ส่งภายใน 10 ธ.ค. 2569",
+  "contents": {
+    "type": "bubble",
+    "size": "mega",
+    "header": {
+      "type": "box",
+      "layout": "vertical",
+      "contents": [
+        {
+          "type": "text",
+          "text": "งานที่ต้องทำ · รายเดือน",
+          "size": "xxs",
+          "color": "#FFFFFFD9",
+          "weight": "bold"
+        },
+        {
+          "type": "text",
+          "text": "รายงานผลเดือน พ.ย. 2569",
+          "size": "lg",
+          "color": "#FFFFFF",
+          "weight": "bold",
+          "wrap": true,
+          "margin": "xs"
+        },
+        {
+          "type": "text",
+          "text": "ตัวชี้วัด 2 · SP การวางแผนเชิงกลยุทธ์",
+          "size": "xs",
+          "color": "#FFFFFFE6",
+          "margin": "xs"
+        }
+      ],
+      "paddingAll": "16px",
+      "background": {
+        "type": "linearGradient",
+        "angle": "135deg",
+        "startColor": "#1F5FE0",
+        "endColor": "#1449B8"
+      }
+    },
+    "body": {
+      "type": "box",
+      "layout": "vertical",
+      "contents": [
+        {
+          "type": "box",
+          "layout": "horizontal",
+          "contents": [
+            {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "text",
+                  "text": "ครบกำหนดส่ง",
+                  "size": "xxs",
+                  "color": "#475569"
+                },
+                {
+                  "type": "text",
+                  "text": "10 ธ.ค. 2569",
+                  "weight": "bold",
+                  "color": "#1449B8"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "text": "อีก 9 วัน",
+              "size": "sm",
+              "weight": "bold",
+              "align": "end",
+              "gravity": "center"
+            }
+          ],
+          "backgroundColor": "#EEF4FF",
+          "cornerRadius": "10px",
+          "paddingAll": "10px"
+        },
+        {
+          "type": "text",
+          "text": "พร้อมส่ง 1 จาก 21 ประเด็น",
+          "size": "xxs",
+          "color": "#94A3B8",
+          "weight": "bold",
+          "margin": "md"
+        },
+        {
+          "type": "box",
+          "layout": "vertical",
+          "contents": [
+            {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [],
+              "width": "5%",
+              "height": "6px",
+              "backgroundColor": "#1F5FE0"
+            }
+          ],
+          "backgroundColor": "#E5EAF2",
+          "height": "6px",
+          "cornerRadius": "3px",
+          "margin": "sm"
+        },
+        {
+          "type": "box",
+          "layout": "horizontal",
+          "contents": [
+            {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "text",
+                  "text": "5",
+                  "weight": "bold",
+                  "align": "center",
+                  "gravity": "center",
+                  "color": "#DC2626"
+                }
+              ],
+              "width": "32px",
+              "height": "32px",
+              "backgroundColor": "#FEE2E2",
+              "cornerRadius": "9px",
+              "justifyContent": "center"
+            },
+            {
+              "type": "text",
+              "text": "ประเด็นยังแนบหลักฐานไม่ครบ",
+              "size": "sm",
+              "wrap": true,
+              "gravity": "center",
+              "flex": 1
+            }
+          ],
+          "spacing": "md",
+          "margin": "md"
+        },
+        {
+          "type": "box",
+          "layout": "horizontal",
+          "contents": [
+            {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "text",
+                  "text": "1",
+                  "weight": "bold",
+                  "align": "center",
+                  "gravity": "center",
+                  "color": "#DC2626"
+                }
+              ],
+              "width": "32px",
+              "height": "32px",
+              "backgroundColor": "#FEE2E2",
+              "cornerRadius": "9px",
+              "justifyContent": "center"
+            },
+            {
+              "type": "text",
+              "text": "ประเด็นยังไม่เขียนผลการดำเนินงาน",
+              "size": "sm",
+              "wrap": true,
+              "gravity": "center",
+              "flex": 1
+            }
+          ],
+          "spacing": "md",
+          "margin": "md"
+        },
+        {
+          "type": "box",
+          "layout": "horizontal",
+          "contents": [
+            {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "text",
+                  "text": "10",
+                  "weight": "bold",
+                  "align": "center",
+                  "gravity": "center",
+                  "color": "#D97706"
+                }
+              ],
+              "width": "32px",
+              "height": "32px",
+              "backgroundColor": "#FEF3C7",
+              "cornerRadius": "9px",
+              "justifyContent": "center"
+            },
+            {
+              "type": "text",
+              "text": "ประเด็นผลยังไม่ครบตามแผน",
+              "size": "sm",
+              "wrap": true,
+              "gravity": "center",
+              "flex": 1
+            }
+          ],
+          "spacing": "md",
+          "margin": "md"
+        },
+        {
+          "type": "box",
+          "layout": "horizontal",
+          "contents": [
+            {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "text",
+                  "text": "20",
+                  "weight": "bold",
+                  "align": "center",
+                  "gravity": "center",
+                  "color": "#1449B8"
+                }
+              ],
+              "width": "32px",
+              "height": "32px",
+              "backgroundColor": "#E0E7FF",
+              "cornerRadius": "9px",
+              "justifyContent": "center"
+            },
+            {
+              "type": "text",
+              "text": "ประเด็นมี GAP แต่ยังไม่มีแผนปรับปรุง",
+              "size": "sm",
+              "wrap": true,
+              "gravity": "center",
+              "flex": 1
+            }
+          ],
+          "spacing": "md",
+          "margin": "md"
+        }
+      ],
+      "paddingAll": "16px"
+    },
+    "footer": {
+      "type": "box",
+      "layout": "vertical",
+      "contents": [
+        {
+          "type": "button",
+          "style": "primary",
+          "color": "#1F5FE0",
+          "height": "sm",
+          "action": {
+            "type": "uri",
+            "label": "เปิดงานของฉัน",
+            "uri": "https://cbe-report.pages.dev/#my"
+          }
+        },
+        {
+          "type": "button",
+          "style": "link",
+          "height": "sm",
+          "action": {
+            "type": "uri",
+            "label": "ดูรายละเอียดทุกประเด็น",
+            "uri": "https://cbe-report.pages.dev/#report"
+          }
+        }
+      ],
+      "spacing": "sm",
+      "paddingAll": "12px"
+    }
+  }
+}

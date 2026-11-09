@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CBE LINE notification mock-up</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--blue:#1F5FE0;--blue2:#1449B8;--ink:#0f172a;--ink2:#475569;--mut:#94a3b8;--ok:#16a34a;--warn:#d97706;--bad:#dc2626}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'IBM Plex Sans Thai',sans-serif;color:var(--ink);background:#c9d6e8;overflow:hidden}
+.status{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 26px 0 30px;font-weight:600;font-size:15px;background:#f7f8fa}
+.status i{display:inline-block;width:24px;height:11px;border:1.5px solid #111;border-radius:3px;position:relative;margin-left:6px}
+.status i:after{content:'';position:absolute;inset:1.5px;right:5px;background:#111;border-radius:1px}
+.head{height:54px;display:flex;align-items:center;gap:10px;padding:0 14px;background:#f7f8fa;border-bottom:1px solid #e3e7ee}
+.head .back{font-size:24px;color:#333;width:18px}
+.head img{width:34px;height:34px;border-radius:50%}
+.head b{font-size:16px}.head small{display:block;font-size:11px;color:var(--mut);font-weight:500}
+.chat{position:absolute;top:98px;bottom:84px;left:0;right:0;overflow-y:auto;padding:14px 12px 24px;scrollbar-width:none}
+.chat::-webkit-scrollbar{display:none}
+.date{align-self:center;margin:6px auto 12px;width:max-content;background:rgba(15,23,42,.18);color:#fff;font-size:11.5px;padding:3px 12px;border-radius:12px}
+.row{display:flex;gap:8px;align-items:flex-start;margin-bottom:12px}
+.row img{width:34px;height:34px;border-radius:50%;flex:none}
+.who{font-size:11px;color:#334155;margin:0 0 3px 2px}
+.txt{background:#fff;border-radius:16px;padding:9px 12px;font-size:13.5px;line-height:1.5;max-width:262px}
+.time{align-self:flex-end;font-size:10px;color:#475569;margin-left:-2px}
+.new{opacity:0;transform:translateY(24px) scale(.96);transition:opacity .35s,transform .45s cubic-bezier(.2,1.3,.4,1)}
+.new.on{opacity:1;transform:none}
+/* flex bubble (mega) */
+.bub{width:286px;background:#fff;border-radius:17px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.bh{padding:14px 16px 12px;color:#fff;background:linear-gradient(135deg,var(--blue),var(--blue2))}
+.bh .k{font-size:10.5px;letter-spacing:.06em;opacity:.85;font-weight:600}
+.bh .t{font-size:16.5px;font-weight:700;line-height:1.35;margin-top:2px}
+.bh .s{font-size:11.5px;opacity:.9;margin-top:2px}
+.bb{padding:12px 16px 4px}
+.big{display:flex;align-items:baseline;gap:6px}.big b{font-size:34px;line-height:1.1}.big span{font-size:13px;color:var(--ink2)}
+.sub{font-size:11.5px;color:var(--ink2);margin:2px 0 10px}
+.chips{display:flex;gap:6px;margin-bottom:10px}
+.chip{flex:1;background:#f1f5fd;border-radius:10px;padding:7px 8px}.chip b{display:block;font-size:16px}.chip span{font-size:10.5px;color:var(--ink2)}
+.sep{height:1px;background:#e8edf5;margin:6px 0 8px}
+.lbl{font-size:11px;color:var(--mut);font-weight:600;margin-bottom:6px}
+.ind{display:grid;grid-template-columns:44px 1fr 74px;align-items:center;gap:8px;margin-bottom:7px;font-size:12px}
+.ind .c{font-weight:700}.ind .v{text-align:right;font-size:11px;white-space:nowrap}.ind .v b{font-size:12.5px}
+.bar{height:7px;background:#edf1f7;border-radius:4px;position:relative}
+.bar s{position:absolute;left:0;top:0;bottom:0;border-radius:4px;text-decoration:none}
+.bar u{position:absolute;top:-3px;bottom:-3px;width:2px;background:#0f172a;border-radius:1px}
+.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+.leg{display:flex;gap:10px;font-size:10.5px;color:var(--ink2);margin:2px 0 8px}
+.leg i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+.note{background:#fff7ed;border-radius:10px;padding:8px 10px;font-size:11.5px;color:#9a3412;margin:4px 0 10px;line-height:1.5}
+.task{display:grid;grid-template-columns:30px 1fr;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #eef2f7}
+.task:last-child{border:0}
+.task .n{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-weight:700;font-size:14px}
+.task p{font-size:12.5px;line-height:1.35}.task small{display:block;color:var(--mut);font-size:10.5px}
+.due{display:flex;justify-content:space-between;align-items:center;background:#eef4ff;border-radius:10px;padding:8px 10px;margin-bottom:8px}
+.due b{font-size:14px;color:var(--blue2)}.due span{font-size:11px;color:var(--ink2)}
+.prog{height:6px;background:#e5eaf2;border-radius:3px;margin:4px 0 2px}.prog s{display:block;height:100%;border-radius:3px;background:var(--blue)}
+.bf{padding:8px 12px 12px;display:flex;flex-direction:column;gap:6px}
+.btn{display:block;text-align:center;border-radius:10px;padding:9px;font-weight:600;font-size:13.5px}
+.btn.p{background:var(--blue);color:#fff}.btn.l{color:var(--blue)}
+.input{position:absolute;bottom:0;left:0;right:0;height:84px;background:#f7f8fa;border-top:1px solid #e3e7ee;padding:9px 12px;display:flex;gap:10px;align-items:flex-start}
+.input div{flex:1;height:36px;border-radius:18px;background:#fff;border:1px solid #e3e7ee;font-size:13px;color:var(--mut);padding:8px 14px}
+.input span{width:36px;height:36px;border-radius:50%;background:#e9eef6;display:grid;place-items:center;color:#64748b;font-size:18px}
+/* notification banner */
+.ban{position:absolute;left:8px;right:8px;top:8px;z-index:9;background:rgba(245,247,250,.93);backdrop-filter:blur(14px);border-radius:20px;padding:11px 13px;display:flex;gap:10px;box-shadow:0 10px 30px rgba(15,23,42,.22);transform:translateY(-130%);transition:transform .5s cubic-bezier(.2,1.2,.4,1)}
+.ban.on{transform:none}
+.ban .ic{width:38px;height:38px;border-radius:10px;background:#16a34a;display:grid;place-items:center;flex:none}
+.ban b{font-size:13.5px}.ban p{font-size:12.5px;color:#334155;line-height:1.4}.ban em{font-style:normal;font-size:11px;color:var(--mut);float:right}
+.mock{position:absolute;bottom:90px;right:10px;font-size:10px;color:#475569;background:rgba(255,255,255,.7);padding:2px 8px;border-radius:8px}
+</style></head><body>
+<div class="status"><span>9:00</span><span>5G<i></i></span></div>
+<div class="head"><span class="back">‹</span><img src="cbe-icon.png" alt=""><div><b>CBE Reporting</b><small>บัญชีแจ้งเตือนของระบบ</small></div></div>
+<div class="ban" id="ban"><div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M12 3C6.5 3 2 6.6 2 11c0 2.6 1.5 4.9 3.9 6.3L5 21l4.2-2.4c.9.2 1.8.3 2.8.3 5.5 0 10-3.6 10-8S17.5 3 12 3z"/></svg></div>
+ <div style="flex:1"><b>CBE Reporting</b><em>ตอนนี้</em><p id="banTxt"></p></div></div>
+<div class="chat" id="chat"></div>
+<div class="input"><span>+</span><div>Aa</div><span>☺</span></div>
+<script>
+const V = new URLSearchParams(location.search).get('v') || 'exec';
+const AV = '<img src="cbe-icon.png" alt="">';
+const IND = [ // synthetic demo values (same as the mockup overview)
+  ['CG', 2.45, 2.69], ['SP', 2.22, 2.24], ['RM', 2.36, 2.40], ['SCM', 2.54, 2.65],
+  ['DT', 2.04, null], ['HCM', 2.99, 2.95], ['KM&IM', 1.73, 1.75], ['IA', 2.63, 2.83]];
+const st = (v, t) => t == null ? ['#94a3b8', ''] : v >= t ? ['#16a34a', 'ok'] : t - v <= 0.1 ? ['#d97706', 'warn'] : ['#dc2626', 'bad'];
+function execBubble() {
+  const rows = IND.map(([c, v, t]) => { const [col, k] = st(v, t);
+    return `<div class="ind"><span class="c">${c}</span><span class="bar"><s style="width:${v / 5 * 100}%;background:${col}"></s>${t != null ? `<u style="left:${t / 5 * 100}%"></u>` : ''}</span><span class="v"><b class="${k}">${v.toFixed(2)}</b> / ${t != null ? t.toFixed(2) : '–'}</span></div>`; }).join('');
+  return `<div class="bub"><div class="bh"><div class="k">สรุปสำหรับผู้บริหาร · รายไตรมาส</div><div class="t">ผลการดำเนินงาน CBE<br>ไตรมาส 1 ปีบัญชี 2570</div><div class="s">ต.ค. – ธ.ค. 2569 · 8 ตัวชี้วัด</div></div>
+  <div class="bb"><div class="big"><b>2.37</b><span>/ 5.00 · เป้า 2.50</span></div><div class="sub">คะแนนเป้าหมายสิ้นปีเฉลี่ย ต่ำกว่าเป้า 0.13</div>
+  <div class="chips"><div class="chip"><b class="ok">7/8</b><span>คาดว่าถึงเป้า</span></div><div class="chip"><b>65.8%</b><span>หลักฐานครบ</span></div><div class="chip"><b class="warn">13</b><span>ระดับล่าช้า</span></div></div>
+  <div class="sep"></div><div class="lbl">รายตัวชี้วัด (คะแนน / เป้าหมาย)</div>${rows}
+  <div class="leg"><span><i style="background:#16a34a"></i>ถึงเป้า</span><span><i style="background:#d97706"></i>ห่างไม่เกิน 0.10</span><span><i style="background:#dc2626"></i>ต่ำกว่าเป้า</span></div>
+  <div class="note">ควรเร่ง: CG และ IA ต่ำกว่าเป้าเกิน 0.10 คะแนน</div></div>
+  <div class="bf"><span class="btn p">เปิดภาพรวม CBE</span></div></div>`;
+}
+function ownerBubble() {
+  const T = [['5', 'ประเด็นยังแนบหลักฐานไม่ครบ', 'Minimum Requirement', '#fee2e2', '#dc2626'],
+             ['1', 'ประเด็นยังไม่เขียนผลการดำเนินงาน', 'ระดับที่รายงานคะแนนไว้', '#fee2e2', '#dc2626'],
+             ['10', 'ประเด็นผลยังไม่ครบตามแผน', 'อัปเดตความคืบหน้าหรือชี้แจงเหตุ', '#fef3c7', '#d97706'],
+             ['20', 'ประเด็นมี GAP แต่ยังไม่มีแผนปรับปรุง', 'กำหนดแผนในหน้าแผนปรับปรุง GAP', '#e0e7ff', '#1449B8']];
+  return `<div class="bub"><div class="bh"><div class="k">งานที่ต้องทำ · รายเดือน</div><div class="t">รายงานผลเดือน พ.ย. 2569</div><div class="s">ตัวชี้วัด 2 · SP การวางแผนเชิงกลยุทธ์</div></div>
+  <div class="bb"><div class="due"><div><span>ครบกำหนดส่ง</span><br><b>10 ธ.ค. 2569</b></div><span>อีก <b style="font-size:18px">9</b> วัน</span></div>
+  <div class="lbl" style="margin:4px 0 0">พร้อมส่ง 1 จาก 21 ประเด็น</div><div class="prog"><s style="width:5%"></s></div>
+  ${T.map(([n, a, b, bg, c]) => `<div class="task"><span class="n" style="background:${bg};color:${c}">${n}</span><p>${a}<small>${b}</small></p></div>`).join('')}</div>
+  <div class="bf"><span class="btn p" id="go">เปิดงานของฉัน</span><span class="btn l">ดูรายละเอียดทุกประเด็น</span></div></div>`;
+}
+const CFG = {
+  exec: { old: ['15 ต.ค. 2569', 'สรุปผลไตรมาส 4 ปีบัญชี 2569 พร้อมแล้ว คะแนนเฉลี่ย 2.41 / 5.00 · ถึงเป้า 5 จาก 8 ตัวชี้วัด'], date: '15 ม.ค. 2570', time: '09:00',
+          ban: 'สรุปผลไตรมาส 1/2570: คะแนนเฉลี่ย 2.37 · คาดว่าถึงเป้า 7/8', bub: execBubble },
+  owner: { old: ['1 พ.ย. 2569', 'รายงานผลเดือน ต.ค. 2569 ของ SP ได้รับการอนุมัติจาก กปม. แล้ว'], date: '1 ธ.ค. 2569', time: '08:30',
+          ban: 'งานเดือน พ.ย. ของ SP: เหลือ 20 ประเด็น · ส่งภายใน 10 ธ.ค.', bub: ownerBubble } }[V];
+const chat = document.getElementById('chat');
+chat.innerHTML = `<div class="date">${CFG.old[0]}</div><div class="row">${AV}<div><div class="who">CBE Reporting</div><div class="txt">${CFG.old[1]}</div></div><span class="time">09:00</span></div>
+  <div class="row"><img src="cbe-icon.png" style="visibility:hidden"><div class="txt" style="font-size:12.5px;color:#334155">ระบบส่งสรุปและแจ้งงานที่ต้องทำให้อัตโนมัติ ตั้งค่าการแจ้งเตือนได้ที่เมนู “ตั้งค่า” ในระบบ CBE Reporting</div><span class="time">09:00</span></div>
+  <div class="new" id="nd"><div class="date">${CFG.date}</div></div>
+  <div class="row new" id="nb">${AV}<div><div class="who">CBE Reporting</div>${CFG.bub()}</div><span class="time">${CFG.time}</span></div>`;
+document.getElementById('banTxt').textContent = CFG.ban;
+window.step = (s) => {
+  if (s === 'banner') document.getElementById('ban').classList.add('on');
+  if (s === 'unbanner') document.getElementById('ban').classList.remove('on');
+  if (s === 'msg') { ['nd', 'nb'].forEach(i => document.getElementById(i).classList.add('on'));
+    const nb = document.getElementById('nb'); chat.scrollTop = nb.offsetTop - 120; }
+};
+</script></body></html>

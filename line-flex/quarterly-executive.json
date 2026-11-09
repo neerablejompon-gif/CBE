@@ -1,0 +1,545 @@
+{
+  "type": "flex",
+  "altText": "สรุปผล CBE ไตรมาส 1/2570: คะแนนเฉลี่ย 2.37 · คาดว่าถึงเป้า 7/8",
+  "contents": {
+    "type": "bubble",
+    "size": "mega",
+    "header": {
+      "type": "box",
+      "layout": "vertical",
+      "contents": [
+        {
+          "type": "text",
+          "text": "สรุปสำหรับผู้บริหาร · รายไตรมาส",
+          "size": "xxs",
+          "color": "#FFFFFFD9",
+          "weight": "bold"
+        },
+        {
+          "type": "text",
+          "text": "ผลการดำเนินงาน CBE ไตรมาส 1 ปีบัญชี 2570",
+          "size": "lg",
+          "color": "#FFFFFF",
+          "weight": "bold",
+          "wrap": true,
+          "margin": "xs"
+        },
+        {
+          "type": "text",
+          "text": "ต.ค. – ธ.ค. 2569 · 8 ตัวชี้วัด",
+          "size": "xs",
+          "color": "#FFFFFFE6",
+          "margin": "xs"
+        }
+      ],
+      "paddingAll": "16px",
+      "background": {
+        "type": "linearGradient",
+        "angle": "135deg",
+        "startColor": "#1F5FE0",
+        "endColor": "#1449B8"
+      }
+    },
+    "body": {
+      "type": "box",
+      "layout": "vertical",
+      "contents": [
+        {
+          "type": "box",
+          "layout": "baseline",
+          "contents": [
+            {
+              "type": "text",
+              "text": "2.37",
+              "size": "3xl",
+              "weight": "bold",
+              "flex": 0
+            },
+            {
+              "type": "text",
+              "text": "/ 5.00 · เป้า 2.50",
+              "size": "sm",
+              "color": "#475569",
+              "margin": "sm"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "คะแนนเป้าหมายสิ้นปีเฉลี่ย ต่ำกว่าเป้า 0.13",
+          "size": "xs",
+          "color": "#475569"
+        },
+        {
+          "type": "box",
+          "layout": "horizontal",
+          "contents": [
+            {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "text",
+                  "text": "7/8",
+                  "weight": "bold",
+                  "size": "md",
+                  "color": "#16A34A"
+                },
+                {
+                  "type": "text",
+                  "text": "คาดว่าถึงเป้า",
+                  "size": "xxs",
+                  "color": "#475569"
+                }
+              ],
+              "backgroundColor": "#F1F5FD",
+              "cornerRadius": "10px",
+              "paddingAll": "8px",
+              "flex": 1
+            },
+            {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "text",
+                  "text": "65.8%",
+                  "weight": "bold",
+                  "size": "md",
+                  "color": "#0F172A"
+                },
+                {
+                  "type": "text",
+                  "text": "หลักฐานครบ",
+                  "size": "xxs",
+                  "color": "#475569"
+                }
+              ],
+              "backgroundColor": "#F1F5FD",
+              "cornerRadius": "10px",
+              "paddingAll": "8px",
+              "flex": 1
+            },
+            {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "text",
+                  "text": "13",
+                  "weight": "bold",
+                  "size": "md",
+                  "color": "#D97706"
+                },
+                {
+                  "type": "text",
+                  "text": "ระดับล่าช้า",
+                  "size": "xxs",
+                  "color": "#475569"
+                }
+              ],
+              "backgroundColor": "#F1F5FD",
+              "cornerRadius": "10px",
+              "paddingAll": "8px",
+              "flex": 1
+            }
+          ],
+          "spacing": "sm",
+          "margin": "md"
+        },
+        {
+          "type": "separator",
+          "margin": "md"
+        },
+        {
+          "type": "text",
+          "text": "รายตัวชี้วัด (คะแนน / เป้าหมาย)",
+          "size": "xxs",
+          "color": "#94A3B8",
+          "weight": "bold",
+          "margin": "md"
+        },
+        {
+          "type": "box",
+          "layout": "horizontal",
+          "contents": [
+            {
+              "type": "text",
+              "text": "CG",
+              "size": "xs",
+              "weight": "bold",
+              "flex": 2
+            },
+            {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "box",
+                  "layout": "vertical",
+                  "contents": [],
+                  "width": "49%",
+                  "height": "7px",
+                  "backgroundColor": "#DC2626",
+                  "cornerRadius": "4px"
+                }
+              ],
+              "backgroundColor": "#EDF1F7",
+              "cornerRadius": "4px",
+              "height": "7px",
+              "flex": 5,
+              "offsetTop": "6px"
+            },
+            {
+              "type": "text",
+              "text": "2.45 / 2.69",
+              "size": "xxs",
+              "align": "end",
+              "color": "#DC2626",
+              "flex": 3
+            }
+          ],
+          "spacing": "sm",
+          "margin": "sm"
+        },
+        {
+          "type": "box",
+          "layout": "horizontal",
+          "contents": [
+            {
+              "type": "text",
+              "text": "SP",
+              "size": "xs",
+              "weight": "bold",
+              "flex": 2
+            },
+            {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "box",
+                  "layout": "vertical",
+                  "contents": [],
+                  "width": "44%",
+                  "height": "7px",
+                  "backgroundColor": "#D97706",
+                  "cornerRadius": "4px"
+                }
+              ],
+              "backgroundColor": "#EDF1F7",
+              "cornerRadius": "4px",
+              "height": "7px",
+              "flex": 5,
+              "offsetTop": "6px"
+            },
+            {
+              "type": "text",
+              "text": "2.22 / 2.24",
+              "size": "xxs",
+              "align": "end",
+              "color": "#D97706",
+              "flex": 3
+            }
+          ],
+          "spacing": "sm",
+          "margin": "sm"
+        },
+        {
+          "type": "box",
+          "layout": "horizontal",
+          "contents": [
+            {
+              "type": "text",
+              "text": "RM",
+              "size": "xs",
+              "weight": "bold",
+              "flex": 2
+            },
+            {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "box",
+                  "layout": "vertical",
+                  "contents": [],
+                  "width": "47%",
+                  "height": "7px",
+                  "backgroundColor": "#D97706",
+                  "cornerRadius": "4px"
+                }
+              ],
+              "backgroundColor": "#EDF1F7",
+              "cornerRadius": "4px",
+              "height": "7px",
+              "flex": 5,
+              "offsetTop": "6px"
+            },
+            {
+              "type": "text",
+              "text": "2.36 / 2.40",
+              "size": "xxs",
+              "align": "end",
+              "color": "#D97706",
+              "flex": 3
+            }
+          ],
+          "spacing": "sm",
+          "margin": "sm"
+        },
+        {
+          "type": "box",
+          "layout": "horizontal",
+          "contents": [
+            {
+              "type": "text",
+              "text": "SCM",
+              "size": "xs",
+              "weight": "bold",
+              "flex": 2
+            },
+            {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "box",
+                  "layout": "vertical",
+                  "contents": [],
+                  "width": "51%",
+                  "height": "7px",
+                  "backgroundColor": "#DC2626",
+                  "cornerRadius": "4px"
+                }
+              ],
+              "backgroundColor": "#EDF1F7",
+              "cornerRadius": "4px",
+              "height": "7px",
+              "flex": 5,
+              "offsetTop": "6px"
+            },
+            {
+              "type": "text",
+              "text": "2.54 / 2.65",
+              "size": "xxs",
+              "align": "end",
+              "color": "#DC2626",
+              "flex": 3
+            }
+          ],
+          "spacing": "sm",
+          "margin": "sm"
+        },
+        {
+          "type": "box",
+          "layout": "horizontal",
+          "contents": [
+            {
+              "type": "text",
+              "text": "DT",
+              "size": "xs",
+              "weight": "bold",
+              "flex": 2
+            },
+            {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "box",
+                  "layout": "vertical",
+                  "contents": [],
+                  "width": "41%",
+                  "height": "7px",
+                  "backgroundColor": "#94A3B8",
+                  "cornerRadius": "4px"
+                }
+              ],
+              "backgroundColor": "#EDF1F7",
+              "cornerRadius": "4px",
+              "height": "7px",
+              "flex": 5,
+              "offsetTop": "6px"
+            },
+            {
+              "type": "text",
+              "text": "2.04 / –",
+              "size": "xxs",
+              "align": "end",
+              "color": "#94A3B8",
+              "flex": 3
+            }
+          ],
+          "spacing": "sm",
+          "margin": "sm"
+        },
+        {
+          "type": "box",
+          "layout": "horizontal",
+          "contents": [
+            {
+              "type": "text",
+              "text": "HCM",
+              "size": "xs",
+              "weight": "bold",
+              "flex": 2
+            },
+            {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "box",
+                  "layout": "vertical",
+                  "contents": [],
+                  "width": "60%",
+                  "height": "7px",
+                  "backgroundColor": "#16A34A",
+                  "cornerRadius": "4px"
+                }
+              ],
+              "backgroundColor": "#EDF1F7",
+              "cornerRadius": "4px",
+              "height": "7px",
+              "flex": 5,
+              "offsetTop": "6px"
+            },
+            {
+              "type": "text",
+              "text": "2.99 / 2.95",
+              "size": "xxs",
+              "align": "end",
+              "color": "#16A34A",
+              "flex": 3
+            }
+          ],
+          "spacing": "sm",
+          "margin": "sm"
+        },
+        {
+          "type": "box",
+          "layout": "horizontal",
+          "contents": [
+            {
+              "type": "text",
+              "text": "KM&IM",
+              "size": "xs",
+              "weight": "bold",
+              "flex": 2
+            },
+            {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "box",
+                  "layout": "vertical",
+                  "contents": [],
+                  "width": "35%",
+                  "height": "7px",
+                  "backgroundColor": "#D97706",
+                  "cornerRadius": "4px"
+                }
+              ],
+              "backgroundColor": "#EDF1F7",
+              "cornerRadius": "4px",
+              "height": "7px",
+              "flex": 5,
+              "offsetTop": "6px"
+            },
+            {
+              "type": "text",
+              "text": "1.73 / 1.75",
+              "size": "xxs",
+              "align": "end",
+              "color": "#D97706",
+              "flex": 3
+            }
+          ],
+          "spacing": "sm",
+          "margin": "sm"
+        },
+        {
+          "type": "box",
+          "layout": "horizontal",
+          "contents": [
+            {
+              "type": "text",
+              "text": "IA",
+              "size": "xs",
+              "weight": "bold",
+              "flex": 2
+            },
+            {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "box",
+                  "layout": "vertical",
+                  "contents": [],
+                  "width": "53%",
+                  "height": "7px",
+                  "backgroundColor": "#DC2626",
+                  "cornerRadius": "4px"
+                }
+              ],
+              "backgroundColor": "#EDF1F7",
+              "cornerRadius": "4px",
+              "height": "7px",
+              "flex": 5,
+              "offsetTop": "6px"
+            },
+            {
+              "type": "text",
+              "text": "2.63 / 2.83",
+              "size": "xxs",
+              "align": "end",
+              "color": "#DC2626",
+              "flex": 3
+            }
+          ],
+          "spacing": "sm",
+          "margin": "sm"
+        },
+        {
+          "type": "box",
+          "layout": "vertical",
+          "contents": [
+            {
+              "type": "text",
+              "text": "ควรเร่ง: CG และ IA ต่ำกว่าเป้าเกิน 0.10 คะแนน",
+              "size": "xs",
+              "color": "#9A3412",
+              "wrap": true
+            }
+          ],
+          "backgroundColor": "#FFF7ED",
+          "cornerRadius": "10px",
+          "paddingAll": "8px",
+          "margin": "md"
+        }
+      ],
+      "paddingAll": "16px"
+    },
+    "footer": {
+      "type": "box",
+      "layout": "vertical",
+      "contents": [
+        {
+          "type": "button",
+          "style": "primary",
+          "color": "#1F5FE0",
+          "height": "sm",
+          "action": {
+            "type": "uri",
+            "label": "เปิดภาพรวม CBE",
+            "uri": "https://cbe-report.pages.dev/#overview"
+          }
+        }
+      ],
+      "paddingAll": "12px"
+    }
+  }
+}
