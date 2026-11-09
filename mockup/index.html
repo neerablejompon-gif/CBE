@@ -1006,6 +1006,95 @@ td, th, .trow, .pl td, .doc, .lib-head { border-color: var(--hair-in) !important
 @keyframes haled { 50% { opacity: .25; } }
 @keyframes haring { 0% { stroke-dasharray: 0 100; } 40%, 90% { stroke-dasharray: 72 100; } 100% { stroke-dasharray: 0 100; } }
 @keyframes hacheck { 0%, 30% { stroke-dashoffset: 1; } 50%, 90% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 1; } }
+/* ===== report steps: criteria part + GAP part ===== */
+.stepper2 { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 12px; margin-bottom: 20px; }
+.stepper2:has(> .sgrp:only-child) { grid-template-columns: minmax(0, 1fr); }
+.sgrp { display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: var(--r-md); border: 1px solid var(--hair-in); background: color-mix(in srgb, var(--glass-solid) 40%, transparent); }
+.sgrp.on { border-color: color-mix(in srgb, var(--primary) 45%, transparent); }
+.sgrp.b { background: color-mix(in srgb, var(--warn-bg) 55%, transparent); }
+.sgrp-h { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); padding: 0 2px; }
+.sgrp-h b { font-weight: 700; color: var(--ink); }
+.sgrp-h .chip { margin-left: auto; }
+.sgrp .stepper { margin: 0; }
+.stepper.n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .stepper.n2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 1100px) { .stepper2 { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 560px) { .stepper.n3, .stepper.n2 { grid-template-columns: minmax(0, 1fr); } }
+/* ===== plan editor: side drawer on the plan and GAP pages ===== */
+.dw-scrim { position: fixed; inset: 0; z-index: 30; background: rgba(4, 12, 40, .32); }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; z-index: 31; width: min(560px, 100vw); display: flex; box-shadow: -24px 0 60px -20px rgba(4, 12, 40, .55); }
+.drawer.enter { animation: dwin .32s cubic-bezier(.2, .8, .2, 1) both; }
+.drawer.enter ~ .dw-scrim, .dw-scrim { animation: dwfade .25s ease both; }
+.drawer .pe-panel { flex: 1; min-width: 0; height: 100%; overflow-y: auto; overscroll-behavior: contain; margin: 0; border-radius: 0; border: 0; border-left: 1px solid var(--hair-in); background: var(--glass-solid) !important; background-image: none !important; box-shadow: none !important; padding: calc(20px + env(safe-area-inset-top, 0px)) 22px 28px; outline: 0; }
+.drawer .pe-panel > .panel-head { position: sticky; top: calc(-20px - env(safe-area-inset-top, 0px)); z-index: 2; margin: -20px -22px 14px; padding: 18px 22px 12px; background: var(--glass-solid); border-bottom: 1px solid var(--hair-in); }
+@keyframes dwin { from { transform: translateX(100%); } }
+@keyframes dwfade { from { opacity: 0; } }
+@media (max-width: 640px) { .drawer { width: 100vw; } .drawer .pe-panel { padding: 16px 16px 24px; } .drawer .pe-panel > .panel-head { margin: -16px -16px 12px; padding: 14px 16px 10px; } }
+/* ===== indicator overview: sub-page switch, GAP progress, target vs evidence, level-map views ===== */
+.ov-seg button { display: inline-flex; align-items: center; gap: 6px; }
+.dv-sec { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin: 8px 2px -4px; }
+.dv-sec h2 { margin: 0; }
+.gp-kpi { display: flex; gap: 22px; margin: 2px 0 10px; }
+.gp-kpi div { display: flex; flex-direction: column; } .gp-kpi b { font: 800 22px/1.2 var(--num); } .gp-kpi b small { font-size: 13px; color: var(--ink-3); } .gp-kpi > div > small { font-size: 12px; color: var(--ink-3); }
+.gp-row { display: grid; grid-template-columns: 92px minmax(0, 1fr) auto; gap: 10px; align-items: center; width: 100%; padding: 7px 4px; border: 0; border-top: 1px solid var(--hair-in); background: none; cursor: pointer; text-align: left; font-size: 13px; color: var(--ink-2); border-radius: 8px; }
+.gp-row:hover, .db-row:hover { background: var(--primary-soft); }
+.gp-row .gp-l b { color: var(--ink); }
+.gp-track { position: relative; height: 10px; border-radius: 99px; background: var(--mute-bg); }
+.gp-fill { position: absolute; inset: 0 auto 0 0; border-radius: 99px; background: var(--primary); }
+.gp-fill.ok { background: var(--ok); } .gp-fill.bad { background: var(--bad); }
+.gp-track i { position: absolute; top: -4px; bottom: -4px; width: 2px; border-radius: 2px; background: var(--ink); }
+.db-wrap { --db-l: 190px; --db-r: 96px; position: relative; }
+.db-target { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px dashed var(--ink); opacity: .55; pointer-events: none; z-index: 1; }
+.db-row { display: grid; grid-template-columns: var(--db-l) minmax(0, 1fr) var(--db-r); gap: 0; align-items: center; width: 100%; min-height: 38px; padding: 4px 0; border: 0; border-top: 1px solid var(--hair-in); background: none; cursor: pointer; text-align: left; border-radius: 8px; }
+.db-l { display: flex; gap: 8px; min-width: 0; padding-right: 12px; font-size: 13px; color: var(--ink-2); }
+.db-l b { font: 700 12.5px var(--num); color: var(--primary); flex: none; } .db-l span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.db-track { position: relative; height: 22px; margin: 0 8px; background: linear-gradient(to right, transparent calc(20% - .5px), var(--hair-in) calc(20% - .5px), var(--hair-in) calc(20% + .5px), transparent calc(20% + .5px)) 0 0 / 20% 100% repeat-x; }
+.db-bar { position: absolute; top: 9px; height: 4px; border-radius: 4px; background: var(--mute); }
+.db-bar.bad { background: var(--bad); } .db-bar.warn { background: var(--warn); }
+.db-dot { position: absolute; top: 4px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; }
+.db-dot.tg { background: var(--primary); box-shadow: 0 0 0 2px var(--glass-solid); }
+.db-dot.sys { background: var(--glass-solid); border: 2.5px solid var(--primary); }
+.db-dot.tg.same { width: 8px; height: 8px; margin-left: -4px; top: 7px; }
+.db-v { display: flex; flex-direction: column; align-items: flex-start; padding-left: 6px; font: 700 13px var(--num); line-height: 1.2; }
+.db-v small { font: 500 11px var(--font); color: var(--ink-3); }
+.db-key { display: inline-block; width: 12px; height: 12px; border-radius: 50%; }
+.db-key.tg { background: var(--primary); } .db-key.sys { border: 2.5px solid var(--primary); } .db-key.bar { width: 18px; height: 4px; border-radius: 4px; background: var(--bad); }
+.db-axis { display: grid; grid-template-columns: 190px minmax(0, 1fr) 96px; margin-top: 4px; }
+.db-ticks { position: relative; height: 16px; margin: 0 8px; font: 600 11px var(--num); color: var(--ink-3); }
+.db-ticks span { position: absolute; transform: translateX(-50%); }
+.hc.warn { background: var(--warn-bg); color: var(--warn); }
+.hc.none { background: transparent; border: 1px dashed var(--hair-in); cursor: default; }
+.hc .num { font-size: 11.5px; font-weight: 700; }
+@media (max-width: 640px) { .db-wrap { --db-l: 96px; --db-r: 64px; } .db-axis { grid-template-columns: 96px minmax(0, 1fr) 64px; } .db-l span { display: none; } .gp-row { grid-template-columns: 80px minmax(0, 1fr); } .gp-row .chip { grid-column: 2; justify-self: start; } }
+/* ===== past results ===== */
+.hy-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
+.hy-card { padding: 16px 18px; border-radius: var(--r-lg); border: 1px solid var(--hair); background-color: var(--glass); background-image: var(--lg-shine); box-shadow: var(--lg-shadow); display: flex; flex-direction: column; gap: 2px; }
+.hy-card.rep, .hy-card.fc { border-style: dashed; border-color: color-mix(in srgb, var(--primary) 40%, transparent); }
+.hy-card .lbl { font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+.hy-card .val { font: 800 26px/1.2 var(--num); } .hy-card .val small { font-size: 12px; color: var(--ink-3); font-weight: 600; margin-left: 2px; }
+.hy-d { font: 700 12px var(--num); min-height: 16px; } .hy-card .meta { font-size: 12px; color: var(--ink-3); }
+.ax-row { display: grid; grid-template-columns: minmax(0, 210px) minmax(0, 1fr) 70px; align-items: center; min-height: 34px; border-top: 1px solid var(--hair-in); border-radius: 8px; outline: 0; }
+.ax-row:hover, .ax-row:focus-visible { background: var(--primary-soft); }
+.ax-l { display: flex; gap: 8px; min-width: 0; padding-right: 10px; font-size: 12.5px; color: var(--ink-2); }
+.ax-l b { color: var(--primary); flex: none; min-width: 16px; } .ax-l span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ax-track { position: relative; height: 20px; margin: 0 8px; background: linear-gradient(to right, transparent calc(20% - .5px), var(--hair-in) calc(20% - .5px), var(--hair-in) calc(20% + .5px), transparent calc(20% + .5px)) 0 0 / 20% 100% repeat-x; }
+.ax-span { position: absolute; top: 9px; height: 2px; background: var(--mute); opacity: .5; }
+.ax-dot { position: absolute; top: 4px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; box-shadow: 0 0 0 2px var(--glass-solid); }
+.ax-key { display: inline-block; width: 11px; height: 11px; border-radius: 50%; }
+.ax-dot.y0, .ax-key.y0 { background: #A9C2FF; } .ax-dot.y1, .ax-key.y1 { background: #5B86F5; } .ax-dot.y2, .ax-key.y2 { background: #173FB8; }
+:root[data-theme="dark"] .ax-dot.y0, :root[data-theme="dark"] .ax-key.y0 { background: #2E4C9C; } :root[data-theme="dark"] .ax-dot.y1, :root[data-theme="dark"] .ax-key.y1 { background: #5E8BFF; } :root[data-theme="dark"] .ax-dot.y2, :root[data-theme="dark"] .ax-key.y2 { background: #BFD3FF; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ax-dot.y0, :root:not([data-theme="light"]) .ax-key.y0 { background: #2E4C9C; } :root:not([data-theme="light"]) .ax-dot.y1, :root:not([data-theme="light"]) .ax-key.y1 { background: #5E8BFF; } :root:not([data-theme="light"]) .ax-dot.y2, :root:not([data-theme="light"]) .ax-key.y2 { background: #BFD3FF; } }
+.ax-v { display: flex; flex-direction: column; line-height: 1.2; font-size: 13px; } .ax-v small { font: 700 11px var(--num); }
+.ax-axis { display: grid; grid-template-columns: minmax(0, 210px) minmax(0, 1fr) 70px; margin-top: 4px; }
+.ax-ticks { position: relative; height: 16px; margin: 0 8px; font: 600 11px var(--num); color: var(--ink-3); } .ax-ticks span { position: absolute; transform: translateX(-50%); }
+.gx-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.gx-card { padding: 14px 16px; border-radius: var(--r-md); border: 1px solid var(--hair-in); background: color-mix(in srgb, var(--glass-solid) 55%, transparent); }
+.gx-card header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.gx-card h3 { margin: 0; flex: 1; font-size: 14px; line-height: 1.35; }
+.gx-n { flex: none; width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; font-size: 12.5px; font-weight: 800; color: #fff; background: linear-gradient(145deg, #5B8CFF, #1F4BE0); }
+.gx-s { flex: none; font-size: 12.5px; font-weight: 700; padding: 2px 9px; border-radius: 99px; background: var(--primary-soft); color: var(--primary); }
+.gx-card ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 1.6; color: var(--ink-2); }
+@media (max-width: 960px) { .gx-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) { .ax-row, .ax-axis { grid-template-columns: 110px minmax(0, 1fr) 56px; } }
 </style>
 </head>
 <body>
@@ -1016,6 +1105,7 @@ td, th, .trow, .pl td, .doc, .lib-head { border-color: var(--hair-in) !important
 <script src="data.js"></script>
 <script src="data-2570.js"></script>
 <script src="history.js"></script>
+<script src="history-axes.js"></script>
 <script>
 'use strict';
 /* ================= constants ================= */
@@ -1466,7 +1556,7 @@ function sidebar() {
     var I = indBy(U.ind);
     var todo = myWork(I, S.month).todo;
     h += '<div class="nav-label">' + I.no + ' · ' + esc(I.label) + '</div>' + REP_TABS.map(function (t) {
-      return nav('data-tab="' + t[0] + '"', t[1], ico(t[2], 19), S.view === 'ind' && S.tab === t[0], t[0] === 'dash' && todo ? '<span class="count">' + todo + '</span>' : '');
+      return nav('data-tab="' + t[0] + '"', t[1], ico(t[2], 19), S.view === 'ind' && (S.tab === t[0] || (t[0] === 'score' && S.tab === 'history')), t[0] === 'dash' && todo ? '<span class="count">' + todo + '</span>' : '');
     }).join('');
   }
   var I0 = U.role === 'reporter' ? indBy(U.ind) : null;
@@ -1481,6 +1571,7 @@ function userMenu() {
 }
 function closeUmenu() { var m = document.querySelector('.umenu.open'); if (m) { m.classList.remove('open'); m.querySelector('.ubtn').setAttribute('aria-expanded', 'false'); } }
 function render() {
+  var dwb = document.querySelector('.drawer .pe-panel'), dwTop = dwb ? dwb.scrollTop : 0;
   CACHE = {}; FCACHE = {};
   var dark = applyTheme();
   if (API && API.login) { $('#root').innerHTML = vLogin(); return; }
@@ -1505,8 +1596,10 @@ function render() {
         : MONTHS.map(function (mm, i) { return '<option value="' + i + '"' + (i === S.month ? ' selected' : '') + '>' + mm + '</option>'; }).join('')) + '</select></label>' +
     '<i class="tb-sep"></i><button class="icon-btn" data-act="theme" aria-label="สลับเป็นธีม' + (dark ? 'สว่าง' : 'มืด') + '">' + ico(dark ? 'sun' : 'moon') + '</button></div>' + userMenu() + '</header>' +
     (FY !== CUR_FY ? '<div class="yearbar" role="status">' + ico('lock', 16) + '<span><b>ปีบัญชี ' + FY + ' · ปิดรอบแล้ว</b> ดูได้อย่างเดียว ข้อมูลผลการดำเนินงานตามแบบฟอร์มเดิม</span><button class="btn sm" data-act="back-current">กลับไปปีบัญชี ' + CUR_FY + '</button></div>' : '') +
-    '<main id="view">' + body + '</main></div></div>';
+    '<main id="view">' + body + '</main></div></div>' + planDrawer();
   animateDv();
+  var dwn = document.querySelector('.drawer .pe-panel'); if (dwn && !S.plEnter) dwn.scrollTop = dwTop;
+  S.plEnter = false;
 }
 function v403() { return '<section class="view"><div class="panel glass empty">' + ico('lock') + '<h2>ไม่มีสิทธิ์เข้าถึงตัวชี้วัดนี้</h2><p>บัญชีของคุณเห็นได้เฉพาะตัวชี้วัดที่รับผิดชอบ</p></div></section>'; }
 
@@ -1759,27 +1852,30 @@ function vInd(I) {
   else if (U.role === 'reporter') acts = ed ? '' : '<span class="chip info">' + ico('lock') + 'ล็อกระหว่างตรวจ</span>';
   else if (isAudit()) acts = w === 'submitted' ? '<button class="btn danger" data-act="ask-return">' + ico('undo', 16) + 'ส่งกลับแก้ไข</button><button class="btn ok" data-wf="approved">' + ico('shield', 16) + 'อนุมัติผล</button>'
     : w === 'approved' ? '<button class="btn" data-wf="draft">' + ico('undo', 16) + 'ปลดล็อก</button>' : '<span class="chip mute">' + ico('clock') + 'รอผู้รายงานส่งตรวจ</span>';
-  var rep = U.role === 'reporter';
-  var tabs = [['dash', 'ภาพรวมคะแนน', 'grid'], ['report', 'รายงานผลตามเกณฑ์', 'report'], ['plan', 'แผนการดำเนินงาน', 'calendar'], ['gap', 'แผนปรับปรุง GAP', 'trend'], ['evidence', 'ทะเบียนหลักฐาน', 'folder']];
+  var rep = U.role === 'reporter', ov = rep ? 'score' : 'dash';
+  var tabs = [['dash', 'ภาพรวมตัวชี้วัด', 'grid'], ['plan', 'แผนการดำเนินงาน', 'calendar'], ['gap', 'แผนปรับปรุง GAP', 'trend'], ['report', 'รายงานผลตามเกณฑ์', 'report'], ['evidence', 'ทะเบียนหลักฐาน', 'folder']];
   var returned = w === 'returned' && WF_NOTE[I.code] ? '<div class="return-box"><b class="bad" style="display:flex;gap:6px;align-items:center">' + ico('undo', 16) + 'กปม. ส่งกลับให้แก้ไข</b><span style="white-space:pre-line">' + esc(WF_NOTE[I.code]) + '</span></div>' : '';
   // Reporter home carries its own task header; other pages get a two-line header
   if (rep && S.tab === 'dash') return '<section class="view">' + returned + vMyWork(I, c) + '</section>';
   var head = '<div class="ihead glass"' + (rep ? ' style="padding-bottom:20px"' : '') + '><div class="ihead-top"><div style="min-width:0"><h1>' + esc(I.name) + '</h1>' +
     '<div class="meta-line"><span>ตัวชี้วัด <b>' + I.no + ' · ' + esc(I.label) + '</b></span><span>ผู้รับผิดชอบ <b>' + esc(I.owner) + '</b></span>' + chip(WF[w]) +
       '<span>ครบกำหนด <b>' + thDate(deadline()) + '</b>' + (od > 0 && ['draft', 'returned'].indexOf(w) > -1 ? ' <span class="chip bad">เลย ' + od + ' วัน</span>' : '') + '</span></div></div>' +
-    '<div class="ctrls" style="border:0;padding:0"><div class="acts">' + (S.tab === 'history' ? '<button class="btn" data-tab="' + (rep ? 'score' : 'dash') + '">' + ico('undo', 16) + 'กลับภาพรวมคะแนน</button>' : '<button class="btn" data-tab="history">' + ico('history', 16) + 'ผลการดำเนินงานที่ผ่านมา</button>') + (acts || '') + '</div></div></div>' +
+    '<div class="ctrls" style="border:0;padding:0"><div class="acts">' + (S.tab === ov || S.tab === 'history' ? '<div class="seg ov-seg" role="group" aria-label="มุมมองภาพรวมตัวชี้วัด"><button data-tab="' + ov + '" aria-pressed="' + (S.tab === ov) + '">' + ico('target', 15) + 'ปีปัจจุบัน</button><button data-tab="history" aria-pressed="' + (S.tab === 'history') + '">' + ico('history', 15) + 'ผลการดำเนินงานที่ผ่านมา</button></div>' : '') + (acts || '') + '</div></div></div>' +
     (S.returning ? '<div class="return-box"><label class="label" for="retReason" style="margin:0">เหตุผลการส่งกลับ (ผู้รายงานจะเห็นข้อความนี้)</label><textarea id="retReason" rows="2" placeholder="เช่น ระดับ 3 ของ 2.1 ยังไม่แนบรายงานการประชุมคณะกรรมการ"></textarea><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn sm" data-act="cancel-return">ยกเลิก</button><button class="btn sm primary" data-act="confirm-return">ยืนยันส่งกลับ</button></div></div>' : '') +
-    returned + (rep ? '' : '<div class="tabs" role="tablist">' + tabs.map(function (t) { return '<button class="tab" role="tab" data-tab="' + t[0] + '" aria-selected="' + (S.tab === t[0]) + '">' + ico(t[2], 16) + t[1] + '</button>'; }).join('') + '</div>') + '</div>';
+    returned + (rep ? '' : '<div class="tabs" role="tablist">' + tabs.map(function (t) { return '<button class="tab" role="tab" data-tab="' + t[0] + '" aria-selected="' + (S.tab === t[0] || (t[0] === 'dash' && S.tab === 'history')) + '">' + ico(t[2], 16) + t[1] + '</button>'; }).join('') + '</div>') + '</div>';
   return '<section class="view">' + head + { dash: vDash, score: vDash, plan: vPlan, report: vReport, gap: vGap, evidence: vEvidence, history: vHistory }[S.tab](I, c) + '</section>';
 }
 
 /* ================= reporter home: what is left to do this round ================= */
-var REP_TABS = [['score', 'ภาพรวมคะแนน', 'target'], ['dash', 'งานของฉัน', 'home'], ['report', 'รายงานผลตามเกณฑ์', 'report'], ['plan', 'แผนการดำเนินงาน', 'calendar'], ['gap', 'แผนปรับปรุง GAP', 'trend'], ['evidence', 'ทะเบียนหลักฐาน', 'folder']];
+var REP_TABS = [['score', 'ภาพรวมตัวชี้วัด', 'target'], ['dash', 'งานของฉัน', 'home'], ['plan', 'แผนการดำเนินงาน', 'calendar'], ['gap', 'แผนปรับปรุง GAP', 'trend'], ['report', 'รายงานผลตามเกณฑ์', 'report'], ['evidence', 'ทะเบียนหลักฐาน', 'folder']];
 var TODO_KIND = [
   ['หลักฐานยังไม่ครบ', 'ยังแนบหลักฐานไม่ครบ', 'ติ๊กเอกสาร Minimum Requirement ที่มีแล้ว และแนบส่วนที่ขาด', 'bad', 'folder'],
   ['ยังไม่มีผลการดำเนินงาน', 'ยังไม่เขียนผลการดำเนินงาน', 'ระดับที่รายงานคะแนนไว้ต้องมีคำอธิบายผล', 'bad', 'report'],
   ['ผลยังไม่ครบตามแผน', 'ผลยังไม่ครบตามแผน', 'อัปเดตความคืบหน้า (ยอดสะสม) หรือชี้แจงเหตุที่ล่าช้า', 'warn', 'calendar'],
-  ['ยังไม่ระบุชื่อหลักฐาน', 'ยังไม่ระบุชื่อไฟล์หลักฐาน', 'ใส่ชื่อไฟล์ให้ตรงกับเอกสารใน Drive', 'warn', 'file']
+  ['ยังไม่ระบุชื่อหลักฐาน', 'ยังไม่ระบุชื่อไฟล์หลักฐาน', 'ใส่ชื่อไฟล์ให้ตรงกับเอกสารใน Drive', 'warn', 'file'],
+  ['ยังไม่มีแผนปรับปรุง GAP', 'มี GAP แต่ยังไม่มีแผนปรับปรุง', 'กำหนดแนวทางและแผนรายเดือนที่หน้าแผนปรับปรุง GAP', 'warn', 'trend'],
+  ['ผลตามแผนปรับปรุง GAP ล่าช้า', 'ผลตามแผนปรับปรุง GAP ล่าช้า', 'อัปเดตความคืบหน้าในส่วนรายงานผลตามแผนปรับปรุง GAP', 'warn', 'trend'],
+  ['ยังไม่รายงานผลตามแผนปรับปรุง GAP', 'ยังไม่รายงานผลตามแผนปรับปรุง GAP', 'เขียนผลการดำเนินงานตามแนวทางปรับปรุง', 'bad', 'report']
 ];
 function myWork(I, m) {
   var subs = I.subs.filter(function (s) { return !U || !U.part || s.part === U.part; }), groups = {}, ready = 0, next = null, bad = {};
@@ -1787,7 +1883,7 @@ function myWork(I, m) {
     var cl = Math.ceil(subScore(s, m)), ok = true;
     s.levels.forEach(function (L) {
       // claimed levels must be complete; unclaimed levels only matter once their plan falls behind (e.g. start of a new year)
-      (L.level <= cl ? lvIssues(L, m) : lvStatus(L, m) === 'late' ? ['ผลยังไม่ครบตามแผน'] : []).forEach(function (t) {
+      (L.level <= cl ? lvIssues(L, m) : lvStatus(L, m) === 'late' ? ['ผลยังไม่ครบตามแผน'] : []).concat(gapIssues(L, m)).forEach(function (t) {
         ok = false; (groups[t] = groups[t] || []).push({ s: s, L: L });
         if (!next) next = { s: s, L: L };
       });
@@ -1858,6 +1954,61 @@ function fcPanel(I) {
     '<div class="hbars">' + fcRow('fc:all', I.name, I.label, f, I.target, 0) + (f.parts.length > 1 ? f.parts.map(function (p, i) { return fcRow('fc:' + p.p.key, p.p.name, p.p.key, p, p.p.target, i + 1); }).join('') : '') + '</div>' + ticks5() +
     (f.status === 'miss' ? '<p class="small bad" style="margin:10px 0 0">' + ico('alert', 13) + ' แม้ทำครบทุกขั้นตามแผนก็ยังไม่ถึงเป้า ควรเพิ่มกิจกรรมในแผน</p>' : '') + '</div>';
 }
+// GAP improvement progress: one bar per level with a GAP (result % vs plan-to-date tick), late first
+function gapPanel(I, m) {
+  var rows = [];
+  I.subs.forEach(function (s) { s.levels.forEach(function (L) {
+    if (!gapApplies(L)) return;
+    var gs = (L.gsteps || []).filter(hasPlan), k = gs.length ? gapStat(L, m) : 'none';
+    var pp = gs.length ? Math.round(sum(gs.map(function (st) { return Math.min(1, cum(st.plan, m) / stTarget(st)); })) / gs.length * 100) : 0;
+    rows.push({ s: s, L: L, k: k, r: gs.length ? gapPctOf(L) || 0 : 0, p: pp });
+  }); });
+  var ord = { late: 0, none: 1, ontrack: 2, wait: 3, done: 4 }, late = rows.filter(function (r) { return r.k === 'late'; }).length, planned = rows.filter(function (r) { return r.k !== 'none'; }).length;
+  rows.sort(function (a, b) { return ord[a.k] - ord[b.k] || b.p - b.r - (a.p - a.r); });
+  var NONE = { t: 'ไม่มีแผน', c: 'warn', i: 'clock' };
+  var body = rows.slice(0, 6).map(function (r) {
+    var st = r.k === 'none' ? NONE : STATUS[r.k], tip = r.s.label + ' ระดับ ' + r.L.level + ' · ' + st.t + (r.k === 'none' ? '' : '\nผลสะสม ' + r.r + '% · แผนสะสมถึง ' + MONTHS[m] + ' ' + r.p + '%') + '\n' + (r.L.action || r.L.gap || '').replace(/\s+/g, ' ').slice(0, 120);
+    return '<button class="gp-row" data-tab="gap" data-pick="' + esc(r.s.uid) + '|' + r.L.level + '" data-tip="' + esc(tip) + '" aria-label="' + esc(tip) + '"><span class="gp-l"><b>' + esc(r.s.label) + '</b> ระดับ ' + r.L.level + '</span>' +
+      '<span class="gp-track">' + (r.k === 'none' ? '' : '<span class="gp-fill ' + (r.k === 'done' ? 'ok' : r.k === 'late' ? 'bad' : '') + '" style="width:' + r.r + '%"></span><i style="left:calc(' + r.p + '% - 1px)"></i>') + '</span>' + chip(st) + '</button>';
+  }).join('');
+  return '<div class="panel glass c5 rise" style="--i:6"><div class="panel-head"><div><h2>ความก้าวหน้าแผนปรับปรุง GAP</h2><p class="sub">แถบ = ผลสะสม % · ขีด = แผนสะสมถึง ' + MONTHS[m] + ' · กดเพื่อเปิดแผน</p></div></div>' +
+    (rows.length ? '<div class="gp-kpi"><div><b class="num">' + rows.length + '</b><small>ระดับที่มี GAP</small></div><div><b class="num">' + planned + '<small>/' + rows.length + '</small></b><small>มีแผนแล้ว</small></div><div><b class="num' + (late ? ' bad' : '') + '">' + late + '</b><small>ล่าช้ากว่าแผน</small></div></div>' + body +
+      (rows.length > 6 ? '<button class="linkbtn" data-tab="gap" style="margin-top:8px">ดูทั้งหมด ' + rows.length + ' ระดับ' + ico('chev', 14) + '</button>' : '')
+      : '<div class="empty">' + ico('check') + 'ไม่มีระดับที่มี GAP</div>') + '</div>';
+}
+// Target score (reporter's year-end estimate) vs score the evidence supports, per sub-issue; widest gap first
+function gapScorePanel(I, m) {
+  var t = I.target, rows = I.subs.map(function (s) { var sys = subSys(s, m), tg = subScore(s, m); return { s: s, sys: sys, tg: tg, d: Math.round((tg - sys) * 100) / 100 }; })
+    .sort(function (a, b) { return b.d - a.d || b.s.weight - a.s.weight; });
+  var X = function (v) { return Math.max(0, Math.min(100, v / 5 * 100)); };
+  var body = rows.map(function (r) {
+    var lo = Math.min(r.sys, r.tg), hi = Math.max(r.sys, r.tg), cls = r.d >= 1 ? 'bad' : r.d > 0 ? 'warn' : 'ok', lv = Math.min(r.s.levels.length, r.sys + 1) || 1;
+    var tip = r.s.label + ' · ' + r.s.name + '\nเป้าหมายสิ้นปี ' + fmt(r.tg) + (r.s.self == null ? ' (ยังไม่กรอก ใช้คะแนนหลักฐาน)' : '') + '\nหลักฐานรองรับ ' + r.sys + (r.d > 0 ? '\nช่องว่าง ' + fmt(r.d) + ' · กดเพื่อไปรายงานระดับ ' + lv : '');
+    return '<button class="db-row" data-open="' + r.s.uid + '|' + lv + '" data-tip="' + esc(tip) + '" aria-label="' + esc(tip) + '"><span class="db-l"><b>' + esc(r.s.label) + '</b><span>' + esc(r.s.name) + '</span></span>' +
+      '<span class="db-track">' + (r.d > 0 ? '<span class="db-bar ' + cls + '" style="left:' + X(lo) + '%;width:' + (X(hi) - X(lo)) + '%"></span>' : '') +
+        '<i class="db-dot sys" style="left:' + X(r.sys) + '%"></i><i class="db-dot tg' + (r.d <= 0 ? ' same' : '') + '" style="left:' + X(r.tg) + '%"></i></span>' +
+      '<span class="db-v ' + cls + '">' + (r.d > 0 ? '−' + fmt(r.d) : ico('check', 15)) + (r.s.self == null ? '<small>ยังไม่กรอกเป้า</small>' : '') + '</span></button>';
+  }).join('');
+  var risk = rows.filter(function (r) { return r.d > 0; }).length;
+  return '<div class="panel glass c7 rise" style="--i:3"><div class="panel-head"><div><h2>คะแนนเป้าหมายเทียบหลักฐานรองรับ</h2><p class="sub">ช่วงห่าง = คะแนนที่อ้างแต่หลักฐานยังไม่รองรับ · ' + (risk ? '<b class="bad">' + risk + ' ประเด็นเสี่ยง</b>' : 'ไม่มีประเด็นเสี่ยง') + ' · กดเพื่อไปรายงานผล</p></div></div>' +
+    '<div class="lg" style="margin-bottom:6px"><span><i class="db-key tg"></i>เป้าหมายสิ้นปี (ผู้รายงานกรอก)</span><span><i class="db-key sys"></i>หลักฐานรองรับ</span><span><i class="db-key bar"></i>ช่องว่าง ≥ 1 ระดับ</span>' + (t != null ? '<span><i class="sw tg"></i>เป้าหมายตัวชี้วัด ' + fmt(t) + '</span>' : '') + '</div>' +
+    '<div class="db-wrap">' + (t != null ? '<i class="db-target" style="left:calc(var(--db-l) + (100% - var(--db-l) - var(--db-r)) * ' + (X(t) / 100).toFixed(4) + ')"></i>' : '') + body + '</div>' +
+    '<div class="db-axis" aria-hidden="true"><span></span><span class="db-ticks">' + [0, 1, 2, 3, 4, 5].map(function (n) { return '<span style="left:' + n * 20 + '%">' + n + '</span>'; }).join('') + '</span><span></span></div></div>';
+}
+// Level map cell in one of four views: plan progress, evidence, narrative, GAP plan
+var HM_MODES = [['prog', 'ความคืบหน้า'], ['evid', 'หลักฐาน'], ['narr', 'ผลการดำเนินงาน'], ['gap', 'แผน GAP']];
+function hmCell(s, L, m, mode) {
+  if (mode === 'evid') { var rd = reqDocs(L), h = rd.filter(function (r) { return r.has; }).length; return rd.length ? { c: h === rd.length ? 'ok' : h ? 'warn' : 'bad', txt: h + '/' + rd.length, t: 'หลักฐาน ' + h + ' จาก ' + rd.length + ' รายการ' } : { c: 'mute', txt: '–', t: 'ไม่มีรายการ Minimum Requirement' }; }
+  if (mode === 'narr') { var on = !!(L.narrative || '').trim(), cl = L.level <= Math.ceil(subScore(s, m)); return on ? { c: 'ok', i: 'check', t: 'เขียนผลการดำเนินงานแล้ว' } : { c: cl ? 'bad' : 'mute', i: cl ? 'alert' : 'clock', t: cl ? 'ระดับที่อ้างคะแนนแต่ยังไม่เขียนผล' : 'ยังไม่เขียนผล (ยังไม่อ้างคะแนน)' }; }
+  if (mode === 'gap') { if (!gapApplies(L)) return { c: 'none', txt: '', t: 'ไม่มี GAP' }; if (!(L.gsteps || []).length) return { c: 'warn', i: 'clock', t: 'มี GAP แต่ยังไม่มีแผน' }; var g = STATUS[gapStat(L, m) || 'wait']; return { c: g.c, i: g.i, t: 'แผน GAP · ' + g.t }; }
+  var st = STATUS[lvStatus(L, m)]; return { c: st.c, i: st.i, t: st.t };
+}
+var HM_LEGEND = {
+  prog: function () { return Object.keys(STATUS).map(function (k) { return '<span class="' + STATUS[k].c + '">' + ico(STATUS[k].i, 14) + '<span style="color:var(--ink-2)">' + STATUS[k].t + '</span></span>'; }).join(''); },
+  evid: function () { return '<span class="ok">■ <span style="color:var(--ink-2)">ครบ</span></span><span class="warn">■ <span style="color:var(--ink-2)">บางส่วน</span></span><span class="bad">■ <span style="color:var(--ink-2)">ยังไม่มี</span></span><span class="mute">■ <span style="color:var(--ink-2)">ไม่มีรายการ</span></span><span class="small muted">ตัวเลข = มี / ต้องมี</span>'; },
+  narr: function () { return '<span class="ok">' + ico('check', 14) + '<span style="color:var(--ink-2)">เขียนแล้ว</span></span><span class="bad">' + ico('alert', 14) + '<span style="color:var(--ink-2)">อ้างคะแนนแต่ยังไม่เขียน</span></span><span class="mute">' + ico('clock', 14) + '<span style="color:var(--ink-2)">ยังไม่อ้างคะแนน</span></span>'; },
+  gap: function () { return HM_LEGEND.prog() + '<span class="warn">' + ico('clock', 14) + '<span style="color:var(--ink-2)">มี GAP แต่ไม่มีแผน</span></span><span class="small muted">ช่องว่าง = ระดับนั้นไม่มี GAP</span>'; }
+};
 function vDash(I, c) {
   var m = S.month, t = I.target, multi = I.parts.length > 1;
   var tops = c.topics.map(function (x) { return { x: x, sys: x.w ? sum(x.t.subs.map(function (s) { return s.weight * subSys(s, m); })) / x.w : 0 }; }).sort(function (a, b) { return b.x.w - a.x.w; });
@@ -1894,25 +2045,26 @@ function vDash(I, c) {
       return '<button class="hb" data-open="' + o.s.uid + '|' + o.lv + '" data-tip="' + esc(tip) + '" aria-label="' + esc(tip) + '"><span class="lbl"><b>' + esc(o.s.label) + '</b>' + esc(o.s.name) + '</span><span class="track">' + fillBar('gain:' + o.s.uid, o.g / gmax * 100, '', i * 70) + '</span><span class="val">+' + fmt(o.g) + '</span></button>';
     }).join('') : '<div class="empty">' + ico('check') + 'ทุกประเด็นได้ระดับ 5 แล้ว</div>') + '</div></div>';
   // 6 · sub-issue × level map, split into two balanced columns
-  var half = Math.ceil(I.subs.length / 2), idx = 0;
+  var half = Math.ceil(I.subs.length / 2), idx = 0, hm = S.hm || 'prog';
   var col = function (subs) {
     return '<div class="hcol"><div class="hrow h"><span></span>' + [1, 2, 3, 4, 5].map(function (n) { return '<span>ระดับ ' + n + '</span>'; }).join('') + '</div>' + subs.map(function (s) {
       return '<div class="hrow"><span class="code" title="' + esc(s.name) + '">' + esc(s.label) + '</span>' + [0, 1, 2, 3, 4].map(function (li) {
         var L = s.levels[li]; if (!L) return '<span></span>';
-        var st = STATUS[lvStatus(L, m)], tip = s.label + ' ระดับ ' + L.level + ' · ' + st.t + '\n' + s.name;
-        return '<button class="hc ' + st.c + '" style="--i:' + (idx++) + '" data-open="' + s.uid + '|' + L.level + '" data-tip="' + esc(tip) + '" aria-label="' + esc(tip) + '">' + ico(st.i, 14) + '</button>';
+        var st = hmCell(s, L, m, hm), tip = s.label + ' ระดับ ' + L.level + ' · ' + st.t + '\n' + s.name;
+        return '<button class="hc ' + st.c + '" style="--i:' + (idx++) + '" data-open="' + s.uid + '|' + L.level + '" data-tip="' + esc(tip) + '" aria-label="' + esc(tip) + '">' + (st.i ? ico(st.i, 14) : '<span class="num">' + st.txt + '</span>') + '</button>';
       }).join('') + '</div>';
     }).join('') + '</div>';
   };
-  var heat = '<div class="panel glass rise" style="--i:7"><div class="panel-head"><div><h2>สถานะรายระดับ</h2><p class="sub">ทุกประเด็นย่อย × ระดับ 1–5 ณ ' + MONTHS[m] + ' · กดช่องเพื่อไปที่ระดับนั้น</p></div></div>' +
+  var heat = '<div class="panel glass rise" style="--i:7"><div class="panel-head"><div><h2>สถานะรายระดับ</h2><p class="sub">ทุกประเด็นย่อย × ระดับ 1–5 ณ ' + MONTHS[m] + ' · กดช่องเพื่อไปที่ระดับนั้น</p></div><div class="seg" role="group" aria-label="มุมมองสถานะรายระดับ">' + HM_MODES.map(function (x) { return '<button data-hm="' + x[0] + '" aria-pressed="' + (hm === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div></div>' +
     '<div class="hmap">' + col(I.subs.slice(0, half)) + col(I.subs.slice(half)) + '</div>' +
-    '<div class="legend">' + Object.keys(STATUS).map(function (k) { return '<span class="' + STATUS[k].c + '">' + ico(STATUS[k].i, 14) + '<span style="color:var(--ink-2)">' + STATUS[k].t + '</span></span>'; }).join('') + '</div></div>';
+    '<div class="legend">' + HM_LEGEND[hm]() + '</div></div>';
+  var dm = S.dm === 'topic' ? 'topic' : 'sub';
+  var scoreSec = '<div class="dv-sec"><div><h2>คะแนนรายประเด็น</h2><p class="sub">' + (dm === 'sub' ? 'ประเด็นย่อยที่คะแนนเสี่ยง และประเด็นที่ขยับแล้วคุ้มที่สุด' : 'คะแนนรายหัวข้อ และสัดส่วนที่ส่งเข้าคะแนนรวม') + '</p></div><div class="seg" role="group" aria-label="มุมมองคะแนน"><button data-dm="sub" aria-pressed="' + (dm === 'sub') + '">รายประเด็นย่อย</button><button data-dm="topic" aria-pressed="' + (dm === 'topic') + '">รายหัวข้อ</button></div></div>' +
+    '<div class="grid">' + (dm === 'sub' ? gapScorePanel(I, m) + gain : topicChart + contrib) + '</div>';
   return '<div class="dv">' +
     '<div class="grid">' + scoreRing(I, c) + kp + '</div>' + fcPanel(I) + parts +
-    '<div class="grid">' + topicChart + contrib + '</div>' +
-    '<div class="grid"><div class="panel glass c7 rise" style="--i:6"><div class="panel-head"><div><h2>ความก้าวหน้า' + (gran() === 'q' ? 'รายไตรมาส' : 'รายเดือน') + '</h2><p class="sub">% ของเป้าหมายทั้งปี · เส้น = สะสม · แท่ง = ทำได้ใน' + (gran() === 'q' ? 'ไตรมาส' : 'เดือน') + 'นั้น</p></div></div>' + cumChart(I) + '</div>' + gain + '</div>' +
+    '<div class="grid"><div class="panel glass c7 rise" style="--i:6"><div class="panel-head"><div><h2>ความก้าวหน้า' + (gran() === 'q' ? 'รายไตรมาส' : 'รายเดือน') + '</h2><p class="sub">% ของเป้าหมายทั้งปี · เส้น = สะสม · แท่ง = ทำได้ใน' + (gran() === 'q' ? 'ไตรมาส' : 'เดือน') + 'นั้น</p></div></div>' + cumChart(I) + '</div>' + gapPanel(I, m) + '</div>' + scoreSec +
     heat +
-    '<div class="sec-h" id="history"><div class="eyebrow">ผลที่ผ่านมา</div><h2>ผลประเมินย้อนหลังและแนวโน้ม</h2><p class="sub">ผลประเมินปี 2565–2568 · คะแนนที่รายงานปี ' + CLOSED_FY + ' · คะแนนคาดการณ์ปีปัจจุบัน · GAP จากผู้ประเมิน</p></div>' + vHistory(I, c) +
     '<details class="method glass"><summary>' + ico('info', 18) + 'วิธีคำนวณคะแนน</summary><p>ผู้รายงานกรอกเฉพาะคะแนนเป้าหมาย ณ สิ้นปีบัญชี (คะแนนคาดการณ์) ของแต่ละประเด็นย่อย ระบบคำนวณที่เหลือให้ตามสูตรสถิติคะแนนตัวชี้วัด: คะแนนตัวชี้วัด = Σ(น้ำหนักประเด็น × คะแนนเป้าหมาย) ÷ Σน้ำหนัก' + (I.share ? ' แล้วรวมแต่ละแบบฟอร์มตามสัดส่วน ' + I.parts.map(function (p) { return p.key + ' ' + Math.round(I.share[p.key] * 100) + '%'; }).join(' + ') : '') + ' · ประเด็นที่ยังไม่กรอกใช้คะแนนที่หลักฐานรองรับแทนชั่วคราว · คะแนนที่หลักฐานรองรับนับระดับต่อเนื่องจากระดับ 1 ที่ผลครบตามแผน มีผลการดำเนินงาน และติ๊กหลักฐานครบ · "ขยับ 1 ระดับ" = น้ำหนักประเด็น ÷ น้ำหนักรวม' + (I.assumed ? ' · แบบฟอร์ม CM ยังไม่มีน้ำหนักประเด็นและคะแนนเป้าหมาย จึงใช้น้ำหนักเฉลี่ยชั่วคราวและคะแนนที่หลักฐานรองรับแทน' : '') + '</p></details></div>';
 }
 function cumChart(I) {
@@ -1991,31 +2143,40 @@ function vReport(I) {
   // One step of the level is on screen at a time; S.step == null means "open the first unfinished step"
   var stSt = stepState(L, m);
   if (S.step == null) { S.step = 0; for (var k = 0; k < stSt.length; k++) if (!stSt[k].done) { S.step = k; break; } }
-  var cur = S.step, last = s.levels.indexOf(L) === s.levels.length - 1;
-  var stepper = '<div class="stepper" role="tablist" aria-label="ขั้นตอนการกรอก">' + stSt.map(function (x, i) {
-    return '<button class="stp' + (x.done ? ' done' : '') + '" role="tab" data-step="' + i + '"' + (i === cur ? ' aria-current="step" aria-selected="true"' : ' aria-selected="false"') + '><span class="n">' + (x.done ? ico('check', 15) : i + 1) + '</span><span style="min-width:0"><b>' + x.t + '</b><small>' + (x.done ? 'เรียบร้อย' : 'ยังไม่ครบ') + '</small></span></button>';
-  }).join('') + '</div>';
+  if (S.step > stSt.length - 1) S.step = stSt.length - 1;
+  var cur = S.step, last = s.levels.indexOf(L) === s.levels.length - 1, sx = stSt[cur];
+  var stBtn = function (x, i) {
+    return '<button class="stp' + (x.done ? ' done' : '') + '" role="tab" data-step="' + i + '"' + (i === cur ? ' aria-current="step" aria-selected="true"' : ' aria-selected="false"') + '><span class="n">' + (x.done ? ico('check', 15) : x.n) + '</span><span style="min-width:0"><b>' + x.t + '</b><small>' + (x.done ? 'เรียบร้อย' : 'ยังไม่ครบ') + '</small></span></button>';
+  };
+  var grp = function (g) {
+    var xs = []; stSt.forEach(function (x, i) { if (x.g === g) xs.push(stBtn(x, i)); });
+    if (!xs.length) return '';
+    var dn = stSt.filter(function (x) { return x.g === g; }).every(function (x) { return x.done; });
+    return '<div class="sgrp ' + g + (sx.g === g ? ' on' : '') + '"><div class="sgrp-h">' + ico(g === 'a' ? 'target' : 'trend', 15) + '<b>' + STEP_GROUPS[g] + '</b>' + (dn ? '<span class="chip ok">' + ico('check') + 'ครบ</span>' : '') + '</div><div class="stepper n' + xs.length + '" role="tablist" aria-label="' + STEP_GROUPS[g] + '">' + xs.join('') + '</div></div>';
+  };
+  var stepper = '<div class="stepper2">' + grp('a') + grp('b') + '</div>';
   var body;
   // Progress: the reporter states the running total (or ticks activities); the system books the increase into the report month
   var live = ed && S.month === curMonth(), ldis = live ? '' : ' disabled', pe = ed && winOpen('plan');
-  if (cur === 0) body = spList(s, L, 'st', ed, false);
-  else if (cur === 2) body = '<div class="mr">' + (L.mr.length ? L.mr.map(function (r, i) {
+  if (sx.g === 'a' && sx.n === 1) body = spList(s, L, 'st', ed, false);
+  else if (sx.g === 'a' && sx.n === 3) body = '<div class="mr">' + (L.mr.length ? L.mr.map(function (r, i) {
       return '<div class="mr-row' + (r.has ? ' has' : '') + '"' + (ed ? ' data-drop="' + i + '"' : '') + '><button class="check" role="checkbox" aria-checked="' + r.has + '" data-mr="' + i + '" aria-label="มีเอกสาร"' + dis + '>' + (r.has ? ico('check', 16) : '') + '</button><div style="min-width:0"><p>' + esc(r.req) + '</p>' +
         '<label class="sr" for="ev' + i + '">ชื่อหลักฐาน</label><textarea id="ev' + i + '" data-ev="' + i + '" rows="1" placeholder="ชื่อไฟล์หลักฐาน"' + dis + '>' + esc(r.evidence) + '</textarea>' +
         fileChips(s, L, r, i, ed) + '</div></div>';
     }).join('') + (ed ? '<p class="small muted" style="margin:2px 0 0">' + ico('info', 13) + ' PDF, Word, Excel, PowerPoint, JPG, PNG · ไม่เกิน 10 MB ต่อไฟล์ · ลากไฟล์มาวางบนรายการได้ · แนบแล้วระบบติ๊ก "มีเอกสาร" ให้</p>' : '')
     : '<div class="empty" style="padding:12px">ไม่มีรายการ Minimum Requirement</div>') + '</div>';
-  else if (cur === 1) body = '<div class="panel-head" style="margin-bottom:8px"><p class="sub" style="margin:0">เรียบเรียงตามค่าเกณฑ์ เพื่อนำไปกรอกในระบบ SEAM</p><button class="btn sm" data-act="copy">คัดลอก</button></div>' +
+  else if (sx.g === 'a') body = '<div class="panel-head" style="margin-bottom:8px"><p class="sub" style="margin:0">เรียบเรียงตามค่าเกณฑ์ เพื่อนำไปกรอกในระบบ SEAM</p><button class="btn sm" data-act="copy">คัดลอก</button></div>' +
       '<label class="sr" for="narr">ผลการดำเนินงาน</label><textarea id="narr" data-f="narrative" rows="9" placeholder="สิ่งที่ดำเนินการ ผลลัพธ์ และเอกสารอ้างอิง"' + dis + '>' + esc(L.narrative) + '</textarea>' +
       (aud || L.remark ? '<label class="label" for="rmk">ข้อสังเกต กปม.</label><textarea id="rmk" data-f="remark" rows="3" placeholder="เขียนข้อสังเกตถึงผู้รายงาน"' + (aud ? '' : ' disabled') + '>' + esc(L.remark) + '</textarea>' : '');
+  else if (sx.n === 1) body = gapBox(L) +
+      '<label class="label">แนวทางปรับปรุง / กิจกรรม</label>' + ((L.action || '').trim() ? '<p class="act-ro">' + esc(L.action) + '</p>' : '<p class="small muted" style="margin:0">ยังไม่ระบุแนวทางปรับปรุง · กำหนดได้ที่หน้าแผนปรับปรุง GAP</p>') +
+      spList(s, L, 'gs', ed, false);
   else {
-    body = gapBox(L) +
-      '<label class="label">แนวทางปรับปรุง / กิจกรรม</label>' + ((L.action || '').trim() ? '<p class="act-ro">' + esc(L.action) + '</p>' : '<p class="small muted" style="margin:0">ยังไม่ระบุแนวทางปรับปรุง</p>') +
-      spList(s, L, 'gs', ed, false) +
+    body = ((L.action || '').trim() ? '<p class="act-ro" style="margin:0 0 4px">' + esc(L.action) + '</p>' : '') +
       '<label class="label" for="gn">รายงานผลการดำเนินงานตามแนวทางปรับปรุง</label><textarea id="gn" data-f="gapNote" rows="4" placeholder="สิ่งที่ดำเนินการแล้วตามแนวทางข้างต้น ผลที่ได้ และเอกสารอ้างอิง"' + dis + '>' + esc(L.gapNote) + '</textarea>';
   }
-  var req = stSt.filter(function (x) { return !x.opt; }), reqDone = req.filter(function (x) { return x.done; }).length;
-  var nextLabel = cur < 3 ? 'ขั้นถัดไป' : !last ? 'ระดับ ' + (L.level + 1) : 'ประเด็นถัดไป';
+  var req = stSt, reqDone = req.filter(function (x) { return x.done; }).length;
+  var nextLabel = cur < stSt.length - 1 ? (stSt[cur + 1].g !== sx.g ? 'ต่อ: รายงานผลตามแผน GAP' : 'ขั้นถัดไป') : !last ? 'ระดับ ' + (L.level + 1) : 'ประเด็นถัดไป';
   var savebar = '<div class="savebar glass" role="region" aria-label="สถานะการกรอก"><span class="grow">' + (ed ? '<span class="saved">' + ico('check', 15) + '<span class="saved-text">' + (S.savedAt ? 'บันทึกแล้ว ' + S.savedAt : 'บันทึกอัตโนมัติ') + '</span></span> · ' : '<span>' + ico('lock', 14) + ' ดูอย่างเดียว</span> · ') +
       'ระดับ ' + L.level + ' พร้อม <b class="num" id="lvReady" style="color:var(--ink)">' + reqDone + '/' + req.length + '</b> ขั้น</span>' +
     '<button class="btn" data-act="prev-step"' + (cur === 0 && s.levels.indexOf(L) === 0 ? ' disabled' : '') + '>' + ico('undo', 16) + 'ก่อนหน้า</button><button class="btn primary" data-act="next-step">' + nextLabel + ico('chev', 16) + '</button></div>';
@@ -2030,7 +2191,7 @@ function vReport(I) {
     '<div class="panel glass"><div class="panel-head" style="margin-bottom:8px"><h3>' + ico('target') + 'ค่าเกณฑ์ระดับ ' + L.level + '</h3>' + chip(st) + '</div>' +
       '<p class="criteria' + (S.critOpen ? '' : ' clamp') + '">' + (esc(L.criteria) || '<span class="muted">ไม่มีข้อความเกณฑ์ในแบบฟอร์ม</span>') + '</p>' +
       (L.criteria && L.criteria.length > 160 ? '<button class="linkbtn" data-act="crit-toggle">' + (S.critOpen ? 'ย่อ' : 'อ่านเกณฑ์ทั้งหมด') + '</button>' : '') + '</div>' +
-    '<div class="panel glass">' + stepper + '<h3 style="margin-bottom:12px">' + ico(['calendar', 'report', 'folder', 'trend'][cur]) + stSt[cur].t + (cur === 2 && L.mr.length ? ' <span class="small muted num">' + reqDocs(L).filter(function (r) { return r.has; }).length + '/' + reqDocs(L).length + '</span>' : '') + '</h3>' + body + '</div>' +
+    '<div class="panel glass">' + stepper + '<h3 style="margin-bottom:12px">' + ico(sx.ic) + '<span class="muted" style="font-weight:500">' + STEP_GROUPS[sx.g] + ' ·</span> ' + sx.n + '. ' + sx.t + (sx.g === 'a' && sx.n === 3 && L.mr.length ? ' <span class="small muted num">' + reqDocs(L).filter(function (r) { return r.has; }).length + '/' + reqDocs(L).length + '</span>' : '') + '</h3>' + body + '</div>' +
     savebar + '</div></div>';
 }
 /* ================= attachments (same limits as src/Config.gs) ================= */
@@ -2106,6 +2267,11 @@ function asOf() { return gran() === 'q' ? 'ไตรมาส ' + (Math.floor(S.
 function gapBox(L) { return L.gap ? '<div class="assessor sepo" style="margin:0 0 4px"><b>' + ico('alert', 16) + 'ข้อเสนอแนะ สคร. ประจำปีบัญชี ' + (FY - 2) + '</b>' + esc(L.gap) + '</div>' : '<p class="sub" style="margin:0 0 4px">ระดับนี้ไม่มีข้อเสนอแนะ สคร. ประจำปีบัญชี ' + (FY - 2) + '</p>'; }
 // The level being edited: the plan editor on the plan/GAP pages, otherwise the level open on the report page
 function lvCtx() { return (S.tab === 'plan' || S.tab === 'gap') && S.pl ? lvOf(S.pl.uid, S.pl.lv) : curLv(); }
+function planDrawer() {
+  if (S.view !== 'ind' || (S.tab !== 'plan' && S.tab !== 'gap') || !S.pl) return '';
+  var inner = planEditor(indBy(S.ind), S.tab === 'gap' ? 'gs' : 'st');
+  return inner ? '<div class="dw-scrim" data-pick="" aria-hidden="true"></div><aside class="drawer' + (S.plEnter ? ' enter' : '') + '" role="dialog" aria-modal="true" aria-label="แก้ไขแผนรายระดับ">' + inner + '</aside>' : '';
+}
 function planEditor(I, kind) {
   var c = S.pl && lvOf(S.pl.uid, S.pl.lv);
   if (!c || !c.L || c.I !== I) return '';
@@ -2234,19 +2400,34 @@ function bookItems(c, st, cd) {
   st.cd = cd; st.chk = cd.map(function (x) { return x >= 0; });
 }
 function openM() { return API && typeof API.openFrom === 'number' ? API.openFrom : new Date().getDate() <= 10 ? Math.max(0, curMonth() - 1) : curMonth(); }
+// A level reports in two parts: against the criteria (3 steps), then against its GAP improvement plan (2 steps, only when it has a GAP)
+var STEP_GROUPS = { a: 'รายงานผลตามค่าเกณฑ์', b: 'รายงานผลตามแผนปรับปรุง GAP' };
+function gapApplies(L) { return !!(L.gap || (L.action || '').trim() || (L.gsteps || []).length); }
 function stepState(L, m) {
-  return [
-    { t: 'ความคืบหน้า', done: !L.steps.length || lvStatus(L, m) !== 'late' },
-    { t: 'ผลการดำเนินงาน', done: !!(L.narrative || '').trim() },
-    { t: 'หลักฐาน', done: reqDocs(L).every(function (r) { return r.has; }) && (!L.mr.length || L.mr.some(function (r) { return r.evidence; })) },
-    { t: 'แผนปรับปรุง GAP', opt: true, done: !L.gap || !!(L.action || '').trim() }
+  var st = [
+    { g: 'a', n: 1, ic: 'calendar', t: 'ความคืบหน้า', done: !L.steps.length || lvStatus(L, m) !== 'late' },
+    { g: 'a', n: 2, ic: 'report', t: 'ผลการดำเนินงาน', done: !!(L.narrative || '').trim() },
+    { g: 'a', n: 3, ic: 'folder', t: 'หลักฐาน', done: reqDocs(L).every(function (r) { return r.has; }) && (!L.mr.length || L.mr.some(function (r) { return r.evidence; })) }
   ];
+  if (gapApplies(L)) st.push(
+    { g: 'b', n: 1, ic: 'trend', t: 'ความคืบหน้า', done: (L.gsteps || []).length > 0 && gapStat(L, m) !== 'late' },
+    { g: 'b', n: 2, ic: 'report', t: 'ผลการดำเนินงาน', done: !!(L.gapNote || '').trim() });
+  return st;
+}
+// To-do items from the GAP part (kept out of the score: the score follows the criteria evidence only)
+function gapIssues(L, m) {
+  if (!gapApplies(L)) return [];
+  var gs = L.gsteps || [], out = [];
+  if (!gs.length) return ['ยังไม่มีแผนปรับปรุง GAP'];
+  if (gapStat(L, m) === 'late') out.push('ผลตามแผนปรับปรุง GAP ล่าช้า');
+  if (!(L.gapNote || '').trim() && gs.some(function (st) { return cum(st.plan, m) > 0; })) out.push('ยังไม่รายงานผลตามแผนปรับปรุง GAP');
+  return out;
 }
 // Typing should tick the stepper without re-rendering the field the user is in
 function refreshSteps() {
   if (S.tab !== 'report' || !S.ind) return;
-  var c = curLv(), st = stepState(c.L, S.month), req = st.filter(function (x) { return !x.opt; });
-  st.forEach(function (x, i) { var b = document.querySelector('.stp[data-step="' + i + '"]'); if (!b) return; b.classList.toggle('done', x.done); b.querySelector('.n').innerHTML = x.done ? ico('check', 15) : i + 1; b.querySelector('small').textContent = x.done ? 'เรียบร้อย' : 'ยังไม่ครบ'; });
+  var c = curLv(), st = stepState(c.L, S.month), req = st;
+  st.forEach(function (x, i) { var b = document.querySelector('.stp[data-step="' + i + '"]'); if (!b) return; b.classList.toggle('done', x.done); b.querySelector('.n').innerHTML = x.done ? ico('check', 15) : x.n; b.querySelector('small').textContent = x.done ? 'เรียบร้อย' : 'ยังไม่ครบ'; });
   var r = document.getElementById('lvReady'); if (r) r.textContent = req.filter(function (x) { return x.done; }).length + '/' + req.length;
 }
 
@@ -2289,7 +2470,7 @@ function vGap(I) {
       kpi('มีแผนย่อยแล้ว', 'calendar', cnt.plan, '/ ' + cnt.all, 'กดแถวในตารางด้านล่างเพื่อวางแผน', cnt.all ? cnt.plan / cnt.all : 0) +
       kpi('ล่าช้ากว่าแผน', 'clock', cnt.late, 'ระดับ', 'ผลสะสมต่ำกว่าแผนสะสม ณ ' + asOf()) + '</div>' +
     '<div class="panel glass"><div class="panel-head" style="flex-wrap:wrap"><div><h2>' + ico('trend', 18) + ' แผน/ผลการปรับปรุงตาม GAP ปีบัญชี ' + FY + '</h2><p class="sub">แนวทางปรับปรุง แผนย่อยรายขั้นตอน และผลที่ลงไว้ · ข้อมูล ณ ' + asOf() + ' · กดแถวระดับเพื่อดูหรือแก้ไขแผน</p></div>' +
-      '<div class="toolbar">' + (canG ? '<button class="btn ' + (ge ? 'primary' : '') + ' sm" data-act="gedit">' + ico(ge ? 'check' : 'edit', 15) + (ge ? 'เสร็จสิ้นการแก้ไขแผน' : 'แก้ไขแผน') + '</button>' : '') + '<div class="seg" role="group" aria-label="กรอง">' + f('all', 'ทั้งหมด', cnt.all) + f('gap', 'มี GAP', cnt.gap) + f('noact', 'ยังไม่มีแนวทาง', cnt.noact) + f('late', 'ล่าช้า', cnt.late) + '</div></div></div>' + winBar('gap') + planEditor(I, 'gs') +
+      '<div class="toolbar">' + (canG ? '<button class="btn ' + (ge ? 'primary' : '') + ' sm" data-act="gedit">' + ico(ge ? 'check' : 'edit', 15) + (ge ? 'เสร็จสิ้นการแก้ไขแผน' : 'แก้ไขแผน') + '</button>' : '') + '<div class="seg" role="group" aria-label="กรอง">' + f('all', 'ทั้งหมด', cnt.all) + f('gap', 'มี GAP', cnt.gap) + f('noact', 'ยังไม่มีแนวทาง', cnt.noact) + f('late', 'ล่าช้า', cnt.late) + '</div></div></div>' + winBar('gap') + '' +
     '<div class="lg" style="margin:4px 0 12px"><span><i class="sw pl-sw-p"></i>มีแผน</span><span><i class="sw pl-sw-r"></i>ลงผลแล้ว (ตัวเลข = ผล)</span><span><i class="sw pl-sw-miss"></i>ถึงกำหนดแต่ยังไม่มีผล</span><span><i class="sw pl-sw-cur"></i>' + (gran() === 'q' ? 'ไตรมาส' : 'เดือน') + 'ที่ติดตาม</span></div>' +
     '<div class="scroll-x pl-wrap"><table class="pl' + (gran() === 'q' ? ' plq' : '') + '"><thead><tr><th class="pl-name">ประเด็น · ระดับ · แผนย่อยปรับปรุง</th>' + C.map(function (c) { return colHead(c, 'pl-m'); }).join('') + '<th>ผล/เป้า</th><th>สถานะ</th></tr></thead><tbody>' +
       (body || '<tr><td colspan="' + (C.length + 3) + '"><div class="empty">' + ico('check') + 'ไม่มีรายการตามตัวกรองนี้</div></td></tr>') + '</tbody></table></div>' +
@@ -2333,7 +2514,7 @@ function vPlan(I) {
   }).join('');
   return '<div class="panel glass"><div class="panel-head" style="flex-wrap:wrap"><div><h2>' + ico('calendar', 18) + ' แผนการดำเนินงาน ปีบัญชี ' + FY + '</h2><p class="sub">กิจกรรมตามค่าเกณฑ์แต่ละระดับ แผนรายเดือน และผลที่ลงไว้ · ข้อมูล ณ ' + asOf() + ' · กดแถวเพื่อดูหรือแก้ไขแผนของระดับนั้น</p></div>' +
       '<div class="toolbar">' + (canP ? '<button class="btn ' + (pe ? 'primary' : '') + ' sm" data-act="pedit">' + ico(pe ? 'check' : 'edit', 15) + (pe ? 'เสร็จสิ้นการแก้ไขแผน' : 'แก้ไขแผน') + '</button>' : '') + parts + '<div class="seg" role="group" aria-label="กรองกิจกรรม">' + f('all', 'ทั้งหมด', cnt.all) + f('now', 'แผนเดือน ' + MONTHS[m], cnt.now) + f('late', 'ล่าช้า', cnt.late) + f('done', 'เสร็จแล้ว', cnt.done) + '</div></div></div>' +
-    winBar('plan') + planEditor(I, 'st') + (pf === 'all' && nowList.length && !pe ? '<div class="pl-now"><b>' + ico('target', 16) + ' เดือน ' + MONTHS[m] + ' มีแผน ' + nowList.length + ' กิจกรรม</b><div class="locs">' + nowList.slice(0, 10).map(function (r) {
+    winBar('plan') + (pf === 'all' && nowList.length && !pe ? '<div class="pl-now"><b>' + ico('target', 16) + ' เดือน ' + MONTHS[m] + ' มีแผน ' + nowList.length + ' กิจกรรม</b><div class="locs">' + nowList.slice(0, 10).map(function (r) {
       return '<button data-open="' + r.s.uid + '|' + r.L.level + '">' + esc(r.s.label) + ' ระดับ ' + r.L.level + ' · ' + fmt(r.st.plan[m], r.st.plan[m] % 1 ? 1 : 0) + ' ' + esc(r.st.unit || '') + '</button>'; }).join('') + (nowList.length > 10 ? '<span class="small muted" style="align-self:center">+' + (nowList.length - 10) + '</span>' : '') + '</div></div>' : '') +
     '<div class="lg" style="margin:4px 0 12px"><span><i class="sw pl-sw-p"></i>มีแผน</span><span><i class="sw pl-sw-r"></i>ลงผลแล้ว (ตัวเลข = ผล)</span><span><i class="sw pl-sw-miss"></i>ถึงกำหนดแต่ยังไม่มีผล</span><span><i class="sw pl-sw-cur"></i>เดือนที่ติดตาม</span></div>' +
     '<div class="scroll-x pl-wrap"><table class="pl' + (gran() === 'q' ? ' plq' : '') + '"><thead><tr><th class="pl-name">ประเด็น · ระดับ · กิจกรรม</th>' + C.map(function (c) { return colHead(c, 'pl-m'); }).join('') + '<th>ผล/เป้า</th><th>สถานะ</th></tr></thead><tbody>' +
@@ -2358,33 +2539,73 @@ function vEvidence(I, c) {
 var HIST_FY = [2566, 2567, 2568], HIST_PART = { CG: ['CG'], SP: ['SP'], RM: ['RM'], SCM: ['SCM'], DT: ['DT'], HCM: ['HCM'], KMIM: ['KM', 'IM'], IA: ['IA'] };
 function histOf(code, yy) { var H = window.CBE_HISTORY || {}, p = (HIST_PART[code] || [code]).map(function (k) { return H[yy] && H[yy][k]; }).filter(Boolean); return p.length ? p : null; }
 function histScore(code, yy) { var p = histOf(code, yy); return p && p[0].score != null ? p[0].score : (HISTORY[code] || {})[yy] != null ? HISTORY[code][yy] : null; }
+// Per-criterion results from the TRIS reports: window.CBE_HISTORY_AXES (history-axes.js) = { fy: { part: { score, axes: [{ n, name, score, gap[] }] } } }
+var AX_FY = [2566, 2567, 2568], AX_PART = { SCM: ['SM', 'CM'], KMIM: ['KM', 'IM'] }, AX_NAME = { SM: 'การมุ่งเน้นผู้มีส่วนได้ส่วนเสีย', CM: 'การมุ่งเน้นลูกค้า', KM: 'การจัดการความรู้', IM: 'การจัดการนวัตกรรม' };
+function axOf(yy, part) { var X = window.CBE_HISTORY_AXES || {}; return X[yy] && X[yy][part] || null; }
+function axTotal(code, yy) {
+  var X = window.CBE_HISTORY_AXES || {}, y = X[yy]; if (!y) return null;
+  if (y[code] && y[code].score != null) return y[code].score;
+  var d = IND_DEF.filter(function (x) { return x.code === code; })[0], ps = AX_PART[code];
+  if (ps && d && d.share && ps.every(function (p) { return y[p] && y[p].score != null; })) return Math.round(ps.reduce(function (t, p) { return t + d.share[p] * y[p].score; }, 0) * 10000) / 10000;
+  return null;
+}
 function vHistory(I, c) {
   // 2565–2568 official results, 2569 = reported score of the closed year, current year = forecast
   var all = [2565].concat(HIST_FY, [CLOSED_FY], FY > CLOSED_FY ? [FY] : []).filter(function (yy, i, a) { return a.indexOf(yy) === i; });
   var past = yearInds(CLOSED_FY).filter(function (J) { return J.code === I.code; })[0];
-  var pts = all.map(function (yy) { var v = histScore(I.code, yy); return v != null ? v : yy === CLOSED_FY && past ? indCalc(past, 11).score : yy === CUR_FY ? forecast(I, S.month).likely : null; });
+  var pts = all.map(function (yy) { var v = histScore(I.code, yy); if (v == null) v = axTotal(I.code, yy); return v != null ? v : yy === CLOSED_FY && past ? indCalc(past, 11).score : yy === CUR_FY ? forecast(I, S.month).likely : null; });
   var keep = all.map(function (yy, i) { return pts[i] != null || yy >= CLOSED_FY; }); all = all.filter(function (_, i) { return keep[i]; }); pts = pts.filter(function (_, i) { return keep[i]; });
+  var kind = function (yy) { return yy === CUR_FY ? 'fc' : yy === CLOSED_FY ? 'rep' : 'off'; };
   var cards = all.map(function (yy, i) {
-    var v = pts[i], lbl = yy === CUR_FY ? 'คะแนนคาดการณ์ปี ' : yy === CLOSED_FY ? 'คะแนนที่รายงานปี ' : 'ผลประเมินปี ', prev = i ? pts[i - 1] : null, d = v != null && prev != null ? v - prev : null;
-    var meta = yy === CUR_FY ? 'จากแผนและผลการดำเนินงานปี ' + yy : yy === CLOSED_FY ? (FY === CLOSED_FY ? 'ปีที่กำลังดู · ปิดรอบแล้ว' : '<button class="linkbtn" data-act="open-closed" style="padding:0">เปิดดูผลการดำเนินงานปี ' + CLOSED_FY + ' →</button>') : v == null ? 'ยังไม่นำเข้าข้อมูล' : 'ผลประเมินอย่างเป็นทางการ' + (d != null ? ' · <b class="' + (d >= 0 ? 'ok' : 'bad') + '">' + (d >= 0 ? '+' : '') + fmt(d, 4) + '</b>' : '');
-    return '<div class="kpi glass' + (HIST_FY.indexOf(yy) > -1 && S.yr === yy ? ' sel' : '') + '"><div class="lbl">' + lbl + yy + '</div><div class="val num">' + (v == null ? '–' : fmt(v, 4)) + '<small>/5.0000</small></div><div class="meta">' + meta + '</div></div>';
+    var v = pts[i], k = kind(yy), prev = i ? pts[i - 1] : null, d = v != null && prev != null ? v - prev : null;
+    var lbl = k === 'fc' ? 'คะแนนคาดการณ์ปี ' : k === 'rep' ? 'คะแนนที่รายงานปี ' : 'ผลประเมินปี ';
+    var meta = k === 'fc' ? 'จากแผนและผลการดำเนินงานปี ' + yy : k === 'rep' ? (FY === CLOSED_FY ? 'ปีที่กำลังดู · ปิดรอบแล้ว' : '<button class="linkbtn" data-act="open-closed" style="padding:0">ดูผลการดำเนินงานปี ' + CLOSED_FY + ' →</button>') : 'ผลประเมินอย่างเป็นทางการ (TRIS)';
+    return '<div class="hy-card ' + k + '"><div class="lbl">' + lbl + yy + '</div><div class="val num">' + (v == null ? '–' : fmt(v, 4)) + '<small>/5.0000</small></div>' +
+      (d != null ? '<div class="hy-d ' + (d >= 0 ? 'ok' : 'bad') + '">' + (d >= 0 ? '▲ +' : '▼ ') + fmt(d, 4) + '</div>' : '<div class="hy-d"> </div>') + '<div class="meta">' + meta + '</div></div>';
   }).join('');
-  var W = 600, H = 220, P = { l: 30, r: 24, t: 14, b: 26 }, x = function (i) { return P.l + i * (W - P.l - P.r) / Math.max(1, all.length - 1); }, y = function (v) { return P.t + (1 - v / 5) * (H - P.t - P.b); };
-  var known = pts.map(function (v, i) { return v == null ? null : [x(i), y(v)]; }).filter(Boolean);
-  var chart = '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" aria-label="แนวโน้มคะแนน">' + [0, 1, 2, 3, 4, 5].map(function (g) { return '<line x1="' + P.l + '" x2="' + (W - P.r) + '" y1="' + y(g) + '" y2="' + y(g) + '" stroke="var(--hair)"/><text x="' + (P.l - 8) + '" y="' + (y(g) + 4) + '" text-anchor="end">' + g + '</text>'; }).join('') +
-    (known.length > 1 ? '<path d="' + known.map(function (p, i) { return (i ? 'L' : 'M') + p[0] + ' ' + p[1]; }).join('') + '" fill="none" stroke="var(--primary)" stroke-width="2.5"/>' : '') +
-    pts.map(function (v, i) { return v == null ? '' : '<circle cx="' + x(i) + '" cy="' + y(v) + '" r="5" fill="' + (all[i] >= CLOSED_FY ? 'var(--glass-solid)' : 'var(--primary)') + '" stroke="var(--primary)" stroke-width="2"/><text x="' + x(i) + '" y="' + (y(v) - 10) + '" text-anchor="middle" style="fill:var(--ink);font-weight:700">' + fmt(v) + '</text>'; }).join('') +
+  // overall trend: solid for official results, dashed + hollow for reported/forecast
+  var W = 600, H = 230, P = { l: 30, r: 24, t: 22, b: 28 }, x = function (i) { return P.l + i * (W - P.l - P.r) / Math.max(1, all.length - 1); }, y = function (v) { return P.t + (1 - v / 5) * (H - P.t - P.b); };
+  var off = [], est = [];
+  pts.forEach(function (v, i) { if (v == null) return; (kind(all[i]) === 'off' ? off : est).push([x(i), y(v)]); });
+  if (off.length && est.length) est.unshift(off[off.length - 1]);
+  var path = function (a) { return a.map(function (p, i) { return (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(''); };
+  var chart = '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" aria-label="แนวโน้มคะแนน ' + esc(I.label) + '">' +
+    [0, 1, 2, 3, 4, 5].map(function (g) { return '<line x1="' + P.l + '" x2="' + (W - P.r) + '" y1="' + y(g) + '" y2="' + y(g) + '" stroke="var(--hair-in)"/><text x="' + (P.l - 8) + '" y="' + (y(g) + 4) + '" text-anchor="end">' + g + '</text>'; }).join('') +
+    (I.target != null ? '<line x1="' + P.l + '" x2="' + (W - P.r) + '" y1="' + y(I.target) + '" y2="' + y(I.target) + '" stroke="var(--ink)" stroke-dasharray="4 5" opacity=".5"/><text x="' + (W - P.r) + '" y="' + (y(I.target) - 6) + '" text-anchor="end" style="fill:var(--ink-2)">เป้า ' + fmt(I.target) + '</text>' : '') +
+    (off.length > 1 ? '<path d="' + path(off) + '" fill="none" stroke="var(--primary)" stroke-width="2.5"/>' : '') + (est.length > 1 ? '<path d="' + path(est) + '" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-dasharray="6 6"/>' : '') +
+    pts.map(function (v, i) { if (v == null) return ''; var k = kind(all[i]); return '<circle cx="' + x(i) + '" cy="' + y(v) + '" r="5" fill="' + (k === 'off' ? 'var(--primary)' : 'var(--glass-solid)') + '" stroke="var(--primary)" stroke-width="2"/><text x="' + x(i) + '" y="' + (y(v) - 11) + '" text-anchor="middle" style="fill:var(--ink);font-weight:700">' + fmt(v) + '</text>'; }).join('') +
     all.map(function (yy, i) { return '<text x="' + x(i) + '" y="' + (H - 6) + '" text-anchor="middle">' + yy + '</text>'; }).join('') + '</svg>';
-  var yr = HIST_FY.indexOf(S.yr) > -1 ? S.yr : 2568, parts = histOf(I.code, yr), names = HIST_PART[I.code] || [I.code];
-  var list = function (title, arr, cls, open) { return arr && arr.length ? '<details class="hlist ' + cls + '"' + (open ? ' open' : '') + '><summary><b>' + title + '</b><span class="num">' + arr.length + ' ข้อ</span></summary><ol>' + arr.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ol></details>' : ''; };
-  var detail = parts ? parts.map(function (p, i) {
-    return (parts.length > 1 ? '<h3 class="hpart"><span class="code">' + names[i] + '</span>' + (names[i] === 'KM' ? 'การจัดการความรู้' : names[i] === 'IM' ? 'การจัดการนวัตกรรม' : '') + '</h3>' : '') +
-      list('ประเด็นที่ยังดำเนินการได้ไม่สมบูรณ์ (GAP)', p.gap, 'gap', true) + list('ข้อเสนอแนะภาพรวมจากผู้ประเมิน', p.rec, 'rec', false) + list('ประเด็นที่ กยท. ดำเนินการได้', p.ok, 'ok', false);
-  }).join('') : '<div class="empty">' + ico('history') + (window.CBE_HISTORY ? 'ไม่มีข้อมูลผลประเมินปี ' + yr + ' ของตัวชี้วัดนี้' : 'ยังไม่ได้นำเข้าข้อมูลผลประเมินย้อนหลัง (history.js)') + '</div>';
-  return '<div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">' + cards + '</div>' +
-    '<div class="grid"><div class="panel glass c5"><div class="eyebrow">Overall trend</div><h2 style="margin-bottom:12px">แนวโน้มคะแนน</h2>' + chart + '<p class="note-demo">' + ico('info', 14) + 'ปี 2566–2568 จากรายงานผลการประเมินของ TRIS · ปี ' + CLOSED_FY + ' เป็นคะแนนที่รายงาน' + (FY > CLOSED_FY ? ' · ปี ' + FY + ' เป็นคะแนนคาดการณ์' : '') + '</p></div>' +
-      '<div class="panel glass c7"><div class="eyebrow">Assessor report</div><div class="panel-head" style="margin-bottom:8px"><h2>ผลการประเมินปีบัญชี ' + yr + '</h2><div class="seg" role="group" aria-label="ปีบัญชี">' + HIST_FY.map(function (yy) { return '<button data-yr="' + yy + '" aria-pressed="' + (yy === yr) + '">' + yy + '</button>'; }).join('') + '</div></div>' +
-        (parts && parts[0].score != null ? '<p class="sub" style="margin:0 0 10px">คะแนน <b class="num">' + fmt(parts[0].score, 4) + '</b> / 5.0000</p>' : '') + detail + '</div></div>';
+  // per-criterion comparison: one row per criterion, a dot per year (light → dark = older → newer)
+  var parts = AX_PART[I.code] || [I.code], hp = parts.indexOf(S.hpart) > -1 ? S.hpart : parts[0];
+  var pseg = parts.length > 1 ? '<div class="seg" role="group" aria-label="ส่วนของตัวชี้วัด">' + parts.map(function (p) { return '<button data-hpart="' + p + '" aria-pressed="' + (hp === p) + '">' + p + ' · ' + AX_NAME[p] + '</button>'; }).join('') + '</div>' : '';
+  var years = AX_FY.filter(function (yy) { return axOf(yy, hp); }), base = axOf(years[years.length - 1], hp);
+  var X5 = function (v) { return Math.max(0, Math.min(100, v / 5 * 100)); };
+  var dots = base ? base.axes.map(function (a, i) {
+    var vs = years.map(function (yy) { var r = axOf(yy, hp).axes[i]; return r ? r.score : null; }), ok = vs.filter(function (v) { return v != null; });
+    var lo = Math.min.apply(null, ok), hi = Math.max.apply(null, ok), last = vs[vs.length - 1], first = vs[0], d = last != null && first != null ? last - first : null;
+    var tip = a.n + '. ' + a.name + '\n' + years.map(function (yy, k) { return 'ปี ' + yy + ' ' + (vs[k] == null ? '–' : fmt(vs[k], 4)); }).join('\n');
+    return '<div class="ax-row" data-tip="' + esc(tip) + '" tabindex="0" aria-label="' + esc(tip) + '"><span class="ax-l"><b class="num">' + a.n + '</b><span>' + esc(a.name) + '</span></span>' +
+      '<span class="ax-track"><span class="ax-span" style="left:' + X5(lo) + '%;width:' + (X5(hi) - X5(lo)) + '%"></span>' + vs.map(function (v, k) { return v == null ? '' : '<i class="ax-dot y' + k + '" style="left:' + X5(v) + '%"></i>'; }).join('') + '</span>' +
+      '<span class="ax-v"><b class="num">' + fmt(last, 2) + '</b>' + (d != null && Math.abs(d) >= .005 ? '<small class="' + (d > 0 ? 'ok' : 'bad') + '">' + (d > 0 ? '+' : '') + fmt(d, 2) + '</small>' : '<small class="muted">±0</small>') + '</span></div>';
+  }).join('') : '';
+  var cmp = '<div class="panel glass c7"><div class="eyebrow">Criteria score</div><div class="panel-head" style="margin-bottom:6px"><div><h2>เปรียบเทียบคะแนนรายประเด็น</h2><p class="sub">ประเด็นประเมินตามรายงาน TRIS · ตัวเลขขวา = ปี ' + (years[years.length - 1] || '') + ' และส่วนต่างจากปี ' + (years[0] || '') + '</p></div>' + pseg + '</div>' +
+    (base ? '<div class="lg" style="margin-bottom:4px">' + years.map(function (yy, k) { return '<span><i class="ax-key y' + k + '"></i>ปี ' + yy + '</span>'; }).join('') + '</div>' + dots +
+      '<div class="ax-axis" aria-hidden="true"><span></span><span class="ax-ticks">' + [0, 1, 2, 3, 4, 5].map(function (n) { return '<span style="left:' + n * 20 + '%">' + n + '</span>'; }).join('') + '</span><span></span></div>'
+      : '<div class="empty">' + ico('history') + (window.CBE_HISTORY_AXES ? 'ไม่มีคะแนนรายประเด็นของตัวชี้วัดนี้' : 'ยังไม่ได้นำเข้าคะแนนรายประเด็น (history-axes.js)') + '</div>') + '</div>';
+  // GAP by year and criterion
+  var yr = AX_FY.indexOf(S.yr) > -1 ? S.yr : AX_FY[AX_FY.length - 1], cur = axOf(yr, hp), gapN = cur ? cur.axes.filter(function (a) { return a.gap.length; }).length : 0;
+  var gcards = cur ? cur.axes.map(function (a) {
+    return '<article class="gx-card"><header><span class="gx-n num">' + ('0' + a.n).slice(-2) + '</span><h3>' + esc(a.name) + '</h3><span class="gx-s num" title="คะแนนปี ' + yr + '">' + fmt(a.score, 4) + '</span></header>' +
+      (a.gap.length ? '<ul>' + a.gap.map(function (g) { return '<li>' + esc(g) + '</li>'; }).join('') + '</ul>' : '<p class="small muted" style="margin:0">ไม่มีประเด็นที่ยังดำเนินการได้ไม่สมบูรณ์ในสรุปของผู้ประเมิน</p>') + '</article>';
+  }).join('') : '';
+  var rec = histOf(I.code, yr), recs = rec ? [].concat.apply([], rec.map(function (p) { return p.rec || []; })) : [];
+  var gapSec = '<div class="panel glass"><div class="eyebrow">Assessor gap</div><div class="panel-head" style="margin-bottom:10px"><div><h2>ประเด็น GAP แยกตามปีและประเด็นประเมิน</h2><p class="sub">จากสรุปประเด็นสำคัญของผู้ประเมิน · ' + (cur ? gapN + ' จาก ' + cur.axes.length + ' ประเด็นมี GAP' : '') + '</p></div>' +
+      '<div class="toolbar">' + pseg + '<div class="seg" role="group" aria-label="ปีบัญชี">' + AX_FY.map(function (yy) { return '<button data-yr="' + yy + '" aria-pressed="' + (yr === yy) + '">ปีบัญชี ' + yy + '</button>'; }).join('') + '</div></div></div>' +
+    (cur ? '<div class="gx-grid">' + gcards + '</div>' : '<div class="empty">' + ico('history') + 'ไม่มีข้อมูลผลประเมินปี ' + yr + '</div>') +
+    (recs.length ? '<details class="hlist rec" style="margin-top:14px"><summary><b>ข้อเสนอแนะภาพรวมจากผู้ประเมิน ปี ' + yr + '</b><span class="num">' + recs.length + ' ข้อ</span></summary><ol>' + recs.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ol></details>' : '') + '</div>';
+  return '<div class="hy-cards">' + cards + '</div>' +
+    '<div class="grid"><div class="panel glass c5"><div class="eyebrow">Overall trend</div><h2 style="margin-bottom:6px">แนวโน้มคะแนนภาพรวม</h2>' + chart +
+      '<p class="note-demo">' + ico('info', 14) + 'เส้นทึบ = ผลประเมินทางการ · เส้นประ/จุดกลวง = คะแนนที่รายงานและคะแนนคาดการณ์</p></div>' + cmp + '</div>' + gapSec;
 }
 
 /* ================= events ================= */
@@ -2396,7 +2617,8 @@ function openInd(code, tab) { S.view = 'ind'; S.ind = code; S.tab = tab || 'dash
 function stepNav(dir) {
   var I = indBy(S.ind), s = curSub(I), li = Math.min(S.level, s.levels.length - 1);
   if (dir > 0) {
-    if (S.step < 3) S.step++;
+    var nst = stepState(s.levels[li], S.month).length;
+    if (S.step < nst - 1) S.step++;
     else if (li < s.levels.length - 1) { S.level = li + 1; S.step = 0; }
     else {
       var mw = myWork(I, S.month), i = I.subs.indexOf(s), nx = -1;
@@ -2405,7 +2627,7 @@ function stepNav(dir) {
       S.sub = nx; S.level = 0; S.step = null;
     }
   } else if (S.step > 0) S.step--;
-  else if (li > 0) { S.level = li - 1; S.step = 3; }
+  else if (li > 0) { S.level = li - 1; S.step = stepState(s.levels[li - 1], S.month).length - 1; }
   render();
   var p = document.querySelector('.stepper'); if (p) p.scrollIntoView({ block: 'nearest' });
 }
@@ -2436,7 +2658,7 @@ document.addEventListener('click', function (e) {
     if (op) um.querySelector('.u-item').focus();
     return;
   }
-  var b = e.target.closest('button, tr.link, .scrim'); if (!b || b.disabled) return;
+  var b = e.target.closest('button, tr.link, .scrim, .dw-scrim'); if (!b || b.disabled) return;
   var d = b.dataset;
   if (d.login) { var p = d.login.split(':'); U = { role: p[0], ind: p[1] || null, part: p[2] || null }; store('user', U); S = { view: 'home', ind: U.ind, tab: 'dash', sub: 0, level: 0, month: 11, filter: 'all', q: '', yr: 2568, theme: S.theme }; logIt('เข้าสู่ระบบ'); render(); return; }
   if (d.act === 'pwtoggle') {
@@ -2462,6 +2684,9 @@ document.addEventListener('click', function (e) {
   if (d.fsel) { S.fid = d.fsel; return renderRv(); }
   if (d.sev) { S.sev = d.sev; S.fid = null; return render(); }
   if (d.act === 'keys') { S.keysHelp = !S.keysHelp; return render(); }
+  if (d.hm) { S.hm = d.hm; return render(); }
+  if (d.hpart) { S.hpart = d.hpart; return render(); }
+  if (d.dm) { S.dm = d.dm; return render(); }
   if (d.act === 'pedit' || d.act === 'gedit') { S[d.act] = !S[d.act]; return render(); }
   if (d.act === 'rerun') {
     var code = S.rv; delete RUNS[code];
@@ -2484,9 +2709,9 @@ document.addEventListener('click', function (e) {
   if (d.ind) return openInd(d.ind);
   if (d.open) { var q = d.open.split('|'); return openUid(q.slice(0, 3).join('|'), q[3]); }
   if (d.pick != null) {
-    var pk = d.pick, cut = pk.lastIndexOf('|'); S.pl = pk ? { uid: pk.slice(0, cut), lv: pk.slice(cut + 1) } : null; S.delStep = null;
+    var pk = d.pick, cut = pk.lastIndexOf('|'), was = S.pl; S.pl = pk ? { uid: pk.slice(0, cut), lv: pk.slice(cut + 1) } : null; S.delStep = null; S.plEnter = !!S.pl && !was;
     if (d.tab) { if (U.role === 'reporter') S.view = 'ind'; S.tab = d.tab; S.filter = 'all'; }
-    render(); var pp = document.getElementById('pe-panel'); if (pp) pp.scrollIntoView({ block: 'start', behavior: 'smooth' }); return;
+    render(); var pp = document.querySelector('.drawer .pe-panel'); if (pp) { pp.scrollTop = 0; pp.setAttribute('tabindex', '-1'); pp.focus({ preventScroll: true }); } else if (!S.pl && was) { var rw = document.querySelector('[data-pick="' + was.uid + '|' + was.lv + '"]'); if (rw) rw.focus && rw.focus(); } return;
   }
   if (d.tab) { if (U.role === 'reporter') S.view = 'ind'; S.tab = d.tab; S.filter = 'all'; document.body.classList.remove('nav-open'); render(); return window.scrollTo(0, 0); }
   if (d.topic) { var I = indBy(S.ind || U.ind), idx = I.subs.findIndex(function (s) { return s.topicRef.id === d.topic; }); S.tab = 'report'; S.sub = Math.max(0, idx); S.level = 0; S.step = null; document.body.classList.remove('nav-open'); render(); return window.scrollTo(0, 0); }
@@ -2632,6 +2857,7 @@ document.addEventListener('change', function (e) {
   if (d.f || d.ev != null) logIt('แก้ไข ' + curLv().s.label + ' ระดับ ' + curLv().L.level);
 });
 document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && S.pl && document.querySelector('.drawer')) { S.pl = null; S.delStep = null; render(); return; }
   if (e.key === 'Escape' && document.querySelector('.umenu.open')) { closeUmenu(); var ub = document.querySelector('.ubtn'); if (ub) ub.focus(); return; }
   if (e.key === 'Escape') { document.body.classList.remove('nav-open'); if (S.keysHelp) { S.keysHelp = false; render(); } return; }
   // Triage shortcuts: only on the auditor workspace and never while typing

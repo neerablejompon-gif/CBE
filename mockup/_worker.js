@@ -33,7 +33,7 @@ export default {
       if (path === `/data-${fy}.js`) {
         try { return js(await boot(req, env, fy)); } catch (e) { if (!e.status) throw e; return js('window.CBE_API=' + JSON.stringify(e.status === 401 ? { login: true, error: '' } : { error: e.message }) + ';'); }
       }
-      if (path === '/data.js' || path === '/history.js') { try { return js(await archive(req, env, path === '/data.js' ? 'ARCHIVE' : 'HISTORY')); } catch (e) { if (e.status !== 401) throw e; return js(''); } }
+      if (path === '/data.js' || path === '/history.js' || path === '/history-axes.js') { try { return js(await archive(req, env, { '/data.js': 'ARCHIVE', '/history.js': 'HISTORY', '/history-axes.js': 'HISTORY_AXES' }[path])); } catch (e) { if (e.status !== 401) throw e; return js(''); } }
       if (path === '/api/login' && req.method === 'POST') return await login(req, env);
       if (path === '/api/logout' && req.method === 'POST') return json({ ok: true }, 200, { 'set-cookie': SESSION + '=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0' });
       if (path === '/api/save' && req.method === 'POST') return json(await save(req, env, fy));
