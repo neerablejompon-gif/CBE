@@ -1065,6 +1065,36 @@ td, th, .trow, .pl td, .doc, .lib-head { border-color: var(--hair-in) !important
 .hc.none { background: transparent; border: 1px dashed var(--hair-in); cursor: default; }
 .hc .num { font-size: 11.5px; font-weight: 700; }
 @media (max-width: 640px) { .db-wrap { --db-l: 96px; --db-r: 64px; } .db-axis { grid-template-columns: 96px minmax(0, 1fr) 64px; } .db-l span { display: none; } .gp-row { grid-template-columns: 80px minmax(0, 1fr); } .gp-row .chip { grid-column: 2; justify-self: start; } }
+/* ===== past results ===== */
+.hy-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
+.hy-card { padding: 16px 18px; border-radius: var(--r-lg); border: 1px solid var(--hair); background-color: var(--glass); background-image: var(--lg-shine); box-shadow: var(--lg-shadow); display: flex; flex-direction: column; gap: 2px; }
+.hy-card.rep, .hy-card.fc { border-style: dashed; border-color: color-mix(in srgb, var(--primary) 40%, transparent); }
+.hy-card .lbl { font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+.hy-card .val { font: 800 26px/1.2 var(--num); } .hy-card .val small { font-size: 12px; color: var(--ink-3); font-weight: 600; margin-left: 2px; }
+.hy-d { font: 700 12px var(--num); min-height: 16px; } .hy-card .meta { font-size: 12px; color: var(--ink-3); }
+.ax-row { display: grid; grid-template-columns: minmax(0, 210px) minmax(0, 1fr) 70px; align-items: center; min-height: 34px; border-top: 1px solid var(--hair-in); border-radius: 8px; outline: 0; }
+.ax-row:hover, .ax-row:focus-visible { background: var(--primary-soft); }
+.ax-l { display: flex; gap: 8px; min-width: 0; padding-right: 10px; font-size: 12.5px; color: var(--ink-2); }
+.ax-l b { color: var(--primary); flex: none; min-width: 16px; } .ax-l span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ax-track { position: relative; height: 20px; margin: 0 8px; background: linear-gradient(to right, transparent calc(20% - .5px), var(--hair-in) calc(20% - .5px), var(--hair-in) calc(20% + .5px), transparent calc(20% + .5px)) 0 0 / 20% 100% repeat-x; }
+.ax-span { position: absolute; top: 9px; height: 2px; background: var(--mute); opacity: .5; }
+.ax-dot { position: absolute; top: 4px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; box-shadow: 0 0 0 2px var(--glass-solid); }
+.ax-key { display: inline-block; width: 11px; height: 11px; border-radius: 50%; }
+.ax-dot.y0, .ax-key.y0 { background: #A9C2FF; } .ax-dot.y1, .ax-key.y1 { background: #5B86F5; } .ax-dot.y2, .ax-key.y2 { background: #173FB8; }
+:root[data-theme="dark"] .ax-dot.y0, :root[data-theme="dark"] .ax-key.y0 { background: #2E4C9C; } :root[data-theme="dark"] .ax-dot.y1, :root[data-theme="dark"] .ax-key.y1 { background: #5E8BFF; } :root[data-theme="dark"] .ax-dot.y2, :root[data-theme="dark"] .ax-key.y2 { background: #BFD3FF; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ax-dot.y0, :root:not([data-theme="light"]) .ax-key.y0 { background: #2E4C9C; } :root:not([data-theme="light"]) .ax-dot.y1, :root:not([data-theme="light"]) .ax-key.y1 { background: #5E8BFF; } :root:not([data-theme="light"]) .ax-dot.y2, :root:not([data-theme="light"]) .ax-key.y2 { background: #BFD3FF; } }
+.ax-v { display: flex; flex-direction: column; line-height: 1.2; font-size: 13px; } .ax-v small { font: 700 11px var(--num); }
+.ax-axis { display: grid; grid-template-columns: minmax(0, 210px) minmax(0, 1fr) 70px; margin-top: 4px; }
+.ax-ticks { position: relative; height: 16px; margin: 0 8px; font: 600 11px var(--num); color: var(--ink-3); } .ax-ticks span { position: absolute; transform: translateX(-50%); }
+.gx-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.gx-card { padding: 14px 16px; border-radius: var(--r-md); border: 1px solid var(--hair-in); background: color-mix(in srgb, var(--glass-solid) 55%, transparent); }
+.gx-card header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.gx-card h3 { margin: 0; flex: 1; font-size: 14px; line-height: 1.35; }
+.gx-n { flex: none; width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; font-size: 12.5px; font-weight: 800; color: #fff; background: linear-gradient(145deg, #5B8CFF, #1F4BE0); }
+.gx-s { flex: none; font-size: 12.5px; font-weight: 700; padding: 2px 9px; border-radius: 99px; background: var(--primary-soft); color: var(--primary); }
+.gx-card ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 1.6; color: var(--ink-2); }
+@media (max-width: 960px) { .gx-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) { .ax-row, .ax-axis { grid-template-columns: 110px minmax(0, 1fr) 56px; } }
 </style>
 </head>
 <body>
@@ -1075,6 +1105,7 @@ td, th, .trow, .pl td, .doc, .lib-head { border-color: var(--hair-in) !important
 <script src="data.js"></script>
 <script src="data-2570.js"></script>
 <script src="history.js"></script>
+<script src="history-axes.js"></script>
 <script>
 'use strict';
 /* ================= constants ================= */
@@ -2508,33 +2539,73 @@ function vEvidence(I, c) {
 var HIST_FY = [2566, 2567, 2568], HIST_PART = { CG: ['CG'], SP: ['SP'], RM: ['RM'], SCM: ['SCM'], DT: ['DT'], HCM: ['HCM'], KMIM: ['KM', 'IM'], IA: ['IA'] };
 function histOf(code, yy) { var H = window.CBE_HISTORY || {}, p = (HIST_PART[code] || [code]).map(function (k) { return H[yy] && H[yy][k]; }).filter(Boolean); return p.length ? p : null; }
 function histScore(code, yy) { var p = histOf(code, yy); return p && p[0].score != null ? p[0].score : (HISTORY[code] || {})[yy] != null ? HISTORY[code][yy] : null; }
+// Per-criterion results from the TRIS reports: window.CBE_HISTORY_AXES (history-axes.js) = { fy: { part: { score, axes: [{ n, name, score, gap[] }] } } }
+var AX_FY = [2566, 2567, 2568], AX_PART = { SCM: ['SM', 'CM'], KMIM: ['KM', 'IM'] }, AX_NAME = { SM: 'การมุ่งเน้นผู้มีส่วนได้ส่วนเสีย', CM: 'การมุ่งเน้นลูกค้า', KM: 'การจัดการความรู้', IM: 'การจัดการนวัตกรรม' };
+function axOf(yy, part) { var X = window.CBE_HISTORY_AXES || {}; return X[yy] && X[yy][part] || null; }
+function axTotal(code, yy) {
+  var X = window.CBE_HISTORY_AXES || {}, y = X[yy]; if (!y) return null;
+  if (y[code] && y[code].score != null) return y[code].score;
+  var d = IND_DEF.filter(function (x) { return x.code === code; })[0], ps = AX_PART[code];
+  if (ps && d && d.share && ps.every(function (p) { return y[p] && y[p].score != null; })) return Math.round(ps.reduce(function (t, p) { return t + d.share[p] * y[p].score; }, 0) * 10000) / 10000;
+  return null;
+}
 function vHistory(I, c) {
   // 2565–2568 official results, 2569 = reported score of the closed year, current year = forecast
   var all = [2565].concat(HIST_FY, [CLOSED_FY], FY > CLOSED_FY ? [FY] : []).filter(function (yy, i, a) { return a.indexOf(yy) === i; });
   var past = yearInds(CLOSED_FY).filter(function (J) { return J.code === I.code; })[0];
-  var pts = all.map(function (yy) { var v = histScore(I.code, yy); return v != null ? v : yy === CLOSED_FY && past ? indCalc(past, 11).score : yy === CUR_FY ? forecast(I, S.month).likely : null; });
+  var pts = all.map(function (yy) { var v = histScore(I.code, yy); if (v == null) v = axTotal(I.code, yy); return v != null ? v : yy === CLOSED_FY && past ? indCalc(past, 11).score : yy === CUR_FY ? forecast(I, S.month).likely : null; });
   var keep = all.map(function (yy, i) { return pts[i] != null || yy >= CLOSED_FY; }); all = all.filter(function (_, i) { return keep[i]; }); pts = pts.filter(function (_, i) { return keep[i]; });
+  var kind = function (yy) { return yy === CUR_FY ? 'fc' : yy === CLOSED_FY ? 'rep' : 'off'; };
   var cards = all.map(function (yy, i) {
-    var v = pts[i], lbl = yy === CUR_FY ? 'คะแนนคาดการณ์ปี ' : yy === CLOSED_FY ? 'คะแนนที่รายงานปี ' : 'ผลประเมินปี ', prev = i ? pts[i - 1] : null, d = v != null && prev != null ? v - prev : null;
-    var meta = yy === CUR_FY ? 'จากแผนและผลการดำเนินงานปี ' + yy : yy === CLOSED_FY ? (FY === CLOSED_FY ? 'ปีที่กำลังดู · ปิดรอบแล้ว' : '<button class="linkbtn" data-act="open-closed" style="padding:0">เปิดดูผลการดำเนินงานปี ' + CLOSED_FY + ' →</button>') : v == null ? 'ยังไม่นำเข้าข้อมูล' : 'ผลประเมินอย่างเป็นทางการ' + (d != null ? ' · <b class="' + (d >= 0 ? 'ok' : 'bad') + '">' + (d >= 0 ? '+' : '') + fmt(d, 4) + '</b>' : '');
-    return '<div class="kpi glass' + (HIST_FY.indexOf(yy) > -1 && S.yr === yy ? ' sel' : '') + '"><div class="lbl">' + lbl + yy + '</div><div class="val num">' + (v == null ? '–' : fmt(v, 4)) + '<small>/5.0000</small></div><div class="meta">' + meta + '</div></div>';
+    var v = pts[i], k = kind(yy), prev = i ? pts[i - 1] : null, d = v != null && prev != null ? v - prev : null;
+    var lbl = k === 'fc' ? 'คะแนนคาดการณ์ปี ' : k === 'rep' ? 'คะแนนที่รายงานปี ' : 'ผลประเมินปี ';
+    var meta = k === 'fc' ? 'จากแผนและผลการดำเนินงานปี ' + yy : k === 'rep' ? (FY === CLOSED_FY ? 'ปีที่กำลังดู · ปิดรอบแล้ว' : '<button class="linkbtn" data-act="open-closed" style="padding:0">ดูผลการดำเนินงานปี ' + CLOSED_FY + ' →</button>') : 'ผลประเมินอย่างเป็นทางการ (TRIS)';
+    return '<div class="hy-card ' + k + '"><div class="lbl">' + lbl + yy + '</div><div class="val num">' + (v == null ? '–' : fmt(v, 4)) + '<small>/5.0000</small></div>' +
+      (d != null ? '<div class="hy-d ' + (d >= 0 ? 'ok' : 'bad') + '">' + (d >= 0 ? '▲ +' : '▼ ') + fmt(d, 4) + '</div>' : '<div class="hy-d"> </div>') + '<div class="meta">' + meta + '</div></div>';
   }).join('');
-  var W = 600, H = 220, P = { l: 30, r: 24, t: 14, b: 26 }, x = function (i) { return P.l + i * (W - P.l - P.r) / Math.max(1, all.length - 1); }, y = function (v) { return P.t + (1 - v / 5) * (H - P.t - P.b); };
-  var known = pts.map(function (v, i) { return v == null ? null : [x(i), y(v)]; }).filter(Boolean);
-  var chart = '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" aria-label="แนวโน้มคะแนน">' + [0, 1, 2, 3, 4, 5].map(function (g) { return '<line x1="' + P.l + '" x2="' + (W - P.r) + '" y1="' + y(g) + '" y2="' + y(g) + '" stroke="var(--hair)"/><text x="' + (P.l - 8) + '" y="' + (y(g) + 4) + '" text-anchor="end">' + g + '</text>'; }).join('') +
-    (known.length > 1 ? '<path d="' + known.map(function (p, i) { return (i ? 'L' : 'M') + p[0] + ' ' + p[1]; }).join('') + '" fill="none" stroke="var(--primary)" stroke-width="2.5"/>' : '') +
-    pts.map(function (v, i) { return v == null ? '' : '<circle cx="' + x(i) + '" cy="' + y(v) + '" r="5" fill="' + (all[i] >= CLOSED_FY ? 'var(--glass-solid)' : 'var(--primary)') + '" stroke="var(--primary)" stroke-width="2"/><text x="' + x(i) + '" y="' + (y(v) - 10) + '" text-anchor="middle" style="fill:var(--ink);font-weight:700">' + fmt(v) + '</text>'; }).join('') +
+  // overall trend: solid for official results, dashed + hollow for reported/forecast
+  var W = 600, H = 230, P = { l: 30, r: 24, t: 22, b: 28 }, x = function (i) { return P.l + i * (W - P.l - P.r) / Math.max(1, all.length - 1); }, y = function (v) { return P.t + (1 - v / 5) * (H - P.t - P.b); };
+  var off = [], est = [];
+  pts.forEach(function (v, i) { if (v == null) return; (kind(all[i]) === 'off' ? off : est).push([x(i), y(v)]); });
+  if (off.length && est.length) est.unshift(off[off.length - 1]);
+  var path = function (a) { return a.map(function (p, i) { return (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(''); };
+  var chart = '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" aria-label="แนวโน้มคะแนน ' + esc(I.label) + '">' +
+    [0, 1, 2, 3, 4, 5].map(function (g) { return '<line x1="' + P.l + '" x2="' + (W - P.r) + '" y1="' + y(g) + '" y2="' + y(g) + '" stroke="var(--hair-in)"/><text x="' + (P.l - 8) + '" y="' + (y(g) + 4) + '" text-anchor="end">' + g + '</text>'; }).join('') +
+    (I.target != null ? '<line x1="' + P.l + '" x2="' + (W - P.r) + '" y1="' + y(I.target) + '" y2="' + y(I.target) + '" stroke="var(--ink)" stroke-dasharray="4 5" opacity=".5"/><text x="' + (W - P.r) + '" y="' + (y(I.target) - 6) + '" text-anchor="end" style="fill:var(--ink-2)">เป้า ' + fmt(I.target) + '</text>' : '') +
+    (off.length > 1 ? '<path d="' + path(off) + '" fill="none" stroke="var(--primary)" stroke-width="2.5"/>' : '') + (est.length > 1 ? '<path d="' + path(est) + '" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-dasharray="6 6"/>' : '') +
+    pts.map(function (v, i) { if (v == null) return ''; var k = kind(all[i]); return '<circle cx="' + x(i) + '" cy="' + y(v) + '" r="5" fill="' + (k === 'off' ? 'var(--primary)' : 'var(--glass-solid)') + '" stroke="var(--primary)" stroke-width="2"/><text x="' + x(i) + '" y="' + (y(v) - 11) + '" text-anchor="middle" style="fill:var(--ink);font-weight:700">' + fmt(v) + '</text>'; }).join('') +
     all.map(function (yy, i) { return '<text x="' + x(i) + '" y="' + (H - 6) + '" text-anchor="middle">' + yy + '</text>'; }).join('') + '</svg>';
-  var yr = HIST_FY.indexOf(S.yr) > -1 ? S.yr : 2568, parts = histOf(I.code, yr), names = HIST_PART[I.code] || [I.code];
-  var list = function (title, arr, cls, open) { return arr && arr.length ? '<details class="hlist ' + cls + '"' + (open ? ' open' : '') + '><summary><b>' + title + '</b><span class="num">' + arr.length + ' ข้อ</span></summary><ol>' + arr.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ol></details>' : ''; };
-  var detail = parts ? parts.map(function (p, i) {
-    return (parts.length > 1 ? '<h3 class="hpart"><span class="code">' + names[i] + '</span>' + (names[i] === 'KM' ? 'การจัดการความรู้' : names[i] === 'IM' ? 'การจัดการนวัตกรรม' : '') + '</h3>' : '') +
-      list('ประเด็นที่ยังดำเนินการได้ไม่สมบูรณ์ (GAP)', p.gap, 'gap', true) + list('ข้อเสนอแนะภาพรวมจากผู้ประเมิน', p.rec, 'rec', false) + list('ประเด็นที่ กยท. ดำเนินการได้', p.ok, 'ok', false);
-  }).join('') : '<div class="empty">' + ico('history') + (window.CBE_HISTORY ? 'ไม่มีข้อมูลผลประเมินปี ' + yr + ' ของตัวชี้วัดนี้' : 'ยังไม่ได้นำเข้าข้อมูลผลประเมินย้อนหลัง (history.js)') + '</div>';
-  return '<div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">' + cards + '</div>' +
-    '<div class="grid"><div class="panel glass c5"><div class="eyebrow">Overall trend</div><h2 style="margin-bottom:12px">แนวโน้มคะแนน</h2>' + chart + '<p class="note-demo">' + ico('info', 14) + 'ปี 2566–2568 จากรายงานผลการประเมินของ TRIS · ปี ' + CLOSED_FY + ' เป็นคะแนนที่รายงาน' + (FY > CLOSED_FY ? ' · ปี ' + FY + ' เป็นคะแนนคาดการณ์' : '') + '</p></div>' +
-      '<div class="panel glass c7"><div class="eyebrow">Assessor report</div><div class="panel-head" style="margin-bottom:8px"><h2>ผลการประเมินปีบัญชี ' + yr + '</h2><div class="seg" role="group" aria-label="ปีบัญชี">' + HIST_FY.map(function (yy) { return '<button data-yr="' + yy + '" aria-pressed="' + (yy === yr) + '">' + yy + '</button>'; }).join('') + '</div></div>' +
-        (parts && parts[0].score != null ? '<p class="sub" style="margin:0 0 10px">คะแนน <b class="num">' + fmt(parts[0].score, 4) + '</b> / 5.0000</p>' : '') + detail + '</div></div>';
+  // per-criterion comparison: one row per criterion, a dot per year (light → dark = older → newer)
+  var parts = AX_PART[I.code] || [I.code], hp = parts.indexOf(S.hpart) > -1 ? S.hpart : parts[0];
+  var pseg = parts.length > 1 ? '<div class="seg" role="group" aria-label="ส่วนของตัวชี้วัด">' + parts.map(function (p) { return '<button data-hpart="' + p + '" aria-pressed="' + (hp === p) + '">' + p + ' · ' + AX_NAME[p] + '</button>'; }).join('') + '</div>' : '';
+  var years = AX_FY.filter(function (yy) { return axOf(yy, hp); }), base = axOf(years[years.length - 1], hp);
+  var X5 = function (v) { return Math.max(0, Math.min(100, v / 5 * 100)); };
+  var dots = base ? base.axes.map(function (a, i) {
+    var vs = years.map(function (yy) { var r = axOf(yy, hp).axes[i]; return r ? r.score : null; }), ok = vs.filter(function (v) { return v != null; });
+    var lo = Math.min.apply(null, ok), hi = Math.max.apply(null, ok), last = vs[vs.length - 1], first = vs[0], d = last != null && first != null ? last - first : null;
+    var tip = a.n + '. ' + a.name + '\n' + years.map(function (yy, k) { return 'ปี ' + yy + ' ' + (vs[k] == null ? '–' : fmt(vs[k], 4)); }).join('\n');
+    return '<div class="ax-row" data-tip="' + esc(tip) + '" tabindex="0" aria-label="' + esc(tip) + '"><span class="ax-l"><b class="num">' + a.n + '</b><span>' + esc(a.name) + '</span></span>' +
+      '<span class="ax-track"><span class="ax-span" style="left:' + X5(lo) + '%;width:' + (X5(hi) - X5(lo)) + '%"></span>' + vs.map(function (v, k) { return v == null ? '' : '<i class="ax-dot y' + k + '" style="left:' + X5(v) + '%"></i>'; }).join('') + '</span>' +
+      '<span class="ax-v"><b class="num">' + fmt(last, 2) + '</b>' + (d != null && Math.abs(d) >= .005 ? '<small class="' + (d > 0 ? 'ok' : 'bad') + '">' + (d > 0 ? '+' : '') + fmt(d, 2) + '</small>' : '<small class="muted">±0</small>') + '</span></div>';
+  }).join('') : '';
+  var cmp = '<div class="panel glass c7"><div class="eyebrow">Criteria score</div><div class="panel-head" style="margin-bottom:6px"><div><h2>เปรียบเทียบคะแนนรายประเด็น</h2><p class="sub">ประเด็นประเมินตามรายงาน TRIS · ตัวเลขขวา = ปี ' + (years[years.length - 1] || '') + ' และส่วนต่างจากปี ' + (years[0] || '') + '</p></div>' + pseg + '</div>' +
+    (base ? '<div class="lg" style="margin-bottom:4px">' + years.map(function (yy, k) { return '<span><i class="ax-key y' + k + '"></i>ปี ' + yy + '</span>'; }).join('') + '</div>' + dots +
+      '<div class="ax-axis" aria-hidden="true"><span></span><span class="ax-ticks">' + [0, 1, 2, 3, 4, 5].map(function (n) { return '<span style="left:' + n * 20 + '%">' + n + '</span>'; }).join('') + '</span><span></span></div>'
+      : '<div class="empty">' + ico('history') + (window.CBE_HISTORY_AXES ? 'ไม่มีคะแนนรายประเด็นของตัวชี้วัดนี้' : 'ยังไม่ได้นำเข้าคะแนนรายประเด็น (history-axes.js)') + '</div>') + '</div>';
+  // GAP by year and criterion
+  var yr = AX_FY.indexOf(S.yr) > -1 ? S.yr : AX_FY[AX_FY.length - 1], cur = axOf(yr, hp), gapN = cur ? cur.axes.filter(function (a) { return a.gap.length; }).length : 0;
+  var gcards = cur ? cur.axes.map(function (a) {
+    return '<article class="gx-card"><header><span class="gx-n num">' + ('0' + a.n).slice(-2) + '</span><h3>' + esc(a.name) + '</h3><span class="gx-s num" title="คะแนนปี ' + yr + '">' + fmt(a.score, 4) + '</span></header>' +
+      (a.gap.length ? '<ul>' + a.gap.map(function (g) { return '<li>' + esc(g) + '</li>'; }).join('') + '</ul>' : '<p class="small muted" style="margin:0">ไม่มีประเด็นที่ยังดำเนินการได้ไม่สมบูรณ์ในสรุปของผู้ประเมิน</p>') + '</article>';
+  }).join('') : '';
+  var rec = histOf(I.code, yr), recs = rec ? [].concat.apply([], rec.map(function (p) { return p.rec || []; })) : [];
+  var gapSec = '<div class="panel glass"><div class="eyebrow">Assessor gap</div><div class="panel-head" style="margin-bottom:10px"><div><h2>ประเด็น GAP แยกตามปีและประเด็นประเมิน</h2><p class="sub">จากสรุปประเด็นสำคัญของผู้ประเมิน · ' + (cur ? gapN + ' จาก ' + cur.axes.length + ' ประเด็นมี GAP' : '') + '</p></div>' +
+      '<div class="toolbar">' + pseg + '<div class="seg" role="group" aria-label="ปีบัญชี">' + AX_FY.map(function (yy) { return '<button data-yr="' + yy + '" aria-pressed="' + (yr === yy) + '">ปีบัญชี ' + yy + '</button>'; }).join('') + '</div></div></div>' +
+    (cur ? '<div class="gx-grid">' + gcards + '</div>' : '<div class="empty">' + ico('history') + 'ไม่มีข้อมูลผลประเมินปี ' + yr + '</div>') +
+    (recs.length ? '<details class="hlist rec" style="margin-top:14px"><summary><b>ข้อเสนอแนะภาพรวมจากผู้ประเมิน ปี ' + yr + '</b><span class="num">' + recs.length + ' ข้อ</span></summary><ol>' + recs.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ol></details>' : '') + '</div>';
+  return '<div class="hy-cards">' + cards + '</div>' +
+    '<div class="grid"><div class="panel glass c5"><div class="eyebrow">Overall trend</div><h2 style="margin-bottom:6px">แนวโน้มคะแนนภาพรวม</h2>' + chart +
+      '<p class="note-demo">' + ico('info', 14) + 'เส้นทึบ = ผลประเมินทางการ · เส้นประ/จุดกลวง = คะแนนที่รายงานและคะแนนคาดการณ์</p></div>' + cmp + '</div>' + gapSec;
 }
 
 /* ================= events ================= */
@@ -2614,6 +2685,7 @@ document.addEventListener('click', function (e) {
   if (d.sev) { S.sev = d.sev; S.fid = null; return render(); }
   if (d.act === 'keys') { S.keysHelp = !S.keysHelp; return render(); }
   if (d.hm) { S.hm = d.hm; return render(); }
+  if (d.hpart) { S.hpart = d.hpart; return render(); }
   if (d.dm) { S.dm = d.dm; return render(); }
   if (d.act === 'pedit' || d.act === 'gedit') { S[d.act] = !S[d.act]; return render(); }
   if (d.act === 'rerun') {
