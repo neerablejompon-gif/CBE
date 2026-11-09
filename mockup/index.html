@@ -1107,6 +1107,40 @@ td, th, .trow, .pl td, .doc, .lib-head { border-color: var(--hair-in) !important
 .gx-card ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 1.6; color: var(--ink-2); }
 @media (max-width: 960px) { .gx-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 640px) { .ax-row, .ax-axis { grid-template-columns: 110px minmax(0, 1fr) 56px; } }
+/* ===== score ring card: larger ring, content centred in the card ===== */
+.ring-panel { display: flex; align-items: center; justify-content: center; }
+.ring-panel .ring-card { width: 100%; max-width: 560px; gap: clamp(20px, 2.4vw, 36px); }
+.ring-panel .ring { width: clamp(176px, 15vw, 224px); height: clamp(176px, 15vw, 224px); }
+.ring-panel .ring .mid b { font-size: clamp(40px, 3.4vw, 52px); }
+.ring-panel .ring .mid div > span { font-size: 13.5px; }
+.ring-panel h2 { font-size: 18px; }
+.ring-panel .lg { flex-direction: column; align-items: flex-start; gap: 6px; }
+.ring-panel .chip { align-self: flex-start; }
+@media (max-width: 1280px) { .ring-panel .lg { flex-direction: row; } }
+@media (max-width: 960px) { .ring-panel .ring-card { text-align: center; } .ring-panel .ring-card > div:last-child { align-items: center; } .ring-panel .chip { align-self: center; } .ring-panel .lg { justify-content: center; } }
+/* ===== collapsible sidebar (desktop): icon rail ===== */
+.brand-mini { display: none; }
+.side { position: sticky; }
+.side-tog { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 36px; padding: 6px 12px; border: 0; border-radius: 10px; background: none; color: var(--rail-ink-2); cursor: pointer; font-size: 13px; }
+.side-tog:hover, .side-tog:focus-visible { background: var(--rail-hover); color: var(--rail-ink); outline: 0; }
+.side-tog svg { transform: rotate(180deg); flex: none; }
+@media (min-width: 961px) {
+  .app { transition: grid-template-columns .22s ease; }
+  .app.mini { grid-template-columns: 76px minmax(0, 1fr); }
+  .app.mini .side { padding-left: 10px; padding-right: 10px; align-items: center; }
+  .app.mini .brand { padding: 8px 0 10px; }
+  .app.mini .brand-logo, .app.mini .brand-org, .app.mini .nav-label, .app.mini .side-foot > span, .app.mini .nav > span:not(.no):not(.count), .app.mini .nav .sc { display: none; }
+  .app.mini .brand-mini { display: block; width: 40px; height: 40px; border-radius: 11px; }
+  .app.mini .side-tog { width: 48px; justify-content: center; padding: 0; margin: 0 auto; }
+  .app.mini .side-tog span { display: none; }
+  .app.mini .side-tog svg { transform: none; }
+  .app.mini .nav { width: 48px; min-height: 44px; padding: 0; justify-content: center; position: relative; margin: 2px auto; }
+  .app.mini .nav .no { min-width: 0; font-size: 13px; }
+  .app.mini .nav .count { position: absolute; top: 3px; right: 2px; margin: 0; padding: 0 5px; font-size: 10px; line-height: 15px; }
+  .app.mini .nav-label + .nav, .app.mini .side > .nav:first-of-type { margin-top: 10px; }
+  .app.mini .side-foot { border-top: 0; padding: 8px 0 4px; }
+}
+@media (max-width: 960px) { .side-tog { display: none; } }
 </style>
 </head>
 <body>
@@ -1531,7 +1565,7 @@ function runFor(I) { if (!RUNS[I.code]) RUNS[I.code] = { at: thDate(new Date()) 
 function confirmed(I) { var r = runFor(I).res; return r.findings.filter(function (f) { return TRI[f.id] === 'confirm'; }); }
 
 /* ================= session / access ================= */
-var S = { view: 'home', ind: null, tab: 'dash', sub: 0, level: 0, month: curMonth(), filter: 'all', q: '', yr: 2568, returning: false, theme: store('theme') };
+var S = { mini: !!store('mini'), view: 'home', ind: null, tab: 'dash', sub: 0, level: 0, month: curMonth(), filter: 'all', q: '', yr: 2568, returning: false, theme: store('theme') };
 INDS.patched = true;
 var U = store('user');
 if (U && U.ind && !indBy(U.ind)) U = null; // indicator codes changed between mockup versions
@@ -1551,10 +1585,10 @@ function applyTheme() {
 }
 
 /* ================= shell ================= */
-function nav(attrs, label, icon, current, extra) { return '<button class="nav" ' + attrs + (current ? ' aria-current="page"' : '') + '>' + icon + '<span>' + label + '</span>' + (extra || '') + '</button>'; }
+function nav(attrs, label, icon, current, extra) { return '<button class="nav" ' + attrs + (current ? ' aria-current="page"' : '') + (S.mini ? ' title="' + esc(String(label).replace(/<[^>]+>/g, '')) + '"' : '') + '>' + icon + '<span>' + label + '</span>' + (extra || '') + '</button>'; }
 function whoCard(cls) { return '<div class="' + cls + '"><div class="av">' + (isAudit() ? 'กป' : isExec() ? 'ผบ' : (U.part || indBy(U.ind).label).slice(0, 3)) + '</div><div><b>' + esc(userLabel()) + '</b><small>' + (isAudit() ? 'ตรวจ · ให้คะแนน · ดูแลระบบ' : isExec() ? 'ดูอย่างเดียว · ทุกตัวชี้วัด' : U.part ? 'แก้ไขเฉพาะส่วน ' + U.part + ' ของ ' + indBy(U.ind).label : 'เห็นเฉพาะตัวชี้วัดของตน') + '</small></div></div>'; }
 function sidebar() {
-  var h = '<div class="brand"><img class="brand-logo" src="assets/cbe-logo-side.png" width="640" height="208" alt="CBE Core Business Enablers"><span class="brand-org">การยางแห่งประเทศไทย</span></div>' +
+  var h = '<div class="brand"><img class="brand-logo" src="assets/cbe-logo-side.png" width="640" height="208" alt="CBE Core Business Enablers"><img class="brand-mini" src="assets/cbe-icon.png" width="40" height="40" alt="CBE"><span class="brand-org">การยางแห่งประเทศไทย</span></div>' +
     '';
   if (U.role !== 'reporter') {
     var q = INDS.filter(function (I) { return wfOf(I) === 'submitted'; }).length;
@@ -1572,7 +1606,7 @@ function sidebar() {
     }).join('');
   }
   var I0 = U.role === 'reporter' ? indBy(U.ind) : null;
-  return h + '<div class="side-foot"><span>' + ico('info', 14) + ' เกณฑ์ SE-AM ' + FY + (I0 ? ' · ' + I0.topics.length + ' หัวข้อ · ' + I0.subs.length + ' ประเด็นย่อย' : ' · 8 ตัวชี้วัด') + '</span>' + '</div>';
+  return h + '<div class="side-foot"><button class="side-tog" data-act="side-toggle" aria-expanded="' + !S.mini + '" title="' + (S.mini ? 'ขยายเมนู' : 'ย่อเมนู') + '">' + ico('chev', 16) + '<span>' + (S.mini ? 'ขยายเมนู' : 'ย่อเมนู') + '</span></button><span>' + ico('info', 14) + ' เกณฑ์ SE-AM ' + FY + (I0 ? ' · ' + I0.topics.length + ' หัวข้อ · ' + I0.subs.length + ' ประเด็นย่อย' : ' · 8 ตัวชี้วัด') + '</span>' + '</div>';
 }
 // Header account menu: who is signed in + account actions (room for profile / user settings later)
 function userMenu() {
@@ -1598,7 +1632,7 @@ function render() {
   else if (S.view === 'ind') { body = vInd(I); crumb = esc(I.name); badge = I.no; eye += ' · ตัวชี้วัด ' + I.no + ' ' + esc(I.code); }
   else if (S.view === 'config' && !isAudit()) { body = v403(); crumb = 'ไม่มีสิทธิ์'; badge = ico('lock', 18); }
   else { body = { home: vOrg, review: vReview, users: vUsers, log: vLog, config: vConfig }[S.view](); crumb = { home: 'ภาพรวมองค์กร', review: 'พื้นที่ผู้ตรวจสอบ', users: 'ผู้ใช้และสิทธิ์', log: 'Audit trail', config: 'Config การกรอกแผน' }[S.view]; badge = ico({ home: 'grid', review: 'shield', users: 'users', log: 'history', config: 'sliders' }[S.view], 18); }
-  $('#root').innerHTML = '<div class="app"><aside class="side" aria-label="เมนูหลัก">' + sidebar() + '</aside><div class="scrim" data-act="close-nav"></div>' +
+  $('#root').innerHTML = '<div class="app' + (S.mini ? ' mini' : '') + '"><aside class="side" aria-label="เมนูหลัก">' + sidebar() + '</aside><div class="scrim" data-act="close-nav"></div>' +
     '<div class="main"><header class="top"><button class="icon-btn menu-btn" data-act="open-nav" aria-label="เปิดเมนู">' + ico('menu') + '</button><div class="tb-title glass"><span class="tb-badge num">' + badge + '</span><div class="tb-txt"><span class="tb-eye">' + eye + '</span><p class="tb-h">' + crumb + '</p></div></div><div class="spacer"></div><div class="tb-ctrl glass">' +
     (U.role === 'reporter' ? '<span class="saved" id="saved" role="status">' + ico('check', 15) + '<span>' + (S.savedAt ? 'บันทึกแล้ว ' + S.savedAt : 'บันทึกอัตโนมัติ') + '</span></span><i class="tb-sep"></i>' : '') +
     '<label class="sr" for="fyear">ปีบัญชี</label><select id="fyear">' + [CUR_FY, CLOSED_FY].map(function (y) { return '<option value="' + y + '"' + (y === FY ? ' selected' : '') + '>ปีบัญชี ' + y + (y === CUR_FY ? '' : ' (ปิดรอบ)') + '</option>'; }).join('') + '</select>' +
@@ -1937,7 +1971,7 @@ function scoreRing(I, c) {
   var t = I.target, ang = t != null ? t / 5 * 2 * Math.PI : 0, R = 70, r2 = 52;
   var tick = t != null ? '<line x1="' + (84 + (R - 10) * Math.cos(ang)) + '" y1="' + (84 + (R - 10) * Math.sin(ang)) + '" x2="' + (84 + (R + 10) * Math.cos(ang)) + '" y2="' + (84 + (R + 10) * Math.sin(ang)) + '" stroke="var(--ink)" stroke-width="2.5" stroke-linecap="round"/>' : '';
   var gap = t == null ? '' : c.score >= t ? '<span class="chip ok">' + ico('check') + 'ถึงเป้าหมายแล้ว</span>' : '<span class="chip warn">' + ico('target') + 'ห่างเป้า ' + fmt(t - c.score) + ' คะแนน</span>';
-  return '<div class="panel glass c5 rise" style="--i:0"><div class="ring-card"><div class="ring" role="img" aria-label="คะแนนเป้าหมายสิ้นปี ' + fmt(c.score) + ' หลักฐานรองรับ ' + fmt(c.sys) + ' เป้าหมาย ' + fmt(t) + ' จาก 5"><svg width="168" height="168" viewBox="0 0 168 168">' +
+  return '<div class="panel glass c5 rise ring-panel" style="--i:0"><div class="ring-card"><div class="ring" role="img" aria-label="คะแนนเป้าหมายสิ้นปี ' + fmt(c.score) + ' หลักฐานรองรับ ' + fmt(c.sys) + ' เป้าหมาย ' + fmt(t) + ' จาก 5"><svg viewBox="0 0 168 168" width="100%" height="100%">' +
       '<circle cx="84" cy="84" r="' + R + '" fill="none" stroke="var(--mute-bg)" stroke-width="13"/><circle cx="84" cy="84" r="' + r2 + '" fill="none" stroke="var(--mute-bg)" stroke-width="8"/>' +
       '<circle class="arc" data-kind="ring" data-k="ring:main" data-v="' + (c.score / 5 * 100).toFixed(2) + '" cx="84" cy="84" r="' + R + '" fill="none" stroke="var(--primary)" stroke-width="13" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>' +
       '<circle class="arc" data-kind="ring" data-k="ring:sys" data-v="' + (c.sys / 5 * 100).toFixed(2) + '" cx="84" cy="84" r="' + r2 + '" fill="none" stroke="color-mix(in srgb, var(--primary) 35%, transparent)" stroke-width="8" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>' + tick +
@@ -2672,7 +2706,7 @@ document.addEventListener('click', function (e) {
   }
   var b = e.target.closest('button, tr.link, .scrim, .dw-scrim'); if (!b || b.disabled) return;
   var d = b.dataset;
-  if (d.login) { var p = d.login.split(':'); U = { role: p[0], ind: p[1] || null, part: p[2] || null }; store('user', U); S = { view: 'home', ind: U.ind, tab: 'dash', sub: 0, level: 0, month: 11, filter: 'all', q: '', yr: 2568, theme: S.theme }; logIt('เข้าสู่ระบบ'); render(); return; }
+  if (d.login) { var p = d.login.split(':'); U = { role: p[0], ind: p[1] || null, part: p[2] || null }; store('user', U); S = { view: 'home', ind: U.ind, tab: 'dash', sub: 0, level: 0, month: 11, filter: 'all', q: '', yr: 2568, theme: S.theme, mini: S.mini }; logIt('เข้าสู่ระบบ'); render(); return; }
   if (d.act === 'pwtoggle') {
     var pw = $('#pw'), show = pw.type === 'password';
     pw.type = show ? 'text' : 'password'; b.setAttribute('aria-pressed', show); b.setAttribute('aria-label', show ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'); pw.focus();
@@ -2699,6 +2733,7 @@ document.addEventListener('click', function (e) {
   if (d.hm) { S.hm = d.hm; return render(); }
   if (d.hpart) { S.hpart = d.hpart; return render(); }
   if (d.dm) { S.dm = d.dm; return render(); }
+  if (d.act === 'side-toggle') { S.mini = !S.mini; store('mini', S.mini); return render(); }
   if (d.act === 'pedit' || d.act === 'gedit') { S[d.act] = !S[d.act]; return render(); }
   if (d.act === 'rerun') {
     var code = S.rv; delete RUNS[code];
