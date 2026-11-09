@@ -33,7 +33,7 @@ export default {
       if (path === `/data-${fy}.js`) {
         try { return js(await boot(req, env, fy)); } catch (e) { if (!e.status) throw e; return js('window.CBE_API=' + JSON.stringify(e.status === 401 ? { login: true, error: '' } : { error: e.message }) + ';'); }
       }
-      if (path === '/data.js') { try { return js(await archive(req, env)); } catch (e) { if (e.status !== 401) throw e; return js(''); } }
+      if (path === '/data.js' || path === '/history.js') { try { return js(await archive(req, env, path === '/data.js' ? 'ARCHIVE' : 'HISTORY')); } catch (e) { if (e.status !== 401) throw e; return js(''); } }
       if (path === '/api/login' && req.method === 'POST') return await login(req, env);
       if (path === '/api/logout' && req.method === 'POST') return json({ ok: true }, 200, { 'set-cookie': SESSION + '=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0' });
       if (path === '/api/save' && req.method === 'POST') return json(await save(req, env, fy));
@@ -272,10 +272,11 @@ async function boot(req, env, fy) {
   return `window.CBE_FORMS_${fy}=${JSON.stringify(data, hideRows)};\nwindow.CBE_API=${JSON.stringify(api)};`;
 }
 // FY2569 (closed year) and the indicator seed: the data.js built by tools/forms-to-json.ps1, kept as a Drive file
-async function archive(req, env) {
+// history.js (past TRIS assessment results, row code HISTORY in the forms tab) is served the same way
+async function archive(req, env, code = 'ARCHIVE') {
   await me(req, env);
-  const f = (await system(env)).forms.find(x => x.code === 'ARCHIVE');
-  return f ? cached('archive:' + f.id, 3600e3, async () => (await g(env, `${DRIVE}${f.id}?alt=media&supportsAllDrives=true`)).text()) : '';
+  const f = (await system(env)).forms.find(x => x.code === code);
+  return f ? cached(code + ':' + f.id, 3600e3, async () => (await g(env, `${DRIVE}${f.id}?alt=media&supportsAllDrives=true`)).text()) : '';
 }
 
 const own = (u, key) => { const [ind, part] = key.split('|'); return u.role === 'reporter' && ind === u.ind && (!u.part || part === u.part); };
