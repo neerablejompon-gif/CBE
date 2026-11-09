@@ -1201,6 +1201,23 @@ td, th, .trow, .pl td, .doc, .lib-head { border-color: var(--hair-in) !important
 .ev-empty > svg { color: var(--primary); opacity: .7; } .ev-empty b { color: var(--ink); font-size: 15px; } .ev-empty span { max-width: 46ch; font-size: 13px; }
 .ev-foot { display: flex; align-items: center; gap: 10px; justify-content: space-between; padding-top: 4px; border-top: 1px solid var(--hair-in); }
 .ev-foot .small { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* ===== sign-in v4: logo + system name in the card; hero = pill, headline, sub, illustration ===== */
+.lg-card-logo { display: block !important; width: min(250px, 78%); height: auto; margin: -4px auto 0; filter: drop-shadow(0 12px 30px rgba(40,110,255,.55)); }
+.lg-brand { text-align: center; margin-top: -10px; }
+.lg-brand .lg-sys { margin: 0; font: 800 16px var(--num); letter-spacing: .05em; color: #A8CBFF; }
+.lg-brand p { margin: 0; font-size: 13.5px; color: var(--lg-ink2); }
+.lg-card .lg-head { margin-top: 6px; } .lg-card .lg-head h2 { font-size: 27px; }
+.lg-pill { align-self: flex-start; display: inline-flex; align-items: center; gap: 9px; padding: 7px 16px 7px 13px; border-radius: 999px; font-size: 13px; font-weight: 500; color: #CFE0FF; background: rgba(255,255,255,.06); border: 1px solid rgba(140,180,255,.28); }
+.lg-pill i { width: 7px; height: 7px; border-radius: 50%; background: #7FB0FF; box-shadow: 0 0 0 4px rgba(127,176,255,.18); }
+.lg-hero h1 { font-size: clamp(30px, 3.1vw, 48px); line-height: 1.25; letter-spacing: -.01em; }
+.lg-hero h1 em { white-space: normal; background: linear-gradient(90deg, #6FA8FF, #5FD3FF); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lg-sub { margin: 0; font-size: 14.5px; color: var(--lg-ink2); line-height: 1.6; }
+.lg-sub b { display: block; font: 800 15px var(--num); letter-spacing: .03em; color: #8FC0FF; }
+@media (min-width: 901px) {
+  .lg-hero { gap: 16px; }
+  .lg-shell { gap: clamp(40px, 6vw, 110px); }
+}
+@media (max-width: 900px) { .lg-card-logo { width: 200px; } }
 </style>
 </head>
 <body>
@@ -1843,10 +1860,11 @@ function vConfig() {
 
 function vLogin() {
   return '<main class="signin"><div class="lg-bg" aria-hidden="true"><i class="o1"></i><i class="o2"></i><i class="o3"></i><b></b></div><div class="lg-shell">' +
-    '<section class="lg-hero" aria-label="เกี่ยวกับระบบ"><img class="lg-logo" src="assets/cbe-logo.png" width="880" height="332" alt="CBE Core Business Enablers">' +
-      '<h1>รายงานผล <em>Core Business Enablers</em><br>ครบ 8 ตัวชี้วัด ในที่เดียว</h1>' + heroArt() + '</section>' +
+    '<section class="lg-hero" aria-label="เกี่ยวกับระบบ"><span class="lg-pill"><i></i>กองประเมินผล · การยางแห่งประเทศไทย</span>' +
+      '<h1>รายงานผล<br>Core Business Enablers<br><em>ครบ 8 ตัวชี้วัด ในที่เดียว</em></h1>' +
+      '<p class="lg-sub">กรอกแผน รายงานผล แนบหลักฐาน และติดตามคะแนนตามเกณฑ์ SE-AM</p>' + heroArt() + '</section>' +
     '<form class="lg-card" id="loginForm" novalidate><img class="lg-card-logo" src="assets/cbe-logo.png" width="880" height="332" alt="CBE Core Business Enablers">' +
-      '<div class="lg-head"><h2>เข้าสู่ระบบ</h2><p class="lg-sys">CBE Reporting System</p><p>ระบบรายงานผล Core Business Enablers</p></div>' +
+      '<div class="lg-brand"><p class="lg-sys">CBE Reporting System</p><p>ระบบรายงานผล Core Business Enablers</p></div><div class="lg-head"><h2>เข้าสู่ระบบ</h2></div>' +
       '<div><label class="lg-label" for="em">รหัสพนักงาน</label><div class="lg-input">' + ico('users', 19) + '<input id="em" inputmode="numeric" maxlength="4" autocomplete="username" placeholder="รหัส 4 หลัก" autofocus></div></div>' +
       '<div><label class="lg-label" for="pw">รหัสผ่าน</label><div class="lg-input">' + ico('lock', 19) + '<input id="pw" type="password" autocomplete="current-password" placeholder="••••••••">' +
         '<button type="button" class="lg-eye" data-act="pwtoggle" aria-label="แสดงรหัสผ่าน" aria-pressed="false">' + ico('eye', 19) + '</button></div></div>' +
