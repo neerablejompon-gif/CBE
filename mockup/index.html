@@ -1178,6 +1178,29 @@ td, th, .trow, .pl td, .doc, .lib-head { border-color: var(--hair-in) !important
 @keyframes mbpop { 0% { transform: scale(.7) translateY(3px); } 60% { transform: scale(1.18) translateY(-2px); } 100% { transform: none; } }
 @keyframes msup { from { transform: translateY(100%); } }
 @media (prefers-reduced-motion: reduce) { .mb-pill, .mb-it svg { transition: none !important; animation: none !important; } }
+/* ===== evidence register: clickable rows + preview drawer ===== */
+.doc-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 0; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; font: inherit; }
+.doc-main > svg { flex: none; color: var(--ink-3); opacity: 0; transition: opacity .15s; }
+.doc:hover, .doc.sel { background: var(--primary-soft); }
+.doc:hover .doc-main > svg, .doc.sel .doc-main > svg, .doc-main:focus-visible > svg { opacity: 1; color: var(--primary); }
+.doc-main:focus-visible { outline: 2px solid var(--primary); outline-offset: 4px; border-radius: 8px; }
+.doc-tx { min-width: 0; flex: 1; }
+.ev-drawer { width: min(760px, 100vw); }
+.ev-drawer .pe-panel { display: flex; flex-direction: column; gap: 12px; }
+.ev-nav { display: inline-flex; align-items: center; gap: 4px; }
+.ev-nav .icon-btn:first-child svg { transform: rotate(180deg); }
+.ev-nav .icon-btn:disabled { opacity: .35; cursor: default; }
+.ev-files { display: flex; flex-wrap: wrap; } .ev-files button { display: inline-flex; align-items: center; gap: 6px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13.5px; }
+.ev-meta b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%; }
+.ev-meta .btn { margin-left: auto; }
+.ev-frame { flex: 1; min-height: 60vh; width: 100%; border: 1px solid var(--hair-in); border-radius: var(--r-md); background: #fff; }
+.ev-img { flex: 1; min-height: 40vh; display: grid; place-items: center; padding: 12px; border: 1px solid var(--hair-in); border-radius: var(--r-md); background: repeating-conic-gradient(var(--field) 0% 25%, transparent 0% 50%) 50% / 18px 18px; }
+.ev-img img { max-width: 100%; max-height: 70vh; border-radius: 8px; box-shadow: var(--float); }
+.ev-empty { flex: 1; min-height: 40vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; padding: 24px; border: 1.5px dashed var(--hair-in); border-radius: var(--r-md); color: var(--ink-3); }
+.ev-empty > svg { color: var(--primary); opacity: .7; } .ev-empty b { color: var(--ink); font-size: 15px; } .ev-empty span { max-width: 46ch; font-size: 13px; }
+.ev-foot { display: flex; align-items: center; gap: 10px; justify-content: space-between; padding-top: 4px; border-top: 1px solid var(--hair-in); }
+.ev-foot .small { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -1711,12 +1734,12 @@ function render() {
         : MONTHS.map(function (mm, i) { return '<option value="' + i + '"' + (i === S.month ? ' selected' : '') + '>' + mm + '</option>'; }).join('')) + '</select></label>' +
     '<i class="tb-sep"></i><button class="icon-btn" data-act="theme" aria-label="สลับเป็นธีม' + (dark ? 'สว่าง' : 'มืด') + '">' + ico(dark ? 'sun' : 'moon') + '</button></div>' + userMenu() + '</header>' +
     (FY !== CUR_FY ? '<div class="yearbar" role="status">' + ico('lock', 16) + '<span><b>ปีบัญชี ' + FY + ' · ปิดรอบแล้ว</b> ดูได้อย่างเดียว ข้อมูลผลการดำเนินงานตามแบบฟอร์มเดิม</span><button class="btn sm" data-act="back-current">กลับไปปีบัญชี ' + CUR_FY + '</button></div>' : '') +
-    '<main id="view">' + body + '</main></div></div>' + mobileBar() + planDrawer();
+    '<main id="view">' + body + '</main></div></div>' + mobileBar() + planDrawer() + evDrawer();
   var pill = document.querySelector('.mb-pill'); if (pill && pill.dataset.to !== String(pill.style.getPropertyValue('--x'))) requestAnimationFrame(function () { requestAnimationFrame(function () { pill.style.setProperty('--x', pill.dataset.to); }); });
   S.mbPrev = null;
   animateDv();
   var dwn = document.querySelector('.drawer .pe-panel'); if (dwn && !S.plEnter) dwn.scrollTop = dwTop;
-  S.plEnter = false;
+  S.plEnter = false; S.evEnter = false;
 }
 function v403() { return '<section class="view"><div class="panel glass empty">' + ico('lock') + '<h2>ไม่มีสิทธิ์เข้าถึงตัวชี้วัดนี้</h2><p>บัญชีของคุณเห็นได้เฉพาะตัวชี้วัดที่รับผิดชอบ</p></div></section>'; }
 
@@ -2384,6 +2407,28 @@ function asOf() { return gran() === 'q' ? 'ไตรมาส ' + (Math.floor(S.
 function gapBox(L) { return L.gap ? '<div class="assessor sepo" style="margin:0 0 4px"><b>' + ico('alert', 16) + 'ข้อเสนอแนะ สคร. ประจำปีบัญชี ' + (FY - 2) + '</b>' + esc(L.gap) + '</div>' : '<p class="sub" style="margin:0 0 4px">ระดับนี้ไม่มีข้อเสนอแนะ สคร. ประจำปีบัญชี ' + (FY - 2) + '</p>'; }
 // The level being edited: the plan editor on the plan/GAP pages, otherwise the level open on the report page
 function lvCtx() { return (S.tab === 'plan' || S.tab === 'gap') && S.pl ? lvOf(S.pl.uid, S.pl.lv) : curLv(); }
+// Evidence preview drawer: one Minimum Requirement item, its attached files, an inline preview for PDF/images
+function evList(I) { var o = []; I.subs.forEach(function (s) { s.levels.forEach(function (L) { L.mr.forEach(function (r, i) { if (reqDocs(L).indexOf(r) > -1 || (r.files || []).length) o.push(s.uid + '|' + L.level + '|' + i); }); }); }); return o; }
+function evDrawer() {
+  if (S.view !== 'ind' || S.tab !== 'evidence' || !S.ev) return '';
+  var k = S.ev, cut = k.lastIndexOf('|'), c = lvOf(k.slice(0, k.lastIndexOf('|', cut - 1)), k.slice(k.lastIndexOf('|', cut - 1) + 1, cut)), mi = +k.slice(cut + 1);
+  var r = c && c.L && c.L.mr[mi]; if (!r) return '';
+  var list = evList(c.I), at = list.indexOf(k), files = r.files || [], fi = Math.min(S.evf || 0, Math.max(0, files.length - 1)), f = files[fi];
+  var url = f && (FILE_URLS[lvKey(c.s, c.L) + '|' + mi + '|' + f.name] || f.url), ext = f ? (f.name.split('.').pop() || '').toLowerCase() : '';
+  var view;
+  if (!f) view = '<div class="ev-empty">' + ico('clip', 28) + '<b>ยังไม่มีไฟล์แนบ</b><span>' + (r.evidence ? 'ระบุชื่อหลักฐานไว้: ' + esc(r.evidence) : 'ยังไม่ระบุชื่อหลักฐาน') + '</span>' + (canEdit(c.I, c.s) ? '<button class="btn sm primary" data-open="' + c.s.uid + '|' + c.L.level + '">' + ico('clip', 15) + 'แนบไฟล์ในหน้ารายงานผล</button>' : '') + '</div>';
+  else if (!url) view = '<div class="ev-empty">' + ico('file', 28) + '<b>' + esc(f.name) + '</b><span>' + (API ? 'ไฟล์ยังอัปโหลดไม่เสร็จ' : 'Mockup: เปิดตัวอย่างได้เฉพาะไฟล์ที่แนบในเบราว์เซอร์นี้ ระบบจริงเปิดจาก Google Drive') + '</span></div>';
+  else if (ext === 'pdf') view = '<iframe class="ev-frame" src="' + esc(url) + '#view=FitH" title="' + esc(f.name) + '"></iframe>';
+  else if (/^(png|jpe?g)$/.test(ext)) view = '<div class="ev-img"><img src="' + esc(url) + '" alt="' + esc(f.name) + '"></div>';
+  else view = '<div class="ev-empty">' + ico('file', 28) + '<b>' + esc(f.name) + '</b><span>ไฟล์ ' + ext.toUpperCase() + ' แสดงตัวอย่างในระบบไม่ได้ · ดาวน์โหลดเพื่อเปิดด้วยโปรแกรม</span><a class="btn sm primary" href="' + esc(url) + '" download="' + esc(f.name) + '">' + ico('save', 15) + 'ดาวน์โหลด</a></div>';
+  var nav = '<div class="ev-nav"><button class="icon-btn" data-ev="' + esc(list[at - 1] || '') + '"' + (at > 0 ? '' : ' disabled') + ' aria-label="หลักฐานก่อนหน้า">' + ico('chev', 16) + '</button><span class="small muted num">' + (at + 1) + ' / ' + list.length + '</span><button class="icon-btn" data-ev="' + esc(list[at + 1] || '') + '"' + (at < list.length - 1 ? '' : ' disabled') + ' aria-label="หลักฐานถัดไป">' + ico('chev', 16) + '</button></div>';
+  return '<div class="dw-scrim" data-act="ev-close" aria-hidden="true"></div><aside class="drawer ev-drawer' + (S.evEnter ? ' enter' : '') + '" role="dialog" aria-modal="true" aria-label="ตัวอย่างหลักฐาน"><div class="panel glass pe-panel" tabindex="-1">' +
+    '<div class="panel-head"><div style="min-width:0"><div class="pe-eye"><span class="code">' + esc(c.s.label) + '</span><b>ระดับ ' + c.L.level + '</b>' + (r.has ? '<span class="chip ok">' + ico('check') + 'มีแล้ว</span>' : '<span class="chip warn">ยังไม่มี</span>') + '</div><h2 style="margin:6px 0 0;font-size:15.5px;line-height:1.45">' + esc(r.req) + '</h2></div>' +
+      '<div class="toolbar">' + nav + '<button class="icon-btn" data-act="ev-close" aria-label="ปิดตัวอย่าง">' + ico('x') + '</button></div></div>' +
+    (files.length > 1 ? '<div class="seg ev-files" role="group" aria-label="ไฟล์แนบ">' + files.map(function (x, j) { return '<button data-evf="' + j + '" aria-pressed="' + (j === fi) + '">' + ico('file', 14) + esc(x.name) + '</button>'; }).join('') + '</div>' : '') +
+    (f ? '<div class="ev-meta">' + ico('file', 15) + '<b>' + esc(f.name) + '</b><span class="muted">' + (f.size ? fsize(f.size) : '') + '</span>' + (url ? '<a class="btn sm" href="' + esc(url) + '" target="_blank" rel="noopener">' + ico('eye', 15) + 'เปิดแท็บใหม่</a>' : '') + '</div>' : '') +
+    view + '<div class="ev-foot"><span class="small muted">' + esc(c.s.name) + '</span><button class="btn sm" data-open="' + c.s.uid + '|' + c.L.level + '">' + ico('report', 15) + 'ไปหน้ารายงานผล</button></div></div></aside>';
+}
 function planDrawer() {
   if (S.view !== 'ind' || (S.tab !== 'plan' && S.tab !== 'gap') || !S.pl) return '';
   var inner = planEditor(indBy(S.ind), S.tab === 'gap' ? 'gs' : 'st');
@@ -2645,7 +2690,7 @@ function vEvidence(I, c) {
     var docs = L.mr.filter(function (r) { if (reqDocs(L).indexOf(r) < 0 && !(r.files || []).length) return false; if (S.filter === 'has' && !r.has) return false; if (S.filter === 'missing' && r.has) return false; return !q || (r.req + ' ' + r.evidence + ' ' + s.name).toLowerCase().indexOf(q) > -1; });
     if (!docs.length) return;
     out += '<div class="lib-head"><span class="code">' + esc(s.label) + '</span><b>ระดับ ' + L.level + '</b><span class="small muted">' + esc(s.name) + '</span><span class="path">3.' + I.no + ' ' + I.code + ' / ' + esc(s.code) + ' / เอกสารแนบค่าเกณฑ์ระดับ ' + L.level + '</span></div>' +
-      docs.map(function (r) { return '<div class="doc"><span class="fi chip ' + (r.has ? 'ok' : 'mute') + '">' + ico(r.has ? 'file' : 'clock') + '</span><div style="min-width:0"><p>' + esc(r.req.slice(0, 200)) + '</p><span class="small">' + (r.evidence ? esc(r.evidence.slice(0, 200)) : 'ยังไม่ระบุชื่อหลักฐาน') + '</span>' + ((r.files || []).length ? '<span class="small info" style="display:block">' + ico('clip', 13) + ' แนบแล้ว ' + r.files.length + ' ไฟล์: ' + r.files.map(function (f) { return esc(f.name); }).join(', ') + '</span>' : '') + '</div>' + (r.has ? '<span class="chip ok">' + ico('check') + 'มีแล้ว</span>' : '<span class="chip warn">ยังไม่มี</span>') + '<button class="btn sm" data-open="' + s.uid + '|' + L.level + '" aria-label="เปิด">' + ico('chev', 16) + '</button></div>'; }).join('');
+      docs.map(function (r) { var ek = s.uid + '|' + L.level + '|' + L.mr.indexOf(r), sel = S.ev === ek; return '<div class="doc' + (sel ? ' sel' : '') + '"><button class="doc-main" data-ev="' + esc(ek) + '" aria-label="ดูตัวอย่างหลักฐาน"><span class="fi chip ' + (r.has ? 'ok' : 'mute') + '">' + ico(r.has ? 'file' : 'clock') + '</span><span class="doc-tx"><p>' + esc(r.req.slice(0, 200)) + '</p><span class="small" style="display:block">' + (r.evidence ? esc(r.evidence.slice(0, 200)) : 'ยังไม่ระบุชื่อหลักฐาน') + '</span>' + ((r.files || []).length ? '<span class="small info" style="display:block">' + ico('clip', 13) + ' แนบแล้ว ' + r.files.length + ' ไฟล์: ' + r.files.map(function (f) { return esc(f.name); }).join(', ') + '</span>' : '') + '</span>' + ico('eye', 16) + '</button>' + (r.has ? '<span class="chip ok">' + ico('check') + 'มีแล้ว</span>' : '<span class="chip warn">ยังไม่มี</span>') + '<button class="btn sm" data-open="' + s.uid + '|' + L.level + '" aria-label="เปิด">' + ico('chev', 16) + '</button></div>'; }).join('');
   }); });
   return '<div class="kpis" style="grid-template-columns:repeat(3,minmax(0,1fr))">' + kpi('เอกสารที่มีแล้ว', 'file', c.has, '/ ' + c.need, 'Minimum Requirement ตามที่ สคร. กำหนด', c.evid, 'ok') + kpi('ยังขาด', 'alert', c.need - c.has, 'เอกสาร', 'ติ๊ก ✓ ในหน้ารายงานเมื่อได้เอกสาร') + kpi('ประเด็นที่ติด Quality Gate', 'shield', c.issues.length, 'รายการ', 'ระดับที่อ้างคะแนนแต่ข้อมูลไม่ครบ') + '</div>' +
     '<div class="panel glass"><div class="toolbar" style="margin-bottom:10px"><label class="search">' + ico('search') + '<span class="sr">ค้นหา</span><input class="input" id="q" type="search" placeholder="ค้นหาเอกสารหรือประเด็น" value="' + esc(S.q) + '"></label><div class="seg" role="group" aria-label="กรอง">' + f('all', 'ทั้งหมด') + f('has', 'มีแล้ว') + f('missing', 'ยังไม่มี') + '</div></div>' +
@@ -2729,7 +2774,7 @@ function vHistory(I, c) {
 var tt;
 function toast(msg, icon) { var t = $('#toast'); t.innerHTML = ico(icon || 'check') + esc(msg); t.classList.add('show'); clearTimeout(tt); tt = setTimeout(function () { t.classList.remove('show'); }, 2400); }
 function curLv() { var I = indBy(S.ind), s = curSub(I); return { I: I, s: s, L: s.levels[Math.min(S.level, s.levels.length - 1)] }; }
-function openInd(code, tab) { S.view = 'ind'; S.ind = code; S.tab = tab || 'dash'; S.sub = 0; S.level = 0; S.filter = 'all'; S.returning = false; document.body.classList.remove('nav-open'); render(); window.scrollTo(0, 0); }
+function openInd(code, tab) { S.ev = null; S.view = 'ind'; S.ind = code; S.tab = tab || 'dash'; S.sub = 0; S.level = 0; S.filter = 'all'; S.returning = false; document.body.classList.remove('nav-open'); render(); window.scrollTo(0, 0); }
 // Next: step → level → next unfinished sub-issue (all subs for read-only roles); Back mirrors it within the sub-issue
 function stepNav(dir) {
   var I = indBy(S.ind), s = curSub(I), li = Math.min(S.level, s.levels.length - 1);
@@ -2778,6 +2823,9 @@ document.addEventListener('click', function (e) {
   var b = e.target.closest('button, tr.link, .scrim, .dw-scrim, .ms-scrim'); if (!b || b.disabled) return;
   var d = b.dataset;
   if (d.mbi != null) { var pl = document.querySelector('.mb-pill'); S.mbPrev = pl ? +pl.dataset.to : null; }
+  if (d.ev != null) { var wasEv = S.ev; S.ev = d.ev || null; S.evf = 0; S.evEnter = !!S.ev && !wasEv; render(); var ep = document.querySelector('.ev-drawer .pe-panel'); if (ep) ep.focus({ preventScroll: true }); return; }
+  if (d.evf != null) { S.evf = +d.evf; return render(); }
+  if (d.act === 'ev-close') { var back = S.ev; S.ev = null; render(); var rb = back && document.querySelector('[data-ev="' + back + '"]'); if (rb) rb.focus(); return; }
   if (d.act === 'mb-sheet') { S.sheet = S.sheet === d.sheet ? null : d.sheet; return render(); }
   if (d.act === 'mb-close') { S.sheet = null; return render(); }
   if (S.sheet && (d.tab || d.go || d.ind || d.act === 'logout')) S.sheet = null;
@@ -2979,6 +3027,7 @@ document.addEventListener('change', function (e) {
   if (d.f || d.ev != null) logIt('แก้ไข ' + curLv().s.label + ' ระดับ ' + curLv().L.level);
 });
 document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && S.ev && document.querySelector('.ev-drawer')) { S.ev = null; render(); return; }
   if (e.key === 'Escape' && S.sheet) { S.sheet = null; render(); return; }
   if (e.key === 'Escape' && S.pl && document.querySelector('.drawer')) { S.pl = null; S.delStep = null; render(); return; }
   if (e.key === 'Escape' && document.querySelector('.umenu.open')) { closeUmenu(); var ub = document.querySelector('.ubtn'); if (ub) ub.focus(); return; }
