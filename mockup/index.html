@@ -1029,6 +1029,42 @@ td, th, .trow, .pl td, .doc, .lib-head { border-color: var(--hair-in) !important
 @keyframes dwin { from { transform: translateX(100%); } }
 @keyframes dwfade { from { opacity: 0; } }
 @media (max-width: 640px) { .drawer { width: 100vw; } .drawer .pe-panel { padding: 16px 16px 24px; } .drawer .pe-panel > .panel-head { margin: -16px -16px 12px; padding: 14px 16px 10px; } }
+/* ===== indicator overview: sub-page switch, GAP progress, target vs evidence, level-map views ===== */
+.ov-seg button { display: inline-flex; align-items: center; gap: 6px; }
+.dv-sec { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin: 8px 2px -4px; }
+.dv-sec h2 { margin: 0; }
+.gp-kpi { display: flex; gap: 22px; margin: 2px 0 10px; }
+.gp-kpi div { display: flex; flex-direction: column; } .gp-kpi b { font: 800 22px/1.2 var(--num); } .gp-kpi b small { font-size: 13px; color: var(--ink-3); } .gp-kpi > div > small { font-size: 12px; color: var(--ink-3); }
+.gp-row { display: grid; grid-template-columns: 92px minmax(0, 1fr) auto; gap: 10px; align-items: center; width: 100%; padding: 7px 4px; border: 0; border-top: 1px solid var(--hair-in); background: none; cursor: pointer; text-align: left; font-size: 13px; color: var(--ink-2); border-radius: 8px; }
+.gp-row:hover, .db-row:hover { background: var(--primary-soft); }
+.gp-row .gp-l b { color: var(--ink); }
+.gp-track { position: relative; height: 10px; border-radius: 99px; background: var(--mute-bg); }
+.gp-fill { position: absolute; inset: 0 auto 0 0; border-radius: 99px; background: var(--primary); }
+.gp-fill.ok { background: var(--ok); } .gp-fill.bad { background: var(--bad); }
+.gp-track i { position: absolute; top: -4px; bottom: -4px; width: 2px; border-radius: 2px; background: var(--ink); }
+.db-wrap { --db-l: 190px; --db-r: 96px; position: relative; }
+.db-target { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px dashed var(--ink); opacity: .55; pointer-events: none; z-index: 1; }
+.db-row { display: grid; grid-template-columns: var(--db-l) minmax(0, 1fr) var(--db-r); gap: 0; align-items: center; width: 100%; min-height: 38px; padding: 4px 0; border: 0; border-top: 1px solid var(--hair-in); background: none; cursor: pointer; text-align: left; border-radius: 8px; }
+.db-l { display: flex; gap: 8px; min-width: 0; padding-right: 12px; font-size: 13px; color: var(--ink-2); }
+.db-l b { font: 700 12.5px var(--num); color: var(--primary); flex: none; } .db-l span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.db-track { position: relative; height: 22px; margin: 0 8px; background: linear-gradient(to right, transparent calc(20% - .5px), var(--hair-in) calc(20% - .5px), var(--hair-in) calc(20% + .5px), transparent calc(20% + .5px)) 0 0 / 20% 100% repeat-x; }
+.db-bar { position: absolute; top: 9px; height: 4px; border-radius: 4px; background: var(--mute); }
+.db-bar.bad { background: var(--bad); } .db-bar.warn { background: var(--warn); }
+.db-dot { position: absolute; top: 4px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; }
+.db-dot.tg { background: var(--primary); box-shadow: 0 0 0 2px var(--glass-solid); }
+.db-dot.sys { background: var(--glass-solid); border: 2.5px solid var(--primary); }
+.db-dot.tg.same { width: 8px; height: 8px; margin-left: -4px; top: 7px; }
+.db-v { display: flex; flex-direction: column; align-items: flex-start; padding-left: 6px; font: 700 13px var(--num); line-height: 1.2; }
+.db-v small { font: 500 11px var(--font); color: var(--ink-3); }
+.db-key { display: inline-block; width: 12px; height: 12px; border-radius: 50%; }
+.db-key.tg { background: var(--primary); } .db-key.sys { border: 2.5px solid var(--primary); } .db-key.bar { width: 18px; height: 4px; border-radius: 4px; background: var(--bad); }
+.db-axis { display: grid; grid-template-columns: 190px minmax(0, 1fr) 96px; margin-top: 4px; }
+.db-ticks { position: relative; height: 16px; margin: 0 8px; font: 600 11px var(--num); color: var(--ink-3); }
+.db-ticks span { position: absolute; transform: translateX(-50%); }
+.hc.warn { background: var(--warn-bg); color: var(--warn); }
+.hc.none { background: transparent; border: 1px dashed var(--hair-in); cursor: default; }
+.hc .num { font-size: 11.5px; font-weight: 700; }
+@media (max-width: 640px) { .db-wrap { --db-l: 96px; --db-r: 64px; } .db-axis { grid-template-columns: 96px minmax(0, 1fr) 64px; } .db-l span { display: none; } .gp-row { grid-template-columns: 80px minmax(0, 1fr); } .gp-row .chip { grid-column: 2; justify-self: start; } }
 </style>
 </head>
 <body>
@@ -1489,7 +1525,7 @@ function sidebar() {
     var I = indBy(U.ind);
     var todo = myWork(I, S.month).todo;
     h += '<div class="nav-label">' + I.no + ' · ' + esc(I.label) + '</div>' + REP_TABS.map(function (t) {
-      return nav('data-tab="' + t[0] + '"', t[1], ico(t[2], 19), S.view === 'ind' && S.tab === t[0], t[0] === 'dash' && todo ? '<span class="count">' + todo + '</span>' : '');
+      return nav('data-tab="' + t[0] + '"', t[1], ico(t[2], 19), S.view === 'ind' && (S.tab === t[0] || (t[0] === 'score' && S.tab === 'history')), t[0] === 'dash' && todo ? '<span class="count">' + todo + '</span>' : '');
     }).join('');
   }
   var I0 = U.role === 'reporter' ? indBy(U.ind) : null;
@@ -1785,7 +1821,7 @@ function vInd(I) {
   else if (U.role === 'reporter') acts = ed ? '' : '<span class="chip info">' + ico('lock') + 'ล็อกระหว่างตรวจ</span>';
   else if (isAudit()) acts = w === 'submitted' ? '<button class="btn danger" data-act="ask-return">' + ico('undo', 16) + 'ส่งกลับแก้ไข</button><button class="btn ok" data-wf="approved">' + ico('shield', 16) + 'อนุมัติผล</button>'
     : w === 'approved' ? '<button class="btn" data-wf="draft">' + ico('undo', 16) + 'ปลดล็อก</button>' : '<span class="chip mute">' + ico('clock') + 'รอผู้รายงานส่งตรวจ</span>';
-  var rep = U.role === 'reporter';
+  var rep = U.role === 'reporter', ov = rep ? 'score' : 'dash';
   var tabs = [['dash', 'ภาพรวมตัวชี้วัด', 'grid'], ['plan', 'แผนการดำเนินงาน', 'calendar'], ['gap', 'แผนปรับปรุง GAP', 'trend'], ['report', 'รายงานผลตามเกณฑ์', 'report'], ['evidence', 'ทะเบียนหลักฐาน', 'folder']];
   var returned = w === 'returned' && WF_NOTE[I.code] ? '<div class="return-box"><b class="bad" style="display:flex;gap:6px;align-items:center">' + ico('undo', 16) + 'กปม. ส่งกลับให้แก้ไข</b><span style="white-space:pre-line">' + esc(WF_NOTE[I.code]) + '</span></div>' : '';
   // Reporter home carries its own task header; other pages get a two-line header
@@ -1793,9 +1829,9 @@ function vInd(I) {
   var head = '<div class="ihead glass"' + (rep ? ' style="padding-bottom:20px"' : '') + '><div class="ihead-top"><div style="min-width:0"><h1>' + esc(I.name) + '</h1>' +
     '<div class="meta-line"><span>ตัวชี้วัด <b>' + I.no + ' · ' + esc(I.label) + '</b></span><span>ผู้รับผิดชอบ <b>' + esc(I.owner) + '</b></span>' + chip(WF[w]) +
       '<span>ครบกำหนด <b>' + thDate(deadline()) + '</b>' + (od > 0 && ['draft', 'returned'].indexOf(w) > -1 ? ' <span class="chip bad">เลย ' + od + ' วัน</span>' : '') + '</span></div></div>' +
-    '<div class="ctrls" style="border:0;padding:0"><div class="acts">' + (S.tab === 'history' ? '<button class="btn" data-tab="' + (rep ? 'score' : 'dash') + '">' + ico('undo', 16) + 'กลับภาพรวมคะแนน</button>' : '<button class="btn" data-tab="history">' + ico('history', 16) + 'ผลการดำเนินงานที่ผ่านมา</button>') + (acts || '') + '</div></div></div>' +
+    '<div class="ctrls" style="border:0;padding:0"><div class="acts">' + (S.tab === ov || S.tab === 'history' ? '<div class="seg ov-seg" role="group" aria-label="มุมมองภาพรวมตัวชี้วัด"><button data-tab="' + ov + '" aria-pressed="' + (S.tab === ov) + '">' + ico('target', 15) + 'ปีปัจจุบัน</button><button data-tab="history" aria-pressed="' + (S.tab === 'history') + '">' + ico('history', 15) + 'ผลการดำเนินงานที่ผ่านมา</button></div>' : '') + (acts || '') + '</div></div></div>' +
     (S.returning ? '<div class="return-box"><label class="label" for="retReason" style="margin:0">เหตุผลการส่งกลับ (ผู้รายงานจะเห็นข้อความนี้)</label><textarea id="retReason" rows="2" placeholder="เช่น ระดับ 3 ของ 2.1 ยังไม่แนบรายงานการประชุมคณะกรรมการ"></textarea><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn sm" data-act="cancel-return">ยกเลิก</button><button class="btn sm primary" data-act="confirm-return">ยืนยันส่งกลับ</button></div></div>' : '') +
-    returned + (rep ? '' : '<div class="tabs" role="tablist">' + tabs.map(function (t) { return '<button class="tab" role="tab" data-tab="' + t[0] + '" aria-selected="' + (S.tab === t[0]) + '">' + ico(t[2], 16) + t[1] + '</button>'; }).join('') + '</div>') + '</div>';
+    returned + (rep ? '' : '<div class="tabs" role="tablist">' + tabs.map(function (t) { return '<button class="tab" role="tab" data-tab="' + t[0] + '" aria-selected="' + (S.tab === t[0] || (t[0] === 'dash' && S.tab === 'history')) + '">' + ico(t[2], 16) + t[1] + '</button>'; }).join('') + '</div>') + '</div>';
   return '<section class="view">' + head + { dash: vDash, score: vDash, plan: vPlan, report: vReport, gap: vGap, evidence: vEvidence, history: vHistory }[S.tab](I, c) + '</section>';
 }
 
@@ -1887,6 +1923,61 @@ function fcPanel(I) {
     '<div class="hbars">' + fcRow('fc:all', I.name, I.label, f, I.target, 0) + (f.parts.length > 1 ? f.parts.map(function (p, i) { return fcRow('fc:' + p.p.key, p.p.name, p.p.key, p, p.p.target, i + 1); }).join('') : '') + '</div>' + ticks5() +
     (f.status === 'miss' ? '<p class="small bad" style="margin:10px 0 0">' + ico('alert', 13) + ' แม้ทำครบทุกขั้นตามแผนก็ยังไม่ถึงเป้า ควรเพิ่มกิจกรรมในแผน</p>' : '') + '</div>';
 }
+// GAP improvement progress: one bar per level with a GAP (result % vs plan-to-date tick), late first
+function gapPanel(I, m) {
+  var rows = [];
+  I.subs.forEach(function (s) { s.levels.forEach(function (L) {
+    if (!gapApplies(L)) return;
+    var gs = (L.gsteps || []).filter(hasPlan), k = gs.length ? gapStat(L, m) : 'none';
+    var pp = gs.length ? Math.round(sum(gs.map(function (st) { return Math.min(1, cum(st.plan, m) / stTarget(st)); })) / gs.length * 100) : 0;
+    rows.push({ s: s, L: L, k: k, r: gs.length ? gapPctOf(L) || 0 : 0, p: pp });
+  }); });
+  var ord = { late: 0, none: 1, ontrack: 2, wait: 3, done: 4 }, late = rows.filter(function (r) { return r.k === 'late'; }).length, planned = rows.filter(function (r) { return r.k !== 'none'; }).length;
+  rows.sort(function (a, b) { return ord[a.k] - ord[b.k] || b.p - b.r - (a.p - a.r); });
+  var NONE = { t: 'ไม่มีแผน', c: 'warn', i: 'clock' };
+  var body = rows.slice(0, 6).map(function (r) {
+    var st = r.k === 'none' ? NONE : STATUS[r.k], tip = r.s.label + ' ระดับ ' + r.L.level + ' · ' + st.t + (r.k === 'none' ? '' : '\nผลสะสม ' + r.r + '% · แผนสะสมถึง ' + MONTHS[m] + ' ' + r.p + '%') + '\n' + (r.L.action || r.L.gap || '').replace(/\s+/g, ' ').slice(0, 120);
+    return '<button class="gp-row" data-tab="gap" data-pick="' + esc(r.s.uid) + '|' + r.L.level + '" data-tip="' + esc(tip) + '" aria-label="' + esc(tip) + '"><span class="gp-l"><b>' + esc(r.s.label) + '</b> ระดับ ' + r.L.level + '</span>' +
+      '<span class="gp-track">' + (r.k === 'none' ? '' : '<span class="gp-fill ' + (r.k === 'done' ? 'ok' : r.k === 'late' ? 'bad' : '') + '" style="width:' + r.r + '%"></span><i style="left:calc(' + r.p + '% - 1px)"></i>') + '</span>' + chip(st) + '</button>';
+  }).join('');
+  return '<div class="panel glass c5 rise" style="--i:6"><div class="panel-head"><div><h2>ความก้าวหน้าแผนปรับปรุง GAP</h2><p class="sub">แถบ = ผลสะสม % · ขีด = แผนสะสมถึง ' + MONTHS[m] + ' · กดเพื่อเปิดแผน</p></div></div>' +
+    (rows.length ? '<div class="gp-kpi"><div><b class="num">' + rows.length + '</b><small>ระดับที่มี GAP</small></div><div><b class="num">' + planned + '<small>/' + rows.length + '</small></b><small>มีแผนแล้ว</small></div><div><b class="num' + (late ? ' bad' : '') + '">' + late + '</b><small>ล่าช้ากว่าแผน</small></div></div>' + body +
+      (rows.length > 6 ? '<button class="linkbtn" data-tab="gap" style="margin-top:8px">ดูทั้งหมด ' + rows.length + ' ระดับ' + ico('chev', 14) + '</button>' : '')
+      : '<div class="empty">' + ico('check') + 'ไม่มีระดับที่มี GAP</div>') + '</div>';
+}
+// Target score (reporter's year-end estimate) vs score the evidence supports, per sub-issue; widest gap first
+function gapScorePanel(I, m) {
+  var t = I.target, rows = I.subs.map(function (s) { var sys = subSys(s, m), tg = subScore(s, m); return { s: s, sys: sys, tg: tg, d: Math.round((tg - sys) * 100) / 100 }; })
+    .sort(function (a, b) { return b.d - a.d || b.s.weight - a.s.weight; });
+  var X = function (v) { return Math.max(0, Math.min(100, v / 5 * 100)); };
+  var body = rows.map(function (r) {
+    var lo = Math.min(r.sys, r.tg), hi = Math.max(r.sys, r.tg), cls = r.d >= 1 ? 'bad' : r.d > 0 ? 'warn' : 'ok', lv = Math.min(r.s.levels.length, r.sys + 1) || 1;
+    var tip = r.s.label + ' · ' + r.s.name + '\nเป้าหมายสิ้นปี ' + fmt(r.tg) + (r.s.self == null ? ' (ยังไม่กรอก ใช้คะแนนหลักฐาน)' : '') + '\nหลักฐานรองรับ ' + r.sys + (r.d > 0 ? '\nช่องว่าง ' + fmt(r.d) + ' · กดเพื่อไปรายงานระดับ ' + lv : '');
+    return '<button class="db-row" data-open="' + r.s.uid + '|' + lv + '" data-tip="' + esc(tip) + '" aria-label="' + esc(tip) + '"><span class="db-l"><b>' + esc(r.s.label) + '</b><span>' + esc(r.s.name) + '</span></span>' +
+      '<span class="db-track">' + (r.d > 0 ? '<span class="db-bar ' + cls + '" style="left:' + X(lo) + '%;width:' + (X(hi) - X(lo)) + '%"></span>' : '') +
+        '<i class="db-dot sys" style="left:' + X(r.sys) + '%"></i><i class="db-dot tg' + (r.d <= 0 ? ' same' : '') + '" style="left:' + X(r.tg) + '%"></i></span>' +
+      '<span class="db-v ' + cls + '">' + (r.d > 0 ? '−' + fmt(r.d) : ico('check', 15)) + (r.s.self == null ? '<small>ยังไม่กรอกเป้า</small>' : '') + '</span></button>';
+  }).join('');
+  var risk = rows.filter(function (r) { return r.d > 0; }).length;
+  return '<div class="panel glass c7 rise" style="--i:3"><div class="panel-head"><div><h2>คะแนนเป้าหมายเทียบหลักฐานรองรับ</h2><p class="sub">ช่วงห่าง = คะแนนที่อ้างแต่หลักฐานยังไม่รองรับ · ' + (risk ? '<b class="bad">' + risk + ' ประเด็นเสี่ยง</b>' : 'ไม่มีประเด็นเสี่ยง') + ' · กดเพื่อไปรายงานผล</p></div></div>' +
+    '<div class="lg" style="margin-bottom:6px"><span><i class="db-key tg"></i>เป้าหมายสิ้นปี (ผู้รายงานกรอก)</span><span><i class="db-key sys"></i>หลักฐานรองรับ</span><span><i class="db-key bar"></i>ช่องว่าง ≥ 1 ระดับ</span>' + (t != null ? '<span><i class="sw tg"></i>เป้าหมายตัวชี้วัด ' + fmt(t) + '</span>' : '') + '</div>' +
+    '<div class="db-wrap">' + (t != null ? '<i class="db-target" style="left:calc(var(--db-l) + (100% - var(--db-l) - var(--db-r)) * ' + (X(t) / 100).toFixed(4) + ')"></i>' : '') + body + '</div>' +
+    '<div class="db-axis" aria-hidden="true"><span></span><span class="db-ticks">' + [0, 1, 2, 3, 4, 5].map(function (n) { return '<span style="left:' + n * 20 + '%">' + n + '</span>'; }).join('') + '</span><span></span></div></div>';
+}
+// Level map cell in one of four views: plan progress, evidence, narrative, GAP plan
+var HM_MODES = [['prog', 'ความคืบหน้า'], ['evid', 'หลักฐาน'], ['narr', 'ผลการดำเนินงาน'], ['gap', 'แผน GAP']];
+function hmCell(s, L, m, mode) {
+  if (mode === 'evid') { var rd = reqDocs(L), h = rd.filter(function (r) { return r.has; }).length; return rd.length ? { c: h === rd.length ? 'ok' : h ? 'warn' : 'bad', txt: h + '/' + rd.length, t: 'หลักฐาน ' + h + ' จาก ' + rd.length + ' รายการ' } : { c: 'mute', txt: '–', t: 'ไม่มีรายการ Minimum Requirement' }; }
+  if (mode === 'narr') { var on = !!(L.narrative || '').trim(), cl = L.level <= Math.ceil(subScore(s, m)); return on ? { c: 'ok', i: 'check', t: 'เขียนผลการดำเนินงานแล้ว' } : { c: cl ? 'bad' : 'mute', i: cl ? 'alert' : 'clock', t: cl ? 'ระดับที่อ้างคะแนนแต่ยังไม่เขียนผล' : 'ยังไม่เขียนผล (ยังไม่อ้างคะแนน)' }; }
+  if (mode === 'gap') { if (!gapApplies(L)) return { c: 'none', txt: '', t: 'ไม่มี GAP' }; if (!(L.gsteps || []).length) return { c: 'warn', i: 'clock', t: 'มี GAP แต่ยังไม่มีแผน' }; var g = STATUS[gapStat(L, m) || 'wait']; return { c: g.c, i: g.i, t: 'แผน GAP · ' + g.t }; }
+  var st = STATUS[lvStatus(L, m)]; return { c: st.c, i: st.i, t: st.t };
+}
+var HM_LEGEND = {
+  prog: function () { return Object.keys(STATUS).map(function (k) { return '<span class="' + STATUS[k].c + '">' + ico(STATUS[k].i, 14) + '<span style="color:var(--ink-2)">' + STATUS[k].t + '</span></span>'; }).join(''); },
+  evid: function () { return '<span class="ok">■ <span style="color:var(--ink-2)">ครบ</span></span><span class="warn">■ <span style="color:var(--ink-2)">บางส่วน</span></span><span class="bad">■ <span style="color:var(--ink-2)">ยังไม่มี</span></span><span class="mute">■ <span style="color:var(--ink-2)">ไม่มีรายการ</span></span><span class="small muted">ตัวเลข = มี / ต้องมี</span>'; },
+  narr: function () { return '<span class="ok">' + ico('check', 14) + '<span style="color:var(--ink-2)">เขียนแล้ว</span></span><span class="bad">' + ico('alert', 14) + '<span style="color:var(--ink-2)">อ้างคะแนนแต่ยังไม่เขียน</span></span><span class="mute">' + ico('clock', 14) + '<span style="color:var(--ink-2)">ยังไม่อ้างคะแนน</span></span>'; },
+  gap: function () { return HM_LEGEND.prog() + '<span class="warn">' + ico('clock', 14) + '<span style="color:var(--ink-2)">มี GAP แต่ไม่มีแผน</span></span><span class="small muted">ช่องว่าง = ระดับนั้นไม่มี GAP</span>'; }
+};
 function vDash(I, c) {
   var m = S.month, t = I.target, multi = I.parts.length > 1;
   var tops = c.topics.map(function (x) { return { x: x, sys: x.w ? sum(x.t.subs.map(function (s) { return s.weight * subSys(s, m); })) / x.w : 0 }; }).sort(function (a, b) { return b.x.w - a.x.w; });
@@ -1923,25 +2014,26 @@ function vDash(I, c) {
       return '<button class="hb" data-open="' + o.s.uid + '|' + o.lv + '" data-tip="' + esc(tip) + '" aria-label="' + esc(tip) + '"><span class="lbl"><b>' + esc(o.s.label) + '</b>' + esc(o.s.name) + '</span><span class="track">' + fillBar('gain:' + o.s.uid, o.g / gmax * 100, '', i * 70) + '</span><span class="val">+' + fmt(o.g) + '</span></button>';
     }).join('') : '<div class="empty">' + ico('check') + 'ทุกประเด็นได้ระดับ 5 แล้ว</div>') + '</div></div>';
   // 6 · sub-issue × level map, split into two balanced columns
-  var half = Math.ceil(I.subs.length / 2), idx = 0;
+  var half = Math.ceil(I.subs.length / 2), idx = 0, hm = S.hm || 'prog';
   var col = function (subs) {
     return '<div class="hcol"><div class="hrow h"><span></span>' + [1, 2, 3, 4, 5].map(function (n) { return '<span>ระดับ ' + n + '</span>'; }).join('') + '</div>' + subs.map(function (s) {
       return '<div class="hrow"><span class="code" title="' + esc(s.name) + '">' + esc(s.label) + '</span>' + [0, 1, 2, 3, 4].map(function (li) {
         var L = s.levels[li]; if (!L) return '<span></span>';
-        var st = STATUS[lvStatus(L, m)], tip = s.label + ' ระดับ ' + L.level + ' · ' + st.t + '\n' + s.name;
-        return '<button class="hc ' + st.c + '" style="--i:' + (idx++) + '" data-open="' + s.uid + '|' + L.level + '" data-tip="' + esc(tip) + '" aria-label="' + esc(tip) + '">' + ico(st.i, 14) + '</button>';
+        var st = hmCell(s, L, m, hm), tip = s.label + ' ระดับ ' + L.level + ' · ' + st.t + '\n' + s.name;
+        return '<button class="hc ' + st.c + '" style="--i:' + (idx++) + '" data-open="' + s.uid + '|' + L.level + '" data-tip="' + esc(tip) + '" aria-label="' + esc(tip) + '">' + (st.i ? ico(st.i, 14) : '<span class="num">' + st.txt + '</span>') + '</button>';
       }).join('') + '</div>';
     }).join('') + '</div>';
   };
-  var heat = '<div class="panel glass rise" style="--i:7"><div class="panel-head"><div><h2>สถานะรายระดับ</h2><p class="sub">ทุกประเด็นย่อย × ระดับ 1–5 ณ ' + MONTHS[m] + ' · กดช่องเพื่อไปที่ระดับนั้น</p></div></div>' +
+  var heat = '<div class="panel glass rise" style="--i:7"><div class="panel-head"><div><h2>สถานะรายระดับ</h2><p class="sub">ทุกประเด็นย่อย × ระดับ 1–5 ณ ' + MONTHS[m] + ' · กดช่องเพื่อไปที่ระดับนั้น</p></div><div class="seg" role="group" aria-label="มุมมองสถานะรายระดับ">' + HM_MODES.map(function (x) { return '<button data-hm="' + x[0] + '" aria-pressed="' + (hm === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div></div>' +
     '<div class="hmap">' + col(I.subs.slice(0, half)) + col(I.subs.slice(half)) + '</div>' +
-    '<div class="legend">' + Object.keys(STATUS).map(function (k) { return '<span class="' + STATUS[k].c + '">' + ico(STATUS[k].i, 14) + '<span style="color:var(--ink-2)">' + STATUS[k].t + '</span></span>'; }).join('') + '</div></div>';
+    '<div class="legend">' + HM_LEGEND[hm]() + '</div></div>';
+  var dm = S.dm === 'topic' ? 'topic' : 'sub';
+  var scoreSec = '<div class="dv-sec"><div><h2>คะแนนรายประเด็น</h2><p class="sub">' + (dm === 'sub' ? 'ประเด็นย่อยที่คะแนนเสี่ยง และประเด็นที่ขยับแล้วคุ้มที่สุด' : 'คะแนนรายหัวข้อ และสัดส่วนที่ส่งเข้าคะแนนรวม') + '</p></div><div class="seg" role="group" aria-label="มุมมองคะแนน"><button data-dm="sub" aria-pressed="' + (dm === 'sub') + '">รายประเด็นย่อย</button><button data-dm="topic" aria-pressed="' + (dm === 'topic') + '">รายหัวข้อ</button></div></div>' +
+    '<div class="grid">' + (dm === 'sub' ? gapScorePanel(I, m) + gain : topicChart + contrib) + '</div>';
   return '<div class="dv">' +
     '<div class="grid">' + scoreRing(I, c) + kp + '</div>' + fcPanel(I) + parts +
-    '<div class="grid">' + topicChart + contrib + '</div>' +
-    '<div class="grid"><div class="panel glass c7 rise" style="--i:6"><div class="panel-head"><div><h2>ความก้าวหน้า' + (gran() === 'q' ? 'รายไตรมาส' : 'รายเดือน') + '</h2><p class="sub">% ของเป้าหมายทั้งปี · เส้น = สะสม · แท่ง = ทำได้ใน' + (gran() === 'q' ? 'ไตรมาส' : 'เดือน') + 'นั้น</p></div></div>' + cumChart(I) + '</div>' + gain + '</div>' +
+    '<div class="grid"><div class="panel glass c7 rise" style="--i:6"><div class="panel-head"><div><h2>ความก้าวหน้า' + (gran() === 'q' ? 'รายไตรมาส' : 'รายเดือน') + '</h2><p class="sub">% ของเป้าหมายทั้งปี · เส้น = สะสม · แท่ง = ทำได้ใน' + (gran() === 'q' ? 'ไตรมาส' : 'เดือน') + 'นั้น</p></div></div>' + cumChart(I) + '</div>' + gapPanel(I, m) + '</div>' + scoreSec +
     heat +
-    '<div class="sec-h" id="history"><div class="eyebrow">ผลที่ผ่านมา</div><h2>ผลประเมินย้อนหลังและแนวโน้ม</h2><p class="sub">ผลประเมินปี 2565–2568 · คะแนนที่รายงานปี ' + CLOSED_FY + ' · คะแนนคาดการณ์ปีปัจจุบัน · GAP จากผู้ประเมิน</p></div>' + vHistory(I, c) +
     '<details class="method glass"><summary>' + ico('info', 18) + 'วิธีคำนวณคะแนน</summary><p>ผู้รายงานกรอกเฉพาะคะแนนเป้าหมาย ณ สิ้นปีบัญชี (คะแนนคาดการณ์) ของแต่ละประเด็นย่อย ระบบคำนวณที่เหลือให้ตามสูตรสถิติคะแนนตัวชี้วัด: คะแนนตัวชี้วัด = Σ(น้ำหนักประเด็น × คะแนนเป้าหมาย) ÷ Σน้ำหนัก' + (I.share ? ' แล้วรวมแต่ละแบบฟอร์มตามสัดส่วน ' + I.parts.map(function (p) { return p.key + ' ' + Math.round(I.share[p.key] * 100) + '%'; }).join(' + ') : '') + ' · ประเด็นที่ยังไม่กรอกใช้คะแนนที่หลักฐานรองรับแทนชั่วคราว · คะแนนที่หลักฐานรองรับนับระดับต่อเนื่องจากระดับ 1 ที่ผลครบตามแผน มีผลการดำเนินงาน และติ๊กหลักฐานครบ · "ขยับ 1 ระดับ" = น้ำหนักประเด็น ÷ น้ำหนักรวม' + (I.assumed ? ' · แบบฟอร์ม CM ยังไม่มีน้ำหนักประเด็นและคะแนนเป้าหมาย จึงใช้น้ำหนักเฉลี่ยชั่วคราวและคะแนนที่หลักฐานรองรับแทน' : '') + '</p></details></div>';
 }
 function cumChart(I) {
@@ -2521,6 +2613,8 @@ document.addEventListener('click', function (e) {
   if (d.fsel) { S.fid = d.fsel; return renderRv(); }
   if (d.sev) { S.sev = d.sev; S.fid = null; return render(); }
   if (d.act === 'keys') { S.keysHelp = !S.keysHelp; return render(); }
+  if (d.hm) { S.hm = d.hm; return render(); }
+  if (d.dm) { S.dm = d.dm; return render(); }
   if (d.act === 'pedit' || d.act === 'gedit') { S[d.act] = !S[d.act]; return render(); }
   if (d.act === 'rerun') {
     var code = S.rv; delete RUNS[code];
