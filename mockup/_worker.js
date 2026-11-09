@@ -13,7 +13,7 @@
 //   CUR_FY           current fiscal year (default 2570)
 
 const IND_PARTS = { CG: ['CG'], SP: ['SP'], RM: ['RM'], SCM: ['SM', 'CM'], DT: ['DT'], HCM: ['HCM'], KMIM: ['KM', 'IM'], IA: ['IA'] };
-const STORES = ['patch', 'wf', 'wfnote', 'tri', 'trinote', 'unlock'];
+const STORES = ['patch', 'wf', 'wfnote', 'tri', 'trinote', 'unlock', 'cfg'];
 const WF = ['draft', 'submitted', 'approved', 'returned'];
 const MONTHS = ['ต.ค.', 'พ.ย.', 'ธ.ค.', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.'];
 const SUM_TAB = "'1.สรุปรายงานผู้บริหาร'", FORM_TAB = "'2.ผลตามเกณฑ์และ GAP'";
@@ -193,6 +193,7 @@ function stateFor(u, st) {
   if (u.role !== 'reporter') return st;
   const mine = k => k === u.ind || k.startsWith(u.ind + ':') || k.startsWith(u.ind + '|') || k.split('|')[1] === u.ind, out = {};
   STORES.forEach(s => { out[s] = {}; Object.keys(st[s]).filter(mine).forEach(k => { out[s][k] = st[s][k]; }); });
+  out.cfg = st.cfg; // plan-entry windows apply to every reporter
   return out;
 }
 
@@ -279,6 +280,9 @@ async function archive(req, env) {
 
 const own = (u, key) => { const [ind, part] = key.split('|'); return u.role === 'reporter' && ind === u.ind && (!u.part || part === u.part); };
 const editable = (st, ind) => ['draft', 'returned'].includes(st.wf[ind] || 'draft');
+// Plan-entry windows (store cfg, set by กปม.): missing = open; dates are Bangkok calendar days YYYY-MM-DD
+const planClosed = (st, k) => { const c = st.cfg[k] || {}, d = new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10); return c.open === false || (c.from && d < c.from) || (c.to && d > c.to); };
+const same12 = (a, b) => { for (let i = 0; i < 12; i++) if ((+(a || [])[i] || 0) !== (+(b || [])[i] || 0)) return false; return true; };
 async function check(env, fy, u, st, op) {
   if (!STORES.includes(op.s) || typeof op.k !== 'string' || !op.k || op.k.length > 200) fail(400, 'คำขอไม่ถูกต้อง');
   if (op.v != null && JSON.stringify(op.v).length > 45000) fail(413, 'ข้อความยาวเกินไป');
@@ -290,6 +294,12 @@ async function check(env, fy, u, st, op) {
       const old = st.patch[op.k] && st.patch[op.k].res || ((await findLevel(env, fy, op.k)).L || { steps: [] }).steps.map(x => x.result), from = openFrom();
       op.v.res.forEach((r, si) => { for (let i = 0; i < from; i++) if ((+(r || [])[i] || 0) !== (+((old[si] || [])[i]) || 0)) fail(409, `ผลเดือน ${MONTHS[i]} ปิดรอบแล้ว ขอให้ กปม. ปลดล็อกเพื่อแก้ย้อนหลัง`); });
     }
+    const prev = st.patch[op.k] || {};
+    if (op.v && Array.isArray(op.v.plan) && planClosed(st, 'plan')) {
+      const old = prev.plan || ((await findLevel(env, fy, op.k)).L || { steps: [] }).steps.map(x => x.plan);
+      if (op.v.plan.some((a, si) => !same12(a, old[si]))) fail(409, 'ปิดรับการแก้ไขแผนการดำเนินงานแล้ว');
+    }
+    if (op.v && Array.isArray(op.v.gapPlan) && planClosed(st, 'gap') && !same12(op.v.gapPlan, prev.gapPlan)) fail(409, 'ปิดรับการแก้ไขแผนปรับปรุง GAP แล้ว');
   } else if (op.s === 'wf') {
     if (audit ? !WF.includes(op.v) : !(reporter && op.k === u.ind && op.v === 'submitted' && editable(st, u.ind))) fail(403, 'ไม่มีสิทธิ์เปลี่ยนสถานะรายงานนี้');
   } else if (op.s === 'wfnote') {
@@ -305,6 +315,7 @@ async function mirror(env, fy, ops) {
     const { f, L } = await findLevel(env, fy, op.k), v = op.v;
     if (!L) continue;
     const d = byForm[f.id] = byForm[f.id] || [];
+    if (Array.isArray(v.plan) && v.plan[0] && L.steps.length) d.push({ range: `${FORM_TAB}!G${L.row}:R${L.row}`, values: [v.plan[0].map(x => +x || '')] });
     if (v.res && v.res[0] && L.steps.length) d.push({ range: `${FORM_TAB}!G${L.row + 1}:R${L.row + 1}`, values: [v.res[0].map(x => +x || '')] });
     if (typeof v.narrative === 'string') d.push({ range: `${FORM_TAB}!V${L.row}`, values: [[v.narrative]] });
     (v.mr || []).forEach((x, i) => { if (L.mrRows[i]) d.push({ range: `${FORM_TAB}!X${L.mrRows[i]}:Y${L.mrRows[i]}`, values: [[x[0] ? '✓' : '', x[1] || '']] }); });
