@@ -898,9 +898,10 @@ td, th, .trow, .pl td, .doc, .lib-head { border-color: var(--hair-in) !important
   .signin { grid-template-columns: minmax(0, 1120px); padding: 32px clamp(16px, 4vw, 48px); }
   /* hero and sign-in card share one glass shell: same top, same bottom */
   /* hero and sign-in card side by side on one line, no frame around them */
-  .lg-shell { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 440px); align-items: start; gap: clamp(40px, 5vw, 88px); }
+  .lg-shell { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 440px); align-items: center; gap: clamp(40px, 5vw, 88px); }
   .lg-hero { max-width: none; align-items: flex-start; text-align: left; gap: 18px; padding: 0; }
-  .lg-hero h1 { font-size: clamp(32px, 3.4vw, 50px); line-height: 1.2; }
+  .lg-hero h1 { font-size: clamp(30px, 3vw, 44px); line-height: 1.2; }
+  .lg-hero .lg-logo { width: min(260px, 100%); }
 }
 .lg-shell { min-width: 0; }
 .lg-logo { width: min(300px, 100%); }
@@ -964,7 +965,7 @@ td, th, .trow, .pl td, .doc, .lib-head { border-color: var(--hair-in) !important
 @media (max-width: 960px) { .u-txt { display: none; } .ubtn { padding-right: 6px; } }
 @media (max-width: 640px) { .main > .top .tb-title { order: 1; flex: 1 1 0; } .umenu { order: 2; } .main > .top .tb-ctrl { order: 3; } .udrop { width: min(280px, calc(100vw - 32px)); } }
 /* hero graphic: isometric reporting desk (servers → dashboard → apps), loops quietly */
-.lg-art { width: min(100%, 560px, max(320px, calc((100vh - 400px) * 1.15))); margin-top: 4px; }
+.lg-art { width: min(100%, 470px, max(300px, calc((100vh - 420px) * 1.1))); margin-top: 0; }
 .lg-art svg { display: block; width: 100%; height: auto; overflow: visible; }
 .ha-srv.ft { fill: #EEF3FB; } .ha-srv.fl { fill: #A9B8D2; } .ha-srv.fr { fill: #C9D5E8; }
 .ha-srv { stroke: rgba(255,255,255,.35); stroke-width: .8; stroke-linejoin: round; }
