@@ -889,6 +889,8 @@ td, th, .trow, .pl td, .doc, .lib-head { border-color: var(--hair-in) !important
 .cfg-state.ok { background: var(--ok-bg); } .cfg-state.mute { background: var(--mute-bg); }
 @media (max-width: 960px) { .cfg-card { grid-column: span 12; } }
 @media (max-width: 520px) { .cfg-dates { grid-template-columns: 1fr; } }
+.sec-h { margin: 12px 0 -4px; padding-top: 16px; border-top: 1px solid var(--hair-in); }
+.sec-h h2 { margin: 2px 0 0; }
 </style>
 </head>
 <body>
@@ -1560,7 +1562,7 @@ function vInd(I) {
   else if (isAudit()) acts = w === 'submitted' ? '<button class="btn danger" data-act="ask-return">' + ico('undo', 16) + 'ส่งกลับแก้ไข</button><button class="btn ok" data-wf="approved">' + ico('shield', 16) + 'อนุมัติผล</button>'
     : w === 'approved' ? '<button class="btn" data-wf="draft">' + ico('undo', 16) + 'ปลดล็อก</button>' : '<span class="chip mute">' + ico('clock') + 'รอผู้รายงานส่งตรวจ</span>';
   var rep = U.role === 'reporter';
-  var tabs = [['dash', 'ภาพรวมคะแนน', 'grid'], ['report', 'รายงานผลตามเกณฑ์', 'report'], ['plan', 'แผนการดำเนินงาน', 'calendar'], ['gap', 'แผนปรับปรุง GAP', 'trend'], ['evidence', 'ทะเบียนหลักฐาน', 'folder'], ['history', 'ผลที่ผ่านมา', 'history']];
+  var tabs = [['dash', 'ภาพรวมคะแนน', 'grid'], ['report', 'รายงานผลตามเกณฑ์', 'report'], ['plan', 'แผนการดำเนินงาน', 'calendar'], ['gap', 'แผนปรับปรุง GAP', 'trend'], ['evidence', 'ทะเบียนหลักฐาน', 'folder']];
   var returned = w === 'returned' && WF_NOTE[I.code] ? '<div class="return-box"><b class="bad" style="display:flex;gap:6px;align-items:center">' + ico('undo', 16) + 'กปม. ส่งกลับให้แก้ไข</b><span style="white-space:pre-line">' + esc(WF_NOTE[I.code]) + '</span></div>' : '';
   // Reporter home carries its own task header; other pages get a two-line header
   if (rep && S.tab === 'dash') return '<section class="view">' + returned + vMyWork(I, c) + '</section>';
@@ -1570,11 +1572,11 @@ function vInd(I) {
     '<div class="ctrls" style="border:0;padding:0"><div class="acts">' + acts + '</div></div></div>' +
     (S.returning ? '<div class="return-box"><label class="label" for="retReason" style="margin:0">เหตุผลการส่งกลับ (ผู้รายงานจะเห็นข้อความนี้)</label><textarea id="retReason" rows="2" placeholder="เช่น ระดับ 3 ของ 2.1 ยังไม่แนบรายงานการประชุมคณะกรรมการ"></textarea><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn sm" data-act="cancel-return">ยกเลิก</button><button class="btn sm primary" data-act="confirm-return">ยืนยันส่งกลับ</button></div></div>' : '') +
     returned + (rep ? '' : '<div class="tabs" role="tablist">' + tabs.map(function (t) { return '<button class="tab" role="tab" data-tab="' + t[0] + '" aria-selected="' + (S.tab === t[0]) + '">' + ico(t[2], 16) + t[1] + '</button>'; }).join('') + '</div>') + '</div>';
-  return '<section class="view">' + head + { dash: vDash, score: vDash, plan: vPlan, report: vReport, gap: vGap, evidence: vEvidence, history: vHistory }[S.tab](I, c) + '</section>';
+  return '<section class="view">' + head + { dash: vDash, score: vDash, plan: vPlan, report: vReport, gap: vGap, evidence: vEvidence, history: vDash }[S.tab](I, c) + '</section>';
 }
 
 /* ================= reporter home: what is left to do this round ================= */
-var REP_TABS = [['score', 'ภาพรวมคะแนน', 'target'], ['dash', 'งานของฉัน', 'home'], ['report', 'รายงานผลตามเกณฑ์', 'report'], ['plan', 'แผนการดำเนินงาน', 'calendar'], ['gap', 'แผนปรับปรุง GAP', 'trend'], ['evidence', 'ทะเบียนหลักฐาน', 'folder'], ['history', 'ผลที่ผ่านมา', 'history']];
+var REP_TABS = [['score', 'ภาพรวมคะแนน', 'target'], ['dash', 'งานของฉัน', 'home'], ['report', 'รายงานผลตามเกณฑ์', 'report'], ['plan', 'แผนการดำเนินงาน', 'calendar'], ['gap', 'แผนปรับปรุง GAP', 'trend'], ['evidence', 'ทะเบียนหลักฐาน', 'folder']];
 var TODO_KIND = [
   ['หลักฐานยังไม่ครบ', 'ยังแนบหลักฐานไม่ครบ', 'ติ๊กเอกสาร Minimum Requirement ที่มีแล้ว และแนบส่วนที่ขาด', 'bad', 'folder'],
   ['ยังไม่มีผลการดำเนินงาน', 'ยังไม่เขียนผลการดำเนินงาน', 'ระดับที่รายงานคะแนนไว้ต้องมีคำอธิบายผล', 'bad', 'report'],
@@ -1612,17 +1614,13 @@ function vMyWork(I, c) {
     var r = t.subs.filter(function (s) { return !mw.bad[s.uid]; }).length;
     return '<button class="trow" data-topic="' + t.id + '"><span style="min-width:0">' + (I.parts.length > 1 ? t.part + ' ' : '') + t.no + ' · ' + esc(t.name) + '</span><span class="bar ' + (r === t.subs.length ? 'ok' : '') + '"><span style="width:' + r / t.subs.length * 100 + '%"></span></span><span class="num small" style="text-align:right">' + r + '/' + t.subs.length + '</span></button>';
   }).join('');
-  var pc = U.part ? c.parts.filter(function (p) { return p.p.key === U.part; })[0] : null, sc = pc ? pc.score : c.score, sys = pc ? pc.sys : c.sys, tg = pc ? pc.p.target : I.target;
   return '<div class="task glass"><div style="min-width:0"><div class="eyebrow">ตัวชี้วัด ' + I.no + ' · ' + esc(who) + '</div><h1>รายงานผลเดือน ' + MONTHS[m] + ' ' + (m < 3 ? FY - 1 : FY) + ' <span class="small muted" style="font-weight:500">ปีบัญชี ' + FY + '</span></h1>' +
       '<div class="meta-line"><span>ครบกำหนด <b>' + thDate(deadline()) + '</b></span>' + (od > 0 ? '<span class="chip bad">' + ico('clock') + 'เลยกำหนด ' + od + ' วัน</span>' : '<span>อีก <b>' + (-od) + '</b> วัน</span>') + chip(WF[w]) + '</div>' +
       '<div class="bar ' + (mw.ready === mw.subs.length ? 'ok' : '') + '"><span style="width:' + (mw.subs.length ? mw.ready / mw.subs.length * 100 : 0) + '%"></span></div>' +
       '<span class="small muted">พร้อมส่ง <b class="num" style="color:var(--ink)">' + mw.ready + '</b> จาก ' + mw.subs.length + ' ประเด็น</span></div><div class="acts">' + acts + '</div></div>' +
     '<div class="grid"><div class="panel glass c7"><div class="panel-head"><div><h2>สิ่งที่ต้องทำ</h2><p class="sub">เฉพาะระดับที่รายงานคะแนนไว้ · กดรหัสเพื่อไปแก้ตรงจุด</p></div></div>' +
         (rows ? '<div class="todo">' + rows + '</div>' : '<div class="empty">' + ico('check') + 'ทุกประเด็นพร้อมส่งแล้ว</div>') + '</div>' +
-      '<div class="c5" style="display:flex;flex-direction:column;gap:20px;min-width:0"><div class="panel glass"><div class="panel-head"><h2>คะแนน' + (pc ? 'ส่วน ' + U.part : '') + '</h2><button class="btn sm" data-tab="score">ดูรายละเอียด</button></div>' +
-        '<div class="scoreline"><div><span>เป้าหมายสิ้นปี</span><b class="num">' + fmt(sc) + '</b></div><div><span>หลักฐานรองรับ</span><b class="num">' + fmt(sys) + '</b></div><div><span>เป้าหมาย</span><b class="num">' + fmt(tg) + '</b></div></div>' +
-        (pc ? '<p class="small muted" style="margin:12px 0 0">รวมเป็นคะแนน ' + esc(I.label) + ' ' + fmt(c.score) + '</p>' : '') + '</div>' +
-      '<div class="panel glass"><div class="panel-head"><h2>ความพร้อมรายหัวข้อ</h2></div>' + topics + '</div></div></div>';
+      '<div class="panel glass c5"><div class="panel-head"><div><h2>ความพร้อมรายหัวข้อ</h2><p class="sub">ประเด็นที่พร้อมส่ง / ทั้งหมด</p></div></div>' + topics + '</div></div>';
 }
 
 /* ================= score dashboard ================= */
@@ -1716,6 +1714,7 @@ function vDash(I, c) {
     '<div class="grid">' + topicChart + contrib + '</div>' +
     '<div class="grid"><div class="panel glass c7 rise" style="--i:6"><div class="panel-head"><div><h2>ความก้าวหน้ารายเดือน</h2><p class="sub">% ของเป้าหมายทั้งปี · เส้น = สะสม · แท่ง = ทำได้ในเดือนนั้น</p></div></div>' + cumChart(I) + '</div>' + gain + '</div>' +
     heat +
+    '<div class="sec-h" id="history"><div class="eyebrow">ผลที่ผ่านมา</div><h2>ผลประเมินย้อนหลังและแนวโน้ม</h2><p class="sub">ผลประเมินปี 2565–2568 · คะแนนที่รายงานปี ' + CLOSED_FY + ' · คะแนนคาดการณ์ปีปัจจุบัน · GAP จากผู้ประเมิน</p></div>' + vHistory(I, c) +
     '<details class="method glass"><summary>' + ico('info', 18) + 'วิธีคำนวณคะแนน</summary><p>ผู้รายงานกรอกเฉพาะคะแนนเป้าหมาย ณ สิ้นปีบัญชี (คะแนนคาดการณ์) ของแต่ละประเด็นย่อย ระบบคำนวณที่เหลือให้ตามสูตรสถิติคะแนนตัวชี้วัด: คะแนนตัวชี้วัด = Σ(น้ำหนักประเด็น × คะแนนเป้าหมาย) ÷ Σน้ำหนัก' + (I.share ? ' แล้วรวมแต่ละแบบฟอร์มตามสัดส่วน ' + I.parts.map(function (p) { return p.key + ' ' + Math.round(I.share[p.key] * 100) + '%'; }).join(' + ') : '') + ' · ประเด็นที่ยังไม่กรอกใช้คะแนนที่หลักฐานรองรับแทนชั่วคราว · คะแนนที่หลักฐานรองรับนับระดับต่อเนื่องจากระดับ 1 ที่ผลครบตามแผน มีผลการดำเนินงาน และติ๊กหลักฐานครบ · "ขยับ 1 ระดับ" = น้ำหนักประเด็น ÷ น้ำหนักรวม' + (I.assumed ? ' · แบบฟอร์ม CM ยังไม่มีน้ำหนักประเด็นและคะแนนเป้าหมาย จึงใช้น้ำหนักเฉลี่ยชั่วคราวและคะแนนที่หลักฐานรองรับแทน' : '') + '</p></details></div>';
 }
 function cumChart(I) {
