@@ -1218,6 +1218,28 @@ td, th, .trow, .pl td, .doc, .lib-head { border-color: var(--hair-in) !important
   .lg-shell { gap: clamp(40px, 6vw, 110px); }
 }
 @media (max-width: 900px) { .lg-card-logo { width: 200px; } }
+/* ===== phones: smoother scrolling and taps ===== */
+@media (max-width: 760px) {
+  /* no blurred, drifting background orbs; a static tint instead */
+  .ambient, .lg-bg i { display: none !important; animation: none !important; }
+  body { background: radial-gradient(120% 60% at 20% 0%, color-mix(in srgb, var(--orb1) 14%, var(--bg)), var(--bg) 60%) fixed; }
+  /* glass surfaces become solid: backdrop blur is the main scroll cost on phones */
+  .glass, .kpi, .hero, .top, .tb-title, .tb-ctrl, .umenu, .seg, .savebar, .lg-card, .msheet, .drawer .pe-panel { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+  .glass, .kpi, .hero, .tb-title, .tb-ctrl, .umenu { background-color: var(--glass-solid) !important; background-image: none !important; box-shadow: 0 1px 2px rgba(10, 30, 90, .06) !important; }
+  .main > .top::before { display: none; }
+  .main > .top { background: var(--bg) !important; margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px))); padding-inline: max(16px, env(safe-area-inset-left, 0px)); padding-bottom: 10px; box-shadow: 0 1px 0 var(--hair-in); }
+  .mbar { -webkit-backdrop-filter: blur(10px) !important; backdrop-filter: blur(10px) !important; }
+  /* entrance and decorative animations off; state changes stay quick */
+  .view, .dv[data-enter] .rise, .hc, .drawer.enter, .dw-scrim, .ms-scrim, .umenu.open .udrop, .kpi { animation: none !important; }
+  .kpi:hover { transform: none; }
+  .fill, .stack .seg, .ring .arc, .bar span, .gp-fill { transition: none !important; }
+  .msheet { animation-duration: .18s !important; }
+  .mb-pill { transition-duration: .26s !important; }
+  /* faster taps, no grey flash */
+  button, a, input, select, textarea, label, tr.link, .doc-main, .mb-it { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  /* skip layout/paint of panels that are off screen */
+  #view .panel { content-visibility: auto; contain-intrinsic-size: auto 420px; }
+}
 </style>
 </head>
 <body>
@@ -1741,7 +1763,7 @@ function render() {
   else if (S.view === 'ind') { body = vInd(I); crumb = esc(I.name); badge = I.no; eye += ' · ตัวชี้วัด ' + I.no + ' ' + esc(I.code); }
   else if (S.view === 'config' && !isAudit()) { body = v403(); crumb = 'ไม่มีสิทธิ์'; badge = ico('lock', 18); }
   else { body = { home: vOrg, review: vReview, users: vUsers, log: vLog, config: vConfig }[S.view](); crumb = { home: 'ภาพรวมองค์กร', review: 'พื้นที่ผู้ตรวจสอบ', users: 'ผู้ใช้และสิทธิ์', log: 'Audit trail', config: 'Config การกรอกแผน' }[S.view]; badge = ico({ home: 'grid', review: 'shield', users: 'users', log: 'history', config: 'sliders' }[S.view], 18); }
-  $('#root').innerHTML = '<div class="app' + (S.mini ? ' mini' : '') + '"><aside class="side" aria-label="เมนูหลัก">' + sidebar() + '</aside><div class="scrim" data-act="close-nav"></div>' +
+  $('#root').innerHTML = '<div class="app' + (S.mini ? ' mini' : '') + '"><aside class="side" aria-label="เมนูหลัก">' + (LITE.matches ? '' : sidebar()) + '</aside><div class="scrim" data-act="close-nav"></div>' +
     '<div class="main"><header class="top"><button class="icon-btn menu-btn" data-act="open-nav" aria-label="เปิดเมนู">' + ico('menu') + '</button><div class="tb-title glass"><span class="tb-badge num">' + badge + '</span><div class="tb-txt"><span class="tb-eye">' + eye + '</span><p class="tb-h">' + crumb + '</p></div></div><div class="spacer"></div><div class="tb-ctrl glass">' +
     (U.role === 'reporter' ? '<span class="saved" id="saved" role="status">' + ico('check', 15) + '<span>' + (S.savedAt ? 'บันทึกแล้ว ' + S.savedAt : 'บันทึกอัตโนมัติ') + '</span></span><i class="tb-sep"></i>' : '') +
     '<label class="sr" for="fyear">ปีบัญชี</label><select id="fyear">' + [CUR_FY, CLOSED_FY].map(function (y) { return '<option value="' + y + '"' + (y === FY ? ' selected' : '') + '>ปีบัญชี ' + y + (y === CUR_FY ? '' : ' (ปิดรอบ)') + '</option>'; }).join('') + '</select>' +
@@ -2254,10 +2276,12 @@ function cumChart(I) {
 }
 // Enter animation runs once per page; later re-renders (month change, filters) glide from the previous values
 var DVKEY = null, DVPREV = {};
+// Phones: lighter rendering (no number/bar animations, no hidden sidebar DOM)
+var LITE = matchMedia('(max-width: 760px)');
 function animateDv() {
   var root = document.querySelector('.dv');
   if (!root) { DVKEY = null; return; }
-  var key = S.ind + ':' + S.tab, enter = DVKEY !== key, still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var key = S.ind + ':' + S.tab, enter = DVKEY !== key, still = LITE.matches || matchMedia('(prefers-reduced-motion: reduce)').matches;
   DVKEY = key;
   var set = function (el, v) { if (el.dataset.kind === 'ring') el.style.strokeDashoffset = 100 - v; else if (el.dataset.kind === 'pos') el.style.left = v + '%'; else el.style.setProperty('--w', v + '%'); };
   var els = root.querySelectorAll('[data-k]:not(.cu)');
@@ -3103,6 +3127,7 @@ function renderRv() {
   var sel = document.querySelector('.frow[aria-selected="true"]'); if (sel) sel.scrollIntoView({ block: 'nearest' });
 }
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () { if (!S.theme) render(); });
+if (LITE.addEventListener) LITE.addEventListener('change', function () { if (U) render(); });
 render();
 </script>
 </body>
