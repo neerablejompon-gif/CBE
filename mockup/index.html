@@ -1694,8 +1694,8 @@ function canSee(code) { return U && (U.role !== 'reporter' || U.ind === code); }
 // A part reporter (SM, CM, KM, IM) sees the whole indicator but edits only its own part
 function canEdit(I, s) { return U && I.fy === CUR_FY && U.role === 'reporter' && U.ind === I.code && (!s || !U.part || s.part === U.part) && ['draft', 'returned'].indexOf(wfOf(I)) > -1; }
 function userLabel() { return !U ? '' : U.role === 'audit' ? 'กปม.' : U.role === 'exec' ? 'ผู้บริหาร' : 'ผู้รายงาน ' + (U.part || indBy(U.ind).label); }
-// report for month m is due on the 10th of the following month (FY 2570 = Oct 2026 – Sep 2027)
-function deadline() { var m = S.month; return new Date(FY - 544 + (m >= 3 ? 1 : 0), (m + 9) % 12 + 1, 10); }
+// report for month m is due on the 5th of the following month (FY 2570 = Oct 2026 – Sep 2027)
+function deadline() { var m = S.month; return new Date(FY - 544 + (m >= 3 ? 1 : 0), (m + 9) % 12 + 1, 5); }
 
 function applyTheme() {
   if (S.theme) document.documentElement.setAttribute('data-theme', S.theme);
@@ -2630,7 +2630,7 @@ function bookItems(c, st, cd) {
   for (var i = from; i < 12; i++) st.result[i] = cd.filter(function (x) { return x === i; }).length;
   st.cd = cd; st.chk = cd.map(function (x) { return x >= 0; });
 }
-function openM() { return API && typeof API.openFrom === 'number' ? API.openFrom : new Date().getDate() <= 10 ? Math.max(0, curMonth() - 1) : curMonth(); }
+function openM() { return API && typeof API.openFrom === 'number' ? API.openFrom : new Date().getDate() <= 5 ? Math.max(0, curMonth() - 1) : curMonth(); }
 // A level reports in two parts: against the criteria (3 steps), then against its GAP improvement plan (2 steps, only when it has a GAP)
 var STEP_GROUPS = { a: 'รายงานผลตามค่าเกณฑ์', b: 'รายงานผลตามแผนปรับปรุง GAP' };
 function gapApplies(L) { return !!(L.gap || (L.action || '').trim() || (L.gsteps || []).length); }

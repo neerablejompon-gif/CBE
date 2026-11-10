@@ -69,8 +69,8 @@ async function cached(key, ttl, fn) {
 function bkk() { return new Date(Date.now() + 7 * 3600e3); }
 const fyMonth = d => (d.getUTCMonth() + 3) % 12;
 function stamp() { const d = bkk(); return `${d.getUTCDate()} ${MONTHS[fyMonth(d)]} ${d.getUTCFullYear() + 543} ${d.toISOString().slice(11, 16)}`; }
-// Months before this one are closed; last month stays open until the 10th, its reporting deadline
-function openFrom() { const d = bkk(), m = fyMonth(d); return d.getUTCDate() <= 10 ? Math.max(0, m - 1) : m; }
+// Months before this one are closed; last month stays open until the 5th, its reporting deadline
+function openFrom() { const d = bkk(), m = fyMonth(d); return d.getUTCDate() <= 5 ? Math.max(0, m - 1) : m; }
 
 /* ---------- sign-in: employee ID + "cbe@ID", HMAC-signed session cookie ---------- */
 const SESSION = 'cbe_session', SESSION_HOURS = 8, MAX_FAILS = 5, LOCK_MS = 15 * 60e3;
