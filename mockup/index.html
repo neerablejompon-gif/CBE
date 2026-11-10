@@ -1549,9 +1549,10 @@ function lvStatus(L, m) {
 function lvProg(L) { if (!L.steps.length) return L.narrative ? 1 : 0; return sum(L.steps.map(function (st) { return Math.min(1, sum(st.result) / stTarget(st)); })) / L.steps.length; }
 function reqDocs(L) { return L.mr.filter(function (r) { return !/^เอกสารประกอบอื่น/.test(r.req); }); }
 // A level counts toward the system score only with results done, a written narrative and every required document ticked
-function lvIssues(L, m) {
-  var out = [];
-  if (lvStatus(L, m) !== 'done') out.push('ผลยังไม่ครบตามแผน');
+// monthly = the monthly report check (on plan so far is enough); otherwise the level must be finished to count toward the score
+function lvIssues(L, m, monthly) {
+  var out = [], ls = lvStatus(L, m);
+  if (monthly ? ls === 'late' : ls !== 'done') out.push('ผลยังไม่ครบตามแผน');
   if (!L.narrative) out.push('ยังไม่มีผลการดำเนินงาน');
   if (reqDocs(L).some(function (r) { return !r.has; })) out.push('หลักฐานยังไม่ครบ');
   else if (L.mr.length && !L.mr.some(function (r) { return r.evidence; })) out.push('ยังไม่ระบุชื่อหลักฐาน'); // old forms list file names once per level
@@ -2160,7 +2161,7 @@ function myWork(I, m) {
     var cl = Math.ceil(subScore(s, m)), ok = true;
     s.levels.forEach(function (L) {
       // claimed levels must be complete; unclaimed levels only matter once their plan falls behind (e.g. start of a new year)
-      (L.level <= cl ? lvIssues(L, m) : lvStatus(L, m) === 'late' ? ['ผลยังไม่ครบตามแผน'] : []).concat(gapIssues(L, m)).forEach(function (t) {
+      (L.level <= cl ? lvIssues(L, m, true) : lvStatus(L, m) === 'late' ? ['ผลยังไม่ครบตามแผน'] : []).concat(gapIssues(L, m)).forEach(function (t) {
         ok = false; (groups[t] = groups[t] || []).push({ s: s, L: L });
         if (!next) next = { s: s, L: L };
       });
@@ -2173,6 +2174,7 @@ function vMyWork(I, c) {
   var m = S.month, w = wfOf(I), ed = canEdit(I), mw = myWork(I, m), od = Math.floor((new Date() - deadline()) / 864e5);
   var who = U.part ? U.part + ' · ' + (I.parts.filter(function (p) { return p.key === U.part; })[0] || {}).name : I.label;
   var acts = !ed ? chip({ t: w === 'approved' ? 'อนุมัติแล้ว' : 'ส่งแล้ว รอ กปม. ตรวจ', c: 'info', i: 'lock' })
+    : S.confirmSubmit ? '<div class="submit-confirm"><p style="margin:0 0 8px"><b>ส่งรายงานเดือน ' + MONTHS[m] + ' ให้ กปม. ตรวจ?</b><br><span class="small muted">ระหว่างตรวจจะแก้ไขไม่ได้ จนกว่า กปม. ส่งกลับ</span>' + (mw.todo ? '<br><span class="small bad">' + ico('alert', 13) + ' ยังไม่พร้อม ' + mw.todo + ' จาก ' + mw.subs.length + ' ประเด็น · ควรแก้ตามรายการ "สิ่งที่ต้องทำ" ก่อน</span>' : '') + '</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="cancel-submit">ยกเลิก</button><button class="btn ' + (mw.todo ? 'danger' : 'primary') + '" data-act="submit" data-confirm="1">' + ico('send', 16) + (mw.todo ? 'ส่งทั้งที่ยังไม่ครบ' : 'ยืนยันส่งตรวจ') + '</button></div></div>'
     : mw.next ? '<button class="btn primary" data-open="' + mw.next.s.uid + '|' + mw.next.L.level + '">ทำต่อ: ' + esc(mw.next.s.label) + ' ระดับ ' + mw.next.L.level + ico('chev', 16) + '</button><button class="btn" data-act="submit">' + ico('send', 16) + 'ส่งตรวจ</button>'
     : '<button class="btn primary" data-act="submit">' + ico('send', 16) + 'ส่งตรวจ</button>';
   var rows = TODO_KIND.filter(function (k) { return mw.groups[k[0]]; }).map(function (k) {
@@ -2593,7 +2595,7 @@ function spWin(kind) { return kind === 'gs' ? 'gap' : 'plan'; }
 // "(1) … (2) …", "1) …", "1. …" or bullet lines become separate steps
 function splitCriteria(t) {
   t = String(t || '');
-  var re = /\(\d{1,2}\)|(?:^|\s)\d{1,2}[.)]\s|\n\s*[-•▪]/g, at = [], m;
+  var re = /\(\d{1,2}\)|(?:^|\s)\d{1,2}[.)](?!\d)\s*|(?:^|\n)[ \t]*\d{1,2}[ \t]+(?=\D)|\n\s*[-•▪]/g, at = [], m;
   while ((m = re.exec(t))) at.push([m.index, m.index + m[0].length]);
   if (at.length < 2) return [];
   return at.map(function (x, i) { return t.slice(x[1], i + 1 < at.length ? at[i + 1][0] : t.length).replace(/\s+/g, ' ').trim(); }).filter(function (x) { return x.length > 3; }).slice(0, 12);
@@ -2647,7 +2649,7 @@ function spList(s, L, kind, ed, planMode) {
       }).join('') + '</div>';
     } else if (planMode) entry = '';
     else {
-      entry = '<div class="month-in"><label for="cu' + key + '" style="font-weight:600">' + (st.mode === 'pct' ? 'ความคืบหน้าแล้ว (%)' : 'ทำได้แล้วทั้งหมด') + '</label><input class="input" id="cu' + key + '" type="number" min="' + (unl ? 0 : prev) + '"' + (st.mode === 'pct' ? ' max="100"' : '') + ' inputmode="decimal" data-cu="' + key + '" value="' + (cr || '') + '"' + (live ? '' : ' disabled') + '><span class="small muted">จากเป้า ' + fmt(tg, 0) + ' ' + esc(st.mode === 'pct' ? '%' : st.unit || '') + '</span></div>' +
+      entry = '<div class="month-in"><label for="cu' + key + '" style="font-weight:600">' + (st.mode === 'pct' ? 'ความคืบหน้าแล้ว (%)' : 'ทำได้แล้วทั้งหมด') + '</label><input class="input" id="cu' + key + '" type="number" min="' + (unl ? 0 : prev) + '"' + (st.mode === 'pct' ? ' max="100"' : '') + ' inputmode="decimal" data-cu="' + key + '" value="' + (cr || '') + '"' + (live ? '' : ' disabled') + '><span class="small muted">จากเป้า ' + fmt(tg, tg % 1 ? 1 : 0) + ' ' + esc(st.mode === 'pct' ? '%' : st.unit || '') + '</span>' + (st.mode !== 'pct' && cr > tg ? '<span class="small warn">' + ico('alert', 13) + ' เกินเป้า ตรวจสอบตัวเลขอีกครั้ง</span>' : '') + '</div>' +
         '<div class="autonote">' + ico('bolt', 14) + '<span>ระบบลงผลให้อัตโนมัติ: เดือน ' + MONTHS[m] + ' <b class="num">+' + fmt(add, add % 1 ? 1 : 0) + '</b>' + (prev ? ' · เดือนก่อนหน้าล็อกไว้ที่ <b class="num">' + fmt(prev, prev % 1 ? 1 : 0) + '</b>' : '') + '</span>' +
           (live && cr < tg ? '<button class="btn sm" data-full="' + key + '">' + ico('check', 15) + 'ทำครบตามเป้าแล้ว</button>' : '') + '</div>';
     }
@@ -2669,6 +2671,7 @@ function spList(s, L, kind, ed, planMode) {
       (ed && !live ? '<p class="small warn" style="margin:0 0 10px">' + ico('lock', 13) + ' ลงผลได้เฉพาะรอบรายงานปัจจุบัน (' + MONTHS[curMonth()] + ') · เดือนอื่นดูได้อย่างเดียว</p>' : '');
   var tools = pe ? '<div class="step-tools"><button class="btn sm" data-act="add-step" data-kind="' + kind + '">' + ico('plus', 15) + 'เพิ่มขั้นตอน</button>' +
     (split ? '<button class="btn sm" data-act="split-steps" data-kind="' + kind + '">' + ico('list', 15) + (kind === 'gs' ? 'แตกขั้นตอนจากแนวทางปรับปรุง' : 'แตกขั้นตอนจากค่าเกณฑ์') + ' (' + parts.length + ' ข้อ)</button>' : '') + '</div>' : '';
+  if (split && pe) tools = tools.replace('data-act="split-steps"', 'data-act="split-steps" data-n="' + parts.length + '"');
   var pct = kind === 'gs' && gapPctOf(L) != null && list.length ? '<div class="gap-pct"><div class="bar' + (gapStat(L, m) === 'done' ? ' ok' : '') + '"><span style="width:' + gapPctOf(L) + '%"></span></div><b class="num">' + gapPctOf(L) + '%</b></div>' : '';
   return '<div class="sp-wrap' + (kind === 'gs' ? ' gap-plan' : '') + '">' + (kind === 'gs' ? '<div class="step-h"><p><b>แผนย่อยตามแนวทางปรับปรุง</b></p>' + (gapStat(L, m) ? chip(STATUS[gapStat(L, m)]) : '') + '</div>' : '') + head +
     (cards || '<div class="empty" style="padding:16px">' + ico('info') + (kind === 'gs' ? 'ยังไม่มีแผนปรับปรุง' : 'ระดับนี้ไม่มีแผนในแบบฟอร์ม') + (pe ? ' · ' + (split ? 'แตกขั้นตอนจาก' + (kind === 'gs' ? 'แนวทาง' : 'ค่าเกณฑ์') + 'หรือ' : '') + 'เพิ่มขั้นตอนเองได้' : !planMode && kind === 'st' ? ' · ข้ามไปขั้นถัดไปได้' : '') + '</div>') +
@@ -2695,7 +2698,8 @@ function bookStep(c, st, total, what) {
   savePatch(c.s, c.L);
   logIt('ลงผลอัตโนมัติ ' + what + ': ยอดสะสม ' + total + ' → ' + MONTHS[m] + ' +' + inc);
   render(); refreshSteps();
-  toast('บันทึกผลเดือน ' + MONTHS[m] + ' +' + inc + ' ' + (st.mode === 'pct' ? '%' : st.unit || ''), 'bolt');
+  var over = st.mode !== 'pct' && total > stTarget(st);
+  toast('บันทึกผลเดือน ' + MONTHS[m] + ' +' + inc + ' ' + (st.mode === 'pct' ? '%' : st.unit || '') + (over ? ' · ยอดสะสม ' + total + ' เกินเป้า ' + stTarget(st) + ' ตรวจสอบตัวเลขอีกครั้ง' : ''), over ? 'alert' : 'bolt');
   return true;
 }
 function bookProgress(si, total) { var c = curLv(); return bookStep(c, c.L.steps[si], total, c.s.label + ' ระดับ ' + c.L.level + ' ขั้นตอน ' + (si + 1)); }
@@ -3074,11 +3078,14 @@ document.addEventListener('click', function (e) {
   if (d.yr) { S.yr = +d.yr; return render(); }
   if (d.mr != null) { var c = curLv(); c.L.mr[+d.mr].has = !c.L.mr[+d.mr].has; savePatch(c.s, c.L); return render(); }
   if (d.act === 'save') { toast('บันทึกร่างแล้ว'); return logIt('บันทึกร่าง ' + S.ind); }
+  if (d.act === 'cancel-submit') { S.confirmSubmit = false; return render(); }
   if (d.act === 'submit') {
-    var I2 = indBy(S.ind), n = indCalc(I2, S.month).issues.length;
+    if (!d.confirm) { S.confirmSubmit = true; return render(); }
+    S.confirmSubmit = false;
+    var I2 = indBy(S.ind), n = myWork(I2, S.month).todo;
     Object.keys(UNLOCK).forEach(function (k) { if (k.indexOf(I2.code + '|') === 0) delete UNLOCK[k]; }); store('unlock' + FY, UNLOCK);
-    WFS[I2.code] = 'submitted'; WF_NOTE[I2.code + ':sent'] = thDate(new Date()) + ' ' + new Date().toTimeString().slice(0, 5); store('wfnote' + FY, WF_NOTE); delete RUNS[I2.code]; store('wf' + FY, WFS); logIt('ส่งรายงาน ' + I2.code + ' ให้ กปม. ตรวจ' + (n ? ' (Quality Gate ค้าง ' + n + ' รายการ)' : '')); render();
-    return toast(n ? 'ส่งตรวจแล้ว · มี ' + n + ' รายการที่ยังไม่ผ่าน Quality Gate' : 'ส่งตรวจแล้ว · ล็อกการแก้ไขระหว่างตรวจ', n ? 'alert' : 'send');
+    WFS[I2.code] = 'submitted'; WF_NOTE[I2.code + ':sent'] = thDate(new Date()) + ' ' + new Date().toTimeString().slice(0, 5); store('wfnote' + FY, WF_NOTE); delete RUNS[I2.code]; store('wf' + FY, WFS); logIt('ส่งรายงาน ' + I2.code + ' ให้ กปม. ตรวจ' + (n ? ' (ยังไม่พร้อม ' + n + ' ประเด็น)' : '')); render();
+    return toast(n ? 'ส่งตรวจแล้ว · ยังไม่พร้อม ' + n + ' ประเด็น' : 'ส่งตรวจแล้ว · ล็อกการแก้ไขระหว่างตรวจ', n ? 'alert' : 'send');
   }
   if (d.act === 'ask-return') { S.returning = true; render(); var r = $('#retReason'); if (r) r.focus(); return; }
   if (d.act === 'cancel-return') { S.returning = false; return render(); }
@@ -3093,7 +3100,14 @@ document.addEventListener('click', function (e) {
 });
 document.addEventListener('input', function (e) {
   var t = e.target, d = t.dataset;
-  if (d.f) { var c = lvCtx(); if (d.f === 'action' && !winOpen('gap')) return; c.L[d.f] = t.value; savePatch(c.s, c.L); return refreshSteps(); }
+  if (d.f) {
+    var c = lvCtx(); if (d.f === 'action' && !winOpen('gap')) return; c.L[d.f] = t.value; savePatch(c.s, c.L);
+    if (d.f === 'action' && S.pl) { // redraw only when the split button should appear or its count changes, keeping the caret
+      var sb = document.querySelector('[data-act="split-steps"][data-kind="gs"]'), np = spArr(c.L, 'gs').some(function (x) { return x.src === 'crit'; }) ? 0 : splitCriteria(t.value).length;
+      if ((sb ? +sb.dataset.n : 0) !== np) { var pos = t.selectionStart; render(); var a = $('#ac'); if (a) { a.focus(); a.setSelectionRange(pos, pos); } }
+    }
+    return refreshSteps();
+  }
   if (d.ev != null) { var c2 = curLv(); c2.L.mr[+d.ev].evidence = t.value; savePatch(c2.s, c2.L); return refreshSteps(); }
   if (d.tnote) { TRI_NOTE[d.tnote] = t.value; return store('trinote' + FY, TRI_NOTE); }
   if (t.id === 'q') { S.q = t.value; var pos = t.selectionStart; render(); var n = $('#q'); n.focus(); n.setSelectionRange(pos, pos); }
