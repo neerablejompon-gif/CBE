@@ -1240,6 +1240,17 @@ td, th, .trow, .pl td, .doc, .lib-head { border-color: var(--hair-in) !important
   /* skip layout/paint of panels that are off screen */
   #view .panel { content-visibility: auto; contain-intrinsic-size: auto 420px; }
 }
+/* target score: entered in the plan drawer, read-only elsewhere */
+.tg-box { display: grid; grid-template-columns: minmax(0, 1fr) 130px; gap: 12px; align-items: center; padding: 12px 14px; margin-bottom: 14px; border-radius: var(--r-md); border: 1.5px solid color-mix(in srgb, var(--primary) 40%, transparent); background: var(--primary-soft); }
+.tg-box small { display: block; margin-top: 3px; font-size: 12.5px; }
+.tg-box .input { width: 100%; min-height: 44px; font: 800 20px var(--num); text-align: center; }
+.target-fact .linkbtn { padding: 0; font-size: 12px; display: flex; margin-top: 2px; gap: 4px; align-items: center; }
+.ih-facts { display: flex; gap: 10px; flex-wrap: wrap; }
+.ih-facts .fact { min-width: 140px; }
+.ih-facts .fact b { font-size: 22px; }
+.side-credit { display: block; font-size: 11.5px; line-height: 1.6; color: var(--rail-ink-2); padding: 0 6px; }
+.app.mini .side-credit { display: none; }
+@media (max-width: 520px) { .tg-box { grid-template-columns: minmax(0, 1fr); } }
 </style>
 </head>
 <body>
@@ -1686,7 +1697,9 @@ function applyTheme() {
 
 /* ================= shell ================= */
 function nav(attrs, label, icon, current, extra) { return '<button class="nav" ' + attrs + (current ? ' aria-current="page"' : '') + (S.mini ? ' title="' + esc(String(label).replace(/<[^>]+>/g, '')) + '"' : '') + '>' + icon + '<span>' + label + '</span>' + (extra || '') + '</button>'; }
-function whoCard(cls) { return '<div class="' + cls + '"><div class="av">' + (isAudit() ? 'กป' : isExec() ? 'ผบ' : (U.part || indBy(U.ind).label).slice(0, 3)) + '</div><div><b>' + esc(userLabel()) + '</b><small>' + (isAudit() ? 'ตรวจ · ให้คะแนน · ดูแลระบบ' : isExec() ? 'ดูอย่างเดียว · ทุกตัวชี้วัด' : U.part ? 'แก้ไขเฉพาะส่วน ' + U.part + ' ของ ' + indBy(U.ind).label : 'เห็นเฉพาะตัวชี้วัดของตน') + '</small></div></div>'; }
+function whoCard(cls) { return '<div class="' + cls + '"><div class="av">' + (isAudit() ? 'กป' : isExec() ? 'ผบ' : (U.part || indBy(U.ind).label).slice(0, 3)) + '</div><div><b>' + esc(userLabel()) + '</b><small>' + esc(userName()) + '</small></div></div>'; }
+// Person's name from the users sheet (live system); the mockup's demo accounts have none
+function userName() { return (U && U.name) || (API ? 'รหัส ' + (U && U.id || '') : 'ผู้ใช้ทดลอง'); }
 function sidebar() {
   var h = '<div class="brand"><img class="brand-logo" src="assets/cbe-logo-side.png" width="640" height="208" alt="CBE Core Business Enablers"><img class="brand-mini" src="assets/cbe-icon.png" width="40" height="40" alt="CBE"><span class="brand-org">การยางแห่งประเทศไทย</span></div>' +
     '';
@@ -1706,12 +1719,12 @@ function sidebar() {
     }).join('');
   }
   var I0 = U.role === 'reporter' ? indBy(U.ind) : null;
-  return h + '<div class="side-foot"><button class="side-tog" data-act="side-toggle" aria-expanded="' + !S.mini + '" title="' + (S.mini ? 'ขยายเมนู' : 'ย่อเมนู') + '">' + ico('chev', 16) + '<span>' + (S.mini ? 'ขยายเมนู' : 'ย่อเมนู') + '</span></button><span>' + ico('info', 14) + ' เกณฑ์ SE-AM ' + FY + (I0 ? ' · ' + I0.topics.length + ' หัวข้อ · ' + I0.subs.length + ' ประเด็นย่อย' : ' · 8 ตัวชี้วัด') + '</span>' + '</div>';
+  return h + '<div class="side-foot"><button class="side-tog" data-act="side-toggle" aria-expanded="' + !S.mini + '" title="' + (S.mini ? 'ขยายเมนู' : 'ย่อเมนู') + '">' + ico('chev', 16) + '<span>' + (S.mini ? 'ขยายเมนู' : 'ย่อเมนู') + '</span></button><span class="side-credit">© 2569 กองประเมินผล<br>ฝ่ายยุทธศาสตร์องค์กร<br>การยางแห่งประเทศไทย</span>' + '</div>';
 }
 // Header account menu: who is signed in + account actions (room for profile / user settings later)
 function userMenu() {
   var av = isAudit() ? 'กป' : isExec() ? 'ผบ' : (U.part || indBy(U.ind).label).slice(0, 3);
-  return '<div class="umenu glass"><button class="ubtn" data-act="umenu" aria-haspopup="menu" aria-expanded="false" aria-controls="udrop"><span class="av">' + esc(av) + '</span><span class="u-txt"><b>' + esc(userLabel()) + '</b><small>' + (isAudit() ? 'ผู้ดูแลระบบ' : isExec() ? 'ดูอย่างเดียว' : 'ผู้รายงาน') + '</small></span>' + ico('chev', 16) + '</button>' +
+  return '<div class="umenu glass"><button class="ubtn" data-act="umenu" aria-haspopup="menu" aria-expanded="false" aria-controls="udrop"><span class="av">' + esc(av) + '</span><span class="u-txt"><b>' + esc(userLabel()) + '</b><small>' + esc(userName()) + '</small></span>' + ico('chev', 16) + '</button>' +
     '<div class="udrop glass" id="udrop" role="menu" aria-label="บัญชีผู้ใช้">' + whoCard('u-head') +
       '<button class="u-item danger" role="menuitem" data-act="logout">' + ico('logout', 17) + 'ออกจากระบบ</button></div></div>';
 }
@@ -2040,7 +2053,7 @@ function vInd(I) {
   var head = '<div class="ihead glass"' + (rep ? ' style="padding-bottom:20px"' : '') + '><div class="ihead-top"><div style="min-width:0"><h1>' + esc(I.name) + '</h1>' +
     '<div class="meta-line"><span>ตัวชี้วัด <b>' + I.no + ' · ' + esc(I.label) + '</b></span><span>ผู้รับผิดชอบ <b>' + esc(I.owner) + '</b></span>' + chip(WF[w]) +
       '<span>ครบกำหนด <b>' + thDate(deadline()) + '</b>' + (od > 0 && ['draft', 'returned'].indexOf(w) > -1 ? ' <span class="chip bad">เลย ' + od + ' วัน</span>' : '') + '</span></div></div>' +
-    '<div class="ctrls" style="border:0;padding:0"><div class="acts">' + (S.tab === ov || S.tab === 'history' ? '<div class="seg ov-seg" role="group" aria-label="มุมมองภาพรวมตัวชี้วัด"><button data-tab="' + ov + '" aria-pressed="' + (S.tab === ov) + '">' + ico('target', 15) + 'ปีปัจจุบัน</button><button data-tab="history" aria-pressed="' + (S.tab === 'history') + '">' + ico('history', 15) + 'ผลการดำเนินงานที่ผ่านมา</button></div>' : '') + (acts || '') + '</div></div></div>' +
+    '<div class="ctrls" style="border:0;padding:0"><div class="ih-facts"><div class="fact"><span>คะแนนเป้าหมาย ณ สิ้นปี</span><b class="num">' + fmt(c.score) + '</b></div>' + (I.target != null ? '<div class="fact"><span>เป้าหมายตัวชี้วัด</span><b class="num ' + (c.score >= I.target ? 'ok' : 'warn') + '">' + fmt(I.target) + '</b></div>' : '') + '</div><div class="acts">' + (S.tab === ov || S.tab === 'history' ? '<div class="seg ov-seg" role="group" aria-label="มุมมองภาพรวมตัวชี้วัด"><button data-tab="' + ov + '" aria-pressed="' + (S.tab === ov) + '">' + ico('target', 15) + 'ปีปัจจุบัน</button><button data-tab="history" aria-pressed="' + (S.tab === 'history') + '">' + ico('history', 15) + 'ผลการดำเนินงานที่ผ่านมา</button></div>' : '') + (acts || '') + '</div></div></div>' +
     (S.returning ? '<div class="return-box"><label class="label" for="retReason" style="margin:0">เหตุผลการส่งกลับ (ผู้รายงานจะเห็นข้อความนี้)</label><textarea id="retReason" rows="2" placeholder="เช่น ระดับ 3 ของ 2.1 ยังไม่แนบรายงานการประชุมคณะกรรมการ"></textarea><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn sm" data-act="cancel-return">ยกเลิก</button><button class="btn sm primary" data-act="confirm-return">ยืนยันส่งกลับ</button></div></div>' : '') +
     returned + (rep ? '' : '<div class="tabs" role="tablist">' + tabs.map(function (t) { return '<button class="tab" role="tab" data-tab="' + t[0] + '" aria-selected="' + (S.tab === t[0] || (t[0] === 'dash' && S.tab === 'history')) + '">' + ico(t[2], 16) + t[1] + '</button>'; }).join('') + '</div>') + '</div>';
   return '<section class="view">' + head + { dash: vDash, score: vDash, plan: vPlan, report: vReport, gap: vGap, evidence: vEvidence, history: vHistory }[S.tab](I, c) + '</section>';
@@ -2366,8 +2379,9 @@ function vReport(I) {
     '<div class="shead glass"><div class="big-code">' + esc(s.label) + '</div><div style="flex:1 1 260px;min-width:0"><h2>' + esc(s.name) + '</h2><p class="sub">' + esc(s.topicRef.name) + (U.role === 'reporter' && !ed && U.part && s.part !== U.part ? ' · <span class="warn">' + ico('lock', 13) + ' ส่วน ' + s.part + ' ดูอย่างเดียว</span>' : '') + '</p>' +
       (FY === CUR_FY ? '<button class="linkbtn" data-act="prev-year-lv">' + ico('history', 13) + ' ดูผลปี ' + CLOSED_FY + ' ของประเด็นนี้ (ระดับ ' + L.level + ')</button>' : '') + '</div>' +
       '<div class="facts"><div class="fact"><span>น้ำหนัก</span><b>' + fmt(s.weight, s.weight % 1 ? 2 : 0) + '</b></div>' +
-      '<div class="fact target-fact"><label for="self">คะแนนเป้าหมาย ณ สิ้นปีบัญชี</label><input class="num" id="self" type="number" min="0" max="5" step="0.01" inputmode="decimal" placeholder="0.00–5.00" value="' + (s.self != null ? +s.self : '') + '"' + dis + '>' +
-        (s.self == null ? '<small class="warn">ยังไม่กรอก · ใช้คะแนนหลักฐานแทน</small>' : '') + '</div>' +
+      '<div class="fact target-fact"><span>คะแนนเป้าหมาย ณ สิ้นปีบัญชี</span><b class="num">' + (s.self != null ? fmt(+s.self) : '–') + '</b>' +
+        (s.self == null ? '<small class="warn">ยังไม่กรอก · ใช้คะแนนหลักฐานแทน</small>' : '') +
+        '<button class="linkbtn" data-tab="plan" data-pick="' + esc(s.uid) + '|' + L.level + '">' + ico('edit', 12) + (ed ? (s.self == null ? 'กรอกที่หน้าแผน' : 'แก้ที่หน้าแผน') : 'ดูที่หน้าแผน') + '</button></div>' +
       '<div class="fact"><span>คะแนนที่หลักฐานรองรับ</span><b class="' + (sys < Math.floor(sc) ? 'warn' : 'ok') + '">' + sys + '</b></div></div></div>' +
     lvTabs +
     '<div class="panel glass"><div class="panel-head" style="margin-bottom:8px"><h3>' + ico('target') + 'ค่าเกณฑ์ระดับ ' + L.level + '</h3>' + chip(st) + '</div>' +
@@ -2479,10 +2493,12 @@ function planDrawer() {
 function planEditor(I, kind) {
   var c = S.pl && lvOf(S.pl.uid, S.pl.lv);
   if (!c || !c.L || c.I !== I) return '';
-  var ed = canEdit(c.I, c.s), ae = ed && winOpen('gap');
+  var ed = canEdit(c.I, c.s), ae = ed && winOpen('gap'), sys = subSys(c.s, S.month);
+  var tgt = kind === 'gs' ? '' : '<div class="tg-box"><div><label class="label" for="self" style="margin:0">คะแนนเป้าหมาย ณ สิ้นปีบัญชี · ประเด็น ' + esc(c.s.label) + '</label><small class="muted">คะแนนที่คาดว่าประเด็นนี้จะได้ (0.00–5.00) · หลักฐานรองรับตอนนี้ <b class="num">' + sys + '</b>' + (c.I.target != null ? ' · เป้าหมายตัวชี้วัด <b class="num">' + fmt(c.I.target) + '</b>' : '') + '</small></div>' +
+    '<input class="input num" id="self" type="number" min="0" max="5" step="0.01" inputmode="decimal" placeholder="0.00–5.00" value="' + (c.s.self != null ? +c.s.self : '') + '"' + (ed ? '' : ' disabled') + '></div>';
   return '<div class="panel glass pe-panel" id="pe-panel"><div class="panel-head"><div style="min-width:0"><div class="pe-eye"><span class="code">' + esc(c.s.label) + '</span><b>ระดับ ' + c.L.level + '</b>' + (kind === 'gs' ? '<span class="sp-tag own">แผนปรับปรุง GAP</span>' : '<span class="sp-tag form">แผนการดำเนินงาน</span>') + '</div><h3 style="margin:4px 0 0">' + esc(c.s.name) + '</h3></div>' +
       '<div class="toolbar"><button class="btn sm" data-open="' + c.s.uid + '|' + c.L.level + '">' + ico('report', 15) + 'ไปหน้ารายงานผล</button><button class="icon-btn" data-pick="" aria-label="ปิดตัวแก้ไขแผน">' + ico('x') + '</button></div></div>' +
-    (kind === 'gs' ? gapBox(c.L) + '<label class="label" for="ac">แนวทางปรับปรุง / กิจกรรม</label><textarea id="ac" class="act-box" data-f="action" rows="3" placeholder="แนวทางปรับปรุงตามข้อเสนอแนะข้างต้น หรือที่ส่วนงานกำหนดเอง"' + (ae ? '' : ' disabled') + '>' + esc(c.L.action) + '</textarea>'
+    tgt + (kind === 'gs' ? gapBox(c.L) + '<label class="label" for="ac">แนวทางปรับปรุง / กิจกรรม</label><textarea id="ac" class="act-box" data-f="action" rows="3" placeholder="แนวทางปรับปรุงตามข้อเสนอแนะข้างต้น หรือที่ส่วนงานกำหนดเอง"' + (ae ? '' : ' disabled') + '>' + esc(c.L.action) + '</textarea>'
       : '<p class="criteria' + (S.critOpen ? '' : ' clamp') + '" style="margin:0 0 12px">' + (esc(c.L.criteria) || '<span class="muted">ไม่มีข้อความเกณฑ์ในแบบฟอร์ม</span>') + '</p>') +
     spList(c.s, c.L, kind, ed, true) + '</div>';
 }
@@ -3060,9 +3076,9 @@ document.addEventListener('change', function (e) {
   if (t.id === 'ruleSel') { S.rule = t.value; S.fid = null; return render(); }
   if (t.id === 'partSel') { S.rpart = t.value; S.fid = null; return render(); }
   if (t.id === 'self') {
-    var c = curLv(), raw = t.value.trim(), v = raw === '' ? null : Math.round(Math.min(5, Math.max(0, +raw)) * 100) / 100;
-    if (raw !== '' && isNaN(+raw)) return render();
-    c.s.self = v; delete RUNS[S.ind];
+    var c = lvCtx(), raw = t.value.trim(), v = raw === '' ? null : Math.round(Math.min(5, Math.max(0, +raw)) * 100) / 100;
+    if (!c || !canEdit(c.I, c.s) || (raw !== '' && isNaN(+raw))) return render();
+    c.s.self = v; delete RUNS[c.I.code];
     if (v == null) delete P[c.s.uid + '|self']; else P[c.s.uid + '|self'] = v;
     store('patch' + FY, P); logIt((v == null ? 'ล้างคะแนนเป้าหมายสิ้นปี ' + c.s.label : 'กรอกคะแนนเป้าหมายสิ้นปี ' + c.s.label + ' = ' + fmt(v))); return render();
   }
