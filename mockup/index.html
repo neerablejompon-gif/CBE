@@ -1251,6 +1251,14 @@ td, th, .trow, .pl td, .doc, .lib-head { border-color: var(--hair-in) !important
 .side-credit { display: block; font-size: 11.5px; line-height: 1.6; color: var(--rail-ink-2); padding: 0 6px; }
 .app.mini .side-credit { display: none; }
 @media (max-width: 520px) { .tg-box { grid-template-columns: minmax(0, 1fr); } }
+/* help contact + read-only target on later levels */
+.side-help { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; margin: 0 2px; border-radius: 10px; background: rgba(255,255,255,.07); font-size: 12px; line-height: 1.5; color: var(--rail-ink); }
+.side-help svg { flex: none; margin-top: 2px; }
+.app.mini .side-help { display: none; }
+.ms-help { display: flex; gap: 8px; align-items: center; margin: 12px 4px 0; padding: 10px 12px; border-radius: 12px; background: var(--primary-soft); font-size: 13px; color: var(--ink-2); }
+.lg-help { margin: 0; text-align: center; font-size: 13px; color: var(--lg-ink2); }
+.tg-ro { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; margin-bottom: 14px; border-radius: var(--r-md); border: 1px dashed var(--hair-in); background: var(--field); font-size: 13px; color: var(--ink-2); }
+.tg-ro b { font-size: 18px; color: var(--ink); } .tg-ro .linkbtn { margin-left: auto; padding: 0; display: inline-flex; gap: 4px; align-items: center; font-size: 12.5px; }
 </style>
 </head>
 <body>
@@ -1719,7 +1727,7 @@ function sidebar() {
     }).join('');
   }
   var I0 = U.role === 'reporter' ? indBy(U.ind) : null;
-  return h + '<div class="side-foot"><button class="side-tog" data-act="side-toggle" aria-expanded="' + !S.mini + '" title="' + (S.mini ? 'ขยายเมนู' : 'ย่อเมนู') + '">' + ico('chev', 16) + '<span>' + (S.mini ? 'ขยายเมนู' : 'ย่อเมนู') + '</span></button><span class="side-credit">© 2569 กองประเมินผล<br>ฝ่ายยุทธศาสตร์องค์กร<br>การยางแห่งประเทศไทย</span>' + '</div>';
+  return h + '<div class="side-foot"><button class="side-tog" data-act="side-toggle" aria-expanded="' + !S.mini + '" title="' + (S.mini ? 'ขยายเมนู' : 'ย่อเมนู') + '">' + ico('chev', 16) + '<span>' + (S.mini ? 'ขยายเมนู' : 'ย่อเมนู') + '</span></button><span class="side-help">' + ico('info', 14) + '<span>หากมีข้อสงสัยให้ติดต่อ กองประเมินผล 343</span></span><span class="side-credit">© 2569 กองประเมินผล<br>ฝ่ายยุทธศาสตร์องค์กร<br>การยางแห่งประเทศไทย</span>' + '</div>';
 }
 // Header account menu: who is signed in + account actions (room for profile / user settings later)
 function userMenu() {
@@ -1757,6 +1765,7 @@ function mobileSheet() {
     else if (isAudit()) b += '<h3>ระบบ</h3>' + row('data-go="config"', ico('sliders', 19), 'Config การกรอกแผน') + row('data-go="users"', ico('users', 19), 'ผู้ใช้และสิทธิ์') + row('data-go="log"', ico('log', 19), 'Audit trail');
     b += '<h3>บัญชี</h3>' + whoCard('ms-who') + row('data-act="logout"', ico('logout', 19), 'ออกจากระบบ').replace('class="ms-row"', 'class="ms-row danger"');
   }
+  if (S.sheet === 'more') b += '<p class="ms-help">' + ico('info', 15) + 'หากมีข้อสงสัยให้ติดต่อ กองประเมินผล 343</p>';
   return '<div class="ms-scrim" data-act="mb-close"></div><div class="msheet" role="dialog" aria-modal="true" aria-label="' + (S.sheet === 'inds' ? 'ตัวชี้วัด' : 'เมนูเพิ่มเติม') + '"><div class="ms-grab"></div>' + b + '</div>';
 }
 function closeUmenu() { var m = document.querySelector('.umenu.open'); if (m) { m.classList.remove('open'); m.querySelector('.ubtn').setAttribute('aria-expanded', 'false'); } }
@@ -1796,7 +1805,7 @@ function render() {
 function v403() { return '<section class="view"><div class="panel glass empty">' + ico('lock') + '<h2>ไม่มีสิทธิ์เข้าถึงตัวชี้วัดนี้</h2><p>บัญชีของคุณเห็นได้เฉพาะตัวชี้วัดที่รับผิดชอบ</p></div></section>'; }
 
 /* ================= login ================= */
-var CREDIT = '<div class="lg-credit"><img src="assets/raot-logo.png" width="44" height="44" alt="ตราการยางแห่งประเทศไทย"><span>กองประเมินผล ฝ่ายยุทธศาสตร์องค์กร<br><b>การยางแห่งประเทศไทย</b></span></div>';
+var CREDIT = '<p class="lg-help">หากมีข้อสงสัยให้ติดต่อ กองประเมินผล 343</p><div class="lg-credit"><img src="assets/raot-logo.png" width="44" height="44" alt="ตราการยางแห่งประเทศไทย"><span>กองประเมินผล ฝ่ายยุทธศาสตร์องค์กร<br><b>การยางแห่งประเทศไทย</b></span></div>';
 // Hero graphic: isometric reporting desk — server + cloud feed a dashboard monitor, phone and report lie in front,
 // app tiles float around; bars grow, charts draw, data dots travel, gear turns
 function heroArt() {
@@ -2381,7 +2390,7 @@ function vReport(I) {
       '<div class="facts"><div class="fact"><span>น้ำหนัก</span><b>' + fmt(s.weight, s.weight % 1 ? 2 : 0) + '</b></div>' +
       '<div class="fact target-fact"><span>คะแนนเป้าหมาย ณ สิ้นปีบัญชี</span><b class="num">' + (s.self != null ? fmt(+s.self) : '–') + '</b>' +
         (s.self == null ? '<small class="warn">ยังไม่กรอก · ใช้คะแนนหลักฐานแทน</small>' : '') +
-        '<button class="linkbtn" data-tab="plan" data-pick="' + esc(s.uid) + '|' + L.level + '">' + ico('edit', 12) + (ed ? (s.self == null ? 'กรอกที่หน้าแผน' : 'แก้ที่หน้าแผน') : 'ดูที่หน้าแผน') + '</button></div>' +
+        '<button class="linkbtn" data-tab="plan" data-pick="' + esc(s.uid) + '|' + s.levels[0].level + '">' + ico('edit', 12) + (ed ? (s.self == null ? 'กรอกที่หน้าแผน' : 'แก้ที่หน้าแผน') : 'ดูที่หน้าแผน') + '</button></div>' +
       '<div class="fact"><span>คะแนนที่หลักฐานรองรับ</span><b class="' + (sys < Math.floor(sc) ? 'warn' : 'ok') + '">' + sys + '</b></div></div></div>' +
     lvTabs +
     '<div class="panel glass"><div class="panel-head" style="margin-bottom:8px"><h3>' + ico('target') + 'ค่าเกณฑ์ระดับ ' + L.level + '</h3>' + chip(st) + '</div>' +
@@ -2494,7 +2503,9 @@ function planEditor(I, kind) {
   var c = S.pl && lvOf(S.pl.uid, S.pl.lv);
   if (!c || !c.L || c.I !== I) return '';
   var ed = canEdit(c.I, c.s), ae = ed && winOpen('gap'), sys = subSys(c.s, S.month);
-  var tgt = kind === 'gs' ? '' : '<div class="tg-box"><div><label class="label" for="self" style="margin:0">คะแนนเป้าหมาย ณ สิ้นปีบัญชี · ประเด็น ' + esc(c.s.label) + '</label><small class="muted">คะแนนที่คาดว่าประเด็นนี้จะได้ (0.00–5.00) · หลักฐานรองรับตอนนี้ <b class="num">' + sys + '</b>' + (c.I.target != null ? ' · เป้าหมายตัวชี้วัด <b class="num">' + fmt(c.I.target) + '</b>' : '') + '</small></div>' +
+  var first = c.L === c.s.levels[0];
+  var tgt = kind === 'gs' ? '' : !first ? '<div class="tg-ro"><span>คะแนนเป้าหมาย ณ สิ้นปีบัญชี · ประเด็น ' + esc(c.s.label) + '</span><b class="num">' + (c.s.self != null ? fmt(+c.s.self) : '–') + '</b>' +
+      '<button class="linkbtn" data-pick="' + esc(c.s.uid) + '|' + c.s.levels[0].level + '">' + ico('edit', 12) + (c.s.self == null ? 'กรอกที่ระดับ ' : 'แก้ที่ระดับ ') + c.s.levels[0].level + '</button></div>' : '<div class="tg-box"><div><label class="label" for="self" style="margin:0">คะแนนเป้าหมาย ณ สิ้นปีบัญชี · ประเด็น ' + esc(c.s.label) + '</label><small class="muted">กรอกครั้งเดียวต่อประเด็น (0.00–5.00) · หลักฐานรองรับตอนนี้ <b class="num">' + sys + '</b>' + (c.I.target != null ? ' · เป้าหมายตัวชี้วัด <b class="num">' + fmt(c.I.target) + '</b>' : '') + '</small></div>' +
     '<input class="input num" id="self" type="number" min="0" max="5" step="0.01" inputmode="decimal" placeholder="0.00–5.00" value="' + (c.s.self != null ? +c.s.self : '') + '"' + (ed ? '' : ' disabled') + '></div>';
   return '<div class="panel glass pe-panel" id="pe-panel"><div class="panel-head"><div style="min-width:0"><div class="pe-eye"><span class="code">' + esc(c.s.label) + '</span><b>ระดับ ' + c.L.level + '</b>' + (kind === 'gs' ? '<span class="sp-tag own">แผนปรับปรุง GAP</span>' : '<span class="sp-tag form">แผนการดำเนินงาน</span>') + '</div><h3 style="margin:4px 0 0">' + esc(c.s.name) + '</h3></div>' +
       '<div class="toolbar"><button class="btn sm" data-open="' + c.s.uid + '|' + c.L.level + '">' + ico('report', 15) + 'ไปหน้ารายงานผล</button><button class="icon-btn" data-pick="" aria-label="ปิดตัวแก้ไขแผน">' + ico('x') + '</button></div></div>' +
