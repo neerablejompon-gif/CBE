@@ -42,6 +42,8 @@ export default {
       if (path === '/api/logout' && req.method === 'POST') return json({ ok: true }, 200, { 'set-cookie': SESSION + '=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0' });
       if (path === '/api/save' && req.method === 'POST') return json(await save(req, env, fy, ctx));
       if (path === '/api/line/webhook' && req.method === 'POST') return await lineWebhook(req, env);
+      // config check for setup: booleans only, never values
+      if (path === '/api/line/webhook' && req.method === 'GET') return json({ secret: !!env.LINE_CHANNEL_SECRET, token: !!env.LINE_CHANNEL_TOKEN, addUrl: !!env.LINE_ADD_URL, cronKey: !!env.CRON_KEY });
       if (/^\/api\/line\/(code|status|unlink|test)$/.test(path) && req.method === 'POST') return json(await lineApi(req, env, path.slice(10)));
       if (path === '/api/notify' && req.method === 'POST') return json(await notify(req, env, fy));
       if (path === '/api/file' && req.method === 'POST') return json(await upload(req, env, fy));
