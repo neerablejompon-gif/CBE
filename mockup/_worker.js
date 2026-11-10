@@ -298,6 +298,8 @@ async function check(env, fy, u, st, op) {
   if (op.v != null && JSON.stringify(op.v).length > 45000) fail(413, 'ข้อความยาวเกินไป');
   const audit = u.role === 'audit', reporter = u.role === 'reporter';
   if (op.s === 'patch') {
+    // กปม. writes only the remark: keep everything else as the reporter saved it
+    if (audit && !op.k.endsWith('|self')) { op.v = Object.assign({}, st.patch[op.k] || {}, { remark: String((op.v || {}).remark || '').slice(0, 5000) }); return; }
     if (!own(u, op.k)) fail(403, 'แก้ไขได้เฉพาะส่วนที่รับผิดชอบ');
     if (!editable(st, u.ind)) fail(409, 'รายงานนี้ส่งตรวจแล้ว แก้ไขได้เมื่อ กปม. ส่งกลับ');
     if (op.v && Array.isArray(op.v.res) && !op.k.endsWith('|self') && !st.unlock[op.k]) {
