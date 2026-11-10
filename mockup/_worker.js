@@ -11,6 +11,10 @@
 //                    Service accounts have no Drive storage, so files in a personal Drive must be uploaded as a real account;
 //                    without it the service account is used (works only on a Shared Drive).
 //   CUR_FY           current fiscal year (default 2570)
+//   LINE_CHANNEL_SECRET (secret) Messaging API channel secret: checks webhook signatures
+//   LINE_CHANNEL_TOKEN  (secret) long-lived channel access token: sends messages
+//   LINE_ADD_URL     add-friend link of the LINE Official Account (https://line.me/R/ti/p/@...)
+//   CRON_KEY         (secret) shared with the GitHub Actions job that calls /api/notify every morning
 
 const IND_PARTS = { CG: ['CG'], SP: ['SP'], RM: ['RM'], SCM: ['SM', 'CM'], DT: ['DT'], HCM: ['HCM'], KMIM: ['KM', 'IM'], IA: ['IA'] };
 const STORES = ['patch', 'wf', 'wfnote', 'tri', 'trinote', 'unlock', 'cfg'];
@@ -26,7 +30,7 @@ const MAX_FILE = 10 * 1024 * 1024, TTL = 60e3;
 const SHEETS = 'https://sheets.googleapis.com/v4/spreadsheets/', DRIVE = 'https://www.googleapis.com/drive/v3/files/';
 
 export default {
-  async fetch(req, env) {
+  async fetch(req, env, ctx) {
     const path = new URL(req.url).pathname, fy = +(env.CUR_FY || 2570);
     try {
       if (path.startsWith('/tools/') || path.startsWith('/.test/')) return new Response('Not found', { status: 404 });
@@ -36,7 +40,10 @@ export default {
       if (path === '/data.js' || path === '/history.js' || path === '/history-axes.js') { try { return js(await archive(req, env, { '/data.js': 'ARCHIVE', '/history.js': 'HISTORY', '/history-axes.js': 'HISTORY_AXES' }[path])); } catch (e) { if (e.status !== 401) throw e; return js(''); } }
       if (path === '/api/login' && req.method === 'POST') return await login(req, env);
       if (path === '/api/logout' && req.method === 'POST') return json({ ok: true }, 200, { 'set-cookie': SESSION + '=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0' });
-      if (path === '/api/save' && req.method === 'POST') return json(await save(req, env, fy));
+      if (path === '/api/save' && req.method === 'POST') return json(await save(req, env, fy, ctx));
+      if (path === '/api/line/webhook' && req.method === 'POST') return await lineWebhook(req, env);
+      if (/^\/api\/line\/(code|status|unlink|test)$/.test(path) && req.method === 'POST') return json(await lineApi(req, env, path.slice(10)));
+      if (path === '/api/notify' && req.method === 'POST') return json(await notify(req, env, fy));
       if (path === '/api/file' && req.method === 'POST') return json(await upload(req, env, fy));
       if (path.startsWith('/api/file/')) return await download(req, env, fy, path.slice(10));
       if (path.startsWith('/api/')) return new Response('Not found', { status: 404 });
@@ -268,7 +275,7 @@ async function boot(req, env, fy) {
     getRanges(env, env.SYSTEM_SHEET_ID, ['log!A2:D']).then(([rows]) => rows.slice(-60).reverse().map(r => ({ t: str(r[0]), who: str(r[2]), what: str(r[3]) })))]);
   const data = {};
   codes.forEach((c, i) => { if (forms[i]) data[c] = forms[i].data; });
-  const api = { me: { role: u.role, ind: u.ind, part: u.part, name: u.name, id: u.id }, state: stateFor(u, st), log, openFrom: openFrom() };
+  const api = { me: { role: u.role, ind: u.ind, part: u.part, name: u.name, id: u.id }, state: stateFor(u, st), log, openFrom: openFrom(), line: await lineStatus(env, u.id) };
   return `window.CBE_FORMS_${fy}=${JSON.stringify(data, hideRows)};\nwindow.CBE_API=${JSON.stringify(api)};`;
 }
 // FY2569 (closed year) and the indicator seed: the data.js built by tools/forms-to-json.ps1, kept as a Drive file
@@ -327,7 +334,7 @@ async function mirror(env, fy, ops) {
   }
   await Promise.all(Object.keys(byForm).map(id => putRanges(env, id, byForm[id])));
 }
-async function save(req, env, fy) {
+async function save(req, env, fy, ctx) {
   sameOrigin(req);
   const u = await me(req, env), body = await req.json().catch(() => ({}));
   if (+body.fy !== fy) fail(409, 'ปีบัญชีนี้ปิดรอบแล้ว แก้ไขไม่ได้');
@@ -337,6 +344,7 @@ async function save(req, env, fy) {
   const ops = Object.values(byKey), logs = (Array.isArray(body.log) ? body.log : []).slice(0, 30).map(s => String(s).slice(0, 500));
   const { st, at } = await loadState(env, fy);
   for (const op of ops) await check(env, fy, u, st, op); // all or nothing
+  const cfgBefore = JSON.parse(JSON.stringify(st.cfg));
   // Submitting closes every past-month unlock of that indicator
   ops.filter(op => op.s === 'wf' && op.v === 'submitted').forEach(op => Object.keys(st.unlock).forEach(k => {
     if (k.startsWith(op.k + '|') && !byKey['unlock\n' + k]) ops.push(byKey['unlock\n' + k] = { s: 'unlock', k, v: null });
@@ -351,6 +359,8 @@ async function save(req, env, fy) {
   await appendRows(env, env.SYSTEM_SHEET_ID, 'log!A:D', logs.map(w => [when, u.id, label(u), w]));
   let mirrored = true;
   try { await mirror(env, fy, ops.filter(op => op.s === 'patch' && op.v && !op.k.endsWith('|self'))); } catch (e) { mirrored = false; console.error('mirror', e.stack || e); }
+  const tell = onCfgChange(env, new URL(req.url).origin, cfgBefore, ops).catch(e => console.error('line cfg', e.stack || e));
+  if (ctx && ctx.waitUntil) ctx.waitUntil(tell); else await tell;
   return { ok: true, at: when, mirrored };
 }
 const extOf = name => (String(name).split('.').pop() || '').toLowerCase();
@@ -381,4 +391,211 @@ async function download(req, env, fy, id) {
   const ext = extOf(file.name);
   return new Response(r.body, { headers: { 'content-type': INLINE.includes(ext) ? FILE_TYPES[ext] : 'application/octet-stream', 'x-content-type-options': 'nosniff',
     'content-disposition': (INLINE.includes(ext) ? 'inline' : 'attachment') + "; filename*=UTF-8''" + encodeURIComponent(file.name), 'cache-control': 'private, no-store' } });
+}
+
+/* ---------- LINE notifications (Messaging API) ----------
+   Linking: a signed-in user asks for a 6-digit code (10 minutes, single use), adds the OA as a friend and sends the code
+   in the chat; the webhook stores the LINE user ID. Tab "line": A id | B line_user | C linked_at | D code | E code_exp (ms).
+   Jobs (POST /api/notify, header x-cron-key = CRON_KEY), run daily at 08:00 by .github/workflows/line-notify.yml:
+     day 1  reporters: levels planned for last month (due on the 5th) + levels behind plan
+     day 6  กปม.: monthly summary of every indicator + overdue levels
+     daily  reporters: plan-entry window closes in 3 days
+   Event: กปม. opens/closes a plan-entry window → reporters are told at once. */
+const LINE_API = 'https://api.line.me/v2/bot/message/', CODE_MIN = 10, THAI_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+const WIN_NAME = { plan: 'แผนการดำเนินงาน', gap: 'แผนปรับปรุง GAP' };
+const C = { navy: '#0B2E9E', blue: '#1F5BFF', ink: '#0E1A3A', mute: '#5E6B88', line: '#E3E8F3', ok: '#0B8A60', bad: '#C4253F', warn: '#B86E00', gap: '#D9730D', soft: '#F3F6FC' };
+const TONE_END = { [C.ok]: '#05664A', [C.warn]: '#7A4200', [C.mute]: '#36405A', [C.bad]: '#8C1028' };
+const thDay = iso => { const [y, m, d] = iso.split('-').map(Number); return `${d} ${THAI_MONTHS[m - 1]} ${y + 543}`; };
+const todayIso = (plus = 0) => new Date(Date.now() + 7 * 3600e3 + plus * 864e5).toISOString().slice(0, 10);
+
+async function lineRows(env) {
+  const [rows] = await getRanges(env, env.SYSTEM_SHEET_ID, ['line!A2:E']);
+  return rows.map((r, i) => ({ row: i + 2, id: str(r[0]), user: str(r[1]), at: str(r[2]), code: str(r[3]), exp: +r[4] || 0 })).filter(r => r.id);
+}
+const lineSet = (env, r) => putRanges(env, env.SYSTEM_SHEET_ID, [{ range: `line!A${r.row}:E${r.row}`, values: [[r.id, r.user, r.at, r.code, r.exp ? String(r.exp) : '']] }]);
+async function lineUpsert(env, rows, id, patch) {
+  const r = rows.find(x => x.id === id);
+  if (r) return lineSet(env, Object.assign(r, patch));
+  const n = Object.assign({ id, user: '', at: '', code: '', exp: 0 }, patch);
+  return appendRows(env, env.SYSTEM_SHEET_ID, 'line!A:E', [[n.id, n.user, n.at, n.code, n.exp ? String(n.exp) : '']]);
+}
+async function lineStatus(env, id) {
+  if (!env.LINE_CHANNEL_TOKEN) return { enabled: false };
+  let r; try { r = (await lineRows(env)).find(x => x.id === id); } catch (e) { console.error('line tab', e.message); return { enabled: false }; }
+  return { enabled: true, linked: !!(r && r.user), at: r && r.user ? r.at : '', addUrl: env.LINE_ADD_URL || '' };
+}
+async function lineApi(req, env, path) {
+  sameOrigin(req);
+  const u = await me(req, env);
+  if (!env.LINE_CHANNEL_TOKEN) fail(503, 'ยังไม่ได้ตั้งค่า LINE ในระบบ ติดต่อ กปม.');
+  if (path === 'status') return lineStatus(env, u.id);
+  const rows = await lineRows(env);
+  if (path === 'code') {
+    const live = new Set(rows.filter(r => r.exp > Date.now()).map(r => r.code));
+    let code; do { code = String(100000 + crypto.getRandomValues(new Uint32Array(1))[0] % 900000); } while (live.has(code));
+    const exp = Date.now() + CODE_MIN * 60e3;
+    await lineUpsert(env, rows, u.id, { code, exp });
+    return { code, expiresAt: exp, addUrl: env.LINE_ADD_URL || '' };
+  }
+  if (path === 'unlink') { await lineUpsert(env, rows, u.id, { user: '', at: '', code: '', exp: 0 }); await logLine(env, u, 'ยกเลิกการเชื่อมต่อ LINE'); return { ok: true }; }
+  if (path === 'test') {
+    const r = rows.find(x => x.id === u.id);
+    if (!r || !r.user) fail(409, 'ยังไม่ได้เชื่อมต่อ LINE');
+    await linePush(env, r.user, [flex('ทดสอบการแจ้งเตือน CBE', bubble({ tone: C.blue, eyebrow: 'CBE Reporting System', title: 'ทดสอบการแจ้งเตือน', sub: label(u),
+      body: [txt('การแจ้งเตือนผ่าน LINE ใช้งานได้แล้ว คุณจะได้รับสรุปงานทุกวันที่ 1 ของเดือน', { wrap: true, color: C.ink })], url: new URL(req.url).origin }))], 'test|' + u.id + '|' + Date.now());
+    return { ok: true };
+  }
+  fail(404, 'Not found');
+}
+const logLine = (env, u, what) => appendRows(env, env.SYSTEM_SHEET_ID, 'log!A:D', [[stamp(), u.id, label(u), what]]);
+
+// Webhook: signature check, then link by code / greet / help
+async function lineWebhook(req, env) {
+  const raw = await req.text(), sig = req.headers.get('x-line-signature') || '';
+  if (!env.LINE_CHANNEL_SECRET) fail(503, 'LINE not configured');
+  const key = await crypto.subtle.importKey('raw', enc.encode(env.LINE_CHANNEL_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const want = btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.sign('HMAC', key, enc.encode(raw)))));
+  if (!sig || sig !== want) fail(401, 'bad signature');
+  const events = (JSON.parse(raw || '{}').events || []);
+  for (const ev of events) {
+    const uid = ev.source && ev.source.userId; if (!uid || !ev.replyToken) continue;
+    if (ev.type === 'follow') { await lineReply(env, ev.replyToken, [helpMsg('ยินดีต้อนรับสู่การแจ้งเตือน CBE Reporting System')]); continue; }
+    if (ev.type !== 'message' || !ev.message || ev.message.type !== 'text') continue;
+    const text = ev.message.text.replace(/\s/g, '');
+    if (!/^\d{6}$/.test(text)) { await lineReply(env, ev.replyToken, [helpMsg('พิมพ์รหัส 6 หลักเพื่อเชื่อมต่อบัญชี')]); continue; }
+    const rows = await lineRows(env), r = rows.find(x => x.code === text);
+    if (!r || r.exp < Date.now()) { await lineReply(env, ev.replyToken, [plain(r ? 'รหัสนี้หมดอายุแล้ว กรุณาขอรหัสใหม่จากเมนูบัญชีในระบบ' : 'ไม่พบรหัสนี้ ตรวจสอบตัวเลขอีกครั้ง หรือขอรหัสใหม่จากเมนูบัญชีในระบบ')]); continue; }
+    for (const o of rows) if (o.user === uid && o.id !== r.id) await lineSet(env, Object.assign(o, { user: '', at: '' })); // one LINE account ↔ one employee
+    await lineSet(env, Object.assign(r, { user: uid, at: stamp(), code: '', exp: 0 }));
+    const u = (await system(env)).users[r.id] || { id: r.id, role: '' };
+    await logLine(env, u, 'เชื่อมต่อ LINE');
+    await lineReply(env, ev.replyToken, [flex('เชื่อมต่อ LINE สำเร็จ', bubble({ tone: C.ok, eyebrow: 'เชื่อมต่อสำเร็จ', title: label(u), sub: 'รหัสพนักงาน ' + r.id,
+      body: [txt('คุณจะได้รับการแจ้งเตือนจาก CBE Reporting System ทาง LINE นี้', { wrap: true, color: C.ink }), txt('ยกเลิกได้ที่เมนูบัญชีในระบบ', { size: 'xs', color: C.mute, margin: 'md' })] }))]);
+  }
+  return json({ ok: true });
+}
+const helpMsg = title => flex(title, bubble({ tone: C.blue, eyebrow: 'CBE Reporting System', title, body: [
+  txt('วิธีเชื่อมต่อ', { weight: 'bold', color: C.ink }),
+  txt('1. เข้าระบบ CBE แล้วกดชื่อของคุณที่มุมขวาบน', { wrap: true, size: 'sm', color: C.ink, margin: 'sm' }),
+  txt('2. เลือก "เชื่อมต่อ LINE" แล้วกด "รับรหัส"', { wrap: true, size: 'sm', color: C.ink }),
+  txt('3. ส่งรหัส 6 หลักในแชทนี้ (ใช้ได้ภายใน 10 นาที)', { wrap: true, size: 'sm', color: C.ink })] }));
+const plain = text => ({ type: 'text', text });
+
+async function lineCall(env, path, body, retryKey) {
+  const r = await fetch(LINE_API + path, { method: 'POST', headers: { authorization: 'Bearer ' + env.LINE_CHANNEL_TOKEN, 'content-type': 'application/json', ...(retryKey ? { 'x-line-retry-key': await uuidFrom(retryKey) } : {}) }, body: JSON.stringify(body) });
+  if (!r.ok && r.status !== 409) throw new Error('LINE ' + r.status + ': ' + (await r.text()).slice(0, 300)); // 409 = already sent with this retry key
+}
+const lineReply = (env, token, messages) => lineCall(env, 'reply', { replyToken: token, messages });
+const linePush = (env, to, messages, key) => lineCall(env, 'push', { to, messages }, key);
+// Same job + day + person → same retry key, so a repeated cron run does not send twice
+async function uuidFrom(s) {
+  const h = [...new Uint8Array(await crypto.subtle.digest('SHA-256', enc.encode(s)))].map(b => b.toString(16).padStart(2, '0')).join('');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}`;
+}
+
+/* Flex building blocks */
+const flex = (altText, contents) => ({ type: 'flex', altText: altText.slice(0, 400), contents });
+const txt = (text, o = {}) => ({ type: 'text', text: String(text).slice(0, 2000) || ' ', size: 'sm', ...o });
+const row = (left, right, o = {}) => ({ type: 'box', layout: 'horizontal', spacing: 'md', margin: 'sm', contents: [txt(left, { flex: 0, color: o.lc || C.blue, weight: 'bold' }), txt(right, { flex: 1, wrap: true, color: C.ink, size: 'sm' })] });
+const stat = (n, label, color) => ({ type: 'box', layout: 'vertical', flex: 1, paddingAll: '10px', cornerRadius: '10px', backgroundColor: C.soft, contents: [txt(String(n), { size: 'xxl', weight: 'bold', color, align: 'center' }), txt(label, { size: 'xs', color: C.mute, align: 'center', wrap: true })] });
+const sep = () => ({ type: 'separator', margin: 'lg', color: C.line });
+function bubble({ tone, eyebrow, title, sub, stats, body = [], url, button = 'เปิดระบบรายงานผล' }) {
+  const b = { type: 'bubble', size: 'mega',
+    header: { type: 'box', layout: 'vertical', paddingAll: '18px', spacing: 'xs', background: { type: 'linearGradient', angle: '135deg', startColor: tone, endColor: TONE_END[tone] || C.navy },
+      contents: [txt(eyebrow, { size: 'xs', color: '#FFFFFFCC', weight: 'bold' }), txt(title, { size: 'lg', color: '#FFFFFF', weight: 'bold', wrap: true })].concat(sub ? [txt(sub, { size: 'xs', color: '#FFFFFFCC', wrap: true })] : []) },
+    body: { type: 'box', layout: 'vertical', paddingAll: '16px', spacing: 'sm', contents: (stats ? [{ type: 'box', layout: 'horizontal', spacing: 'sm', contents: stats }] : []).concat(body.length ? body : [txt(' ')]) } };
+  if (url) b.footer = { type: 'box', layout: 'vertical', paddingAll: '12px', contents: [{ type: 'button', style: 'primary', color: C.blue, height: 'sm', action: { type: 'uri', label: button, uri: url } }] };
+  return b;
+}
+function listBlock(head, color, items, max = 8) {
+  if (!items.length) return [];
+  return [sep(), txt(head, { weight: 'bold', color, margin: 'lg' })].concat(items.slice(0, max).map(x => row(x[0], x[1], { lc: color })))
+    .concat(items.length > max ? [txt(`และอีก ${items.length - max} รายการ`, { size: 'xs', color: C.mute, margin: 'sm' })] : []);
+}
+
+/* What each level holds after the users' edits (same rules as the app) */
+const sum12 = a => (a || []).reduce((x, y) => x + (+y || 0), 0);
+const cum = (a, m) => { let s = 0; for (let i = 0; i <= m; i++) s += +((a || [])[i]) || 0; return s; };
+const stTarget = st => st.mode === 'pct' ? 100 : (+st.target || sum12(st.plan) || 1);
+const hasPlan = st => sum12(st.plan) > 0 || (!st.custom && +st.target > 0);
+async function levelsOf(env, fy, st, ind, onlyPart) {
+  const out = [];
+  for (const part of IND_PARTS[ind]) {
+    if (onlyPart && part !== onlyPart) continue;
+    const f = await form(env, fy, part); if (!f) continue;
+    for (const s of f.data.subs) for (const L of s.levels) {
+      const key = [ind, part, s.code, L.level].join('|'), p = st.patch[key] || {};
+      const steps = L.steps.map((x, i) => ({ plan: (p.plan || [])[i] || x.plan, result: (p.res || [])[i] || x.result, target: x.target }))
+        .concat((p.cs || []).map(x => ({ custom: true, plan: x.p, result: x.r, target: x.t, mode: x.mo })));
+      const gsteps = (p.gs || []).map(x => ({ custom: true, plan: x.p, result: x.r, target: x.t, mode: x.mo }));
+      out.push({ part, code: s.code, name: s.name, level: L.level, label: (IND_PARTS[ind].length > 1 ? part + ' ' : '') + s.code + ' ระดับ ' + L.level, steps, gsteps,
+        mrMissing: L.mr.filter((r, i) => !/^เอกสารประกอบอื่น/.test(r.req) && !((p.mr || [])[i] ? p.mr[i][0] : r.has)).length });
+    }
+  }
+  return out;
+}
+const dueIn = (list, m) => list.some(st => hasPlan(st) && (+((st.plan || [])[m]) || 0) > 0);
+const behind = (list, m) => m >= 0 && list.some(st => hasPlan(st) && cum(st.result, m) < Math.min(cum(st.plan, m), stTarget(st)));
+
+/* Jobs */
+async function notify(req, env, fy) {
+  const key = req.headers.get('x-cron-key') || '';
+  if (!env.CRON_KEY || key !== env.CRON_KEY) fail(401, 'unauthorized');
+  if (!env.LINE_CHANNEL_TOKEN) fail(503, 'LINE not configured');
+  const q = new URL(req.url).searchParams, dry = q.get('dry') === '1', day = +(q.get('day') || bkk().getUTCDate()), jobs = q.get('job') ? [q.get('job')] : ['daily'];
+  const origin = new URL(req.url).origin, sys = await system(env), links = (await lineRows(env)).filter(r => r.user && sys.users[r.id]);
+  const { st } = await loadState(env, fy), out = [];
+  const send = async (r, msg, tag) => { out.push({ id: r.id, alt: msg.altText, contents: msg.contents }); if (!dry) await linePush(env, r.user, [msg], tag + '|' + todayIso() + '|' + r.id); };
+  const want = j => jobs.includes(j) || (jobs.includes('daily') && ((j === 'monthly' && day === 1) || (j === 'summary' && day === 6) || j === 'closing'));
+  const rm = (fyMonth(bkk()) + 11) % 12, due = `5 ${THAI_MONTHS[bkk().getUTCMonth()]} ${bkk().getUTCFullYear() + 543}`;
+  if (want('monthly')) for (const r of links) {
+    const u = sys.users[r.id]; if (u.role !== 'reporter') continue;
+    const lv = await levelsOf(env, fy, st, u.ind, u.part);
+    const now = lv.filter(L => dueIn(L.steps, rm) || dueIn(L.gsteps, rm)).map(L => [L.label, (dueIn(L.gsteps, rm) && !dueIn(L.steps, rm) ? '[GAP] ' : '') + L.name]);
+    const late = lv.filter(L => behind(L.steps, rm - 1) || behind(L.gsteps, rm - 1)).map(L => [L.label, L.name + (behind(L.gsteps, rm - 1) ? ' · แผน GAP' : '')]);
+    const wf = st.wf[u.ind];
+    await send(r, flex(`รายงานผลเดือน ${MONTHS[rm]} ครบกำหนด ${due}`, bubble({ tone: C.blue, eyebrow: 'แจ้งเตือนรายงานผลประจำเดือน', title: `รายงานผลเดือน ${MONTHS[rm]}`, sub: `${label(u)} · ครบกำหนด ${due}`,
+      stats: [stat(now.length, 'ระดับที่ต้องรายงาน', C.blue), stat(late.length, 'ล่าช้า/เลยกำหนด', late.length ? C.bad : C.ok)],
+      body: (wf === 'returned' ? [txt('กปม. ส่งกลับรายงานให้แก้ไข', { color: C.bad, weight: 'bold', margin: 'md' })] : [])
+        .concat(listBlock('ค่าเกณฑ์ที่มีแผนเดือน ' + MONTHS[rm], C.blue, now), listBlock('งานล่าช้า / เลยกำหนด', C.bad, late))
+        .concat(now.length || late.length ? [] : [txt('ไม่มีแผนที่ต้องรายงานในเดือนนี้', { color: C.ok, margin: 'md' })]), url: origin })), 'monthly');
+  }
+  if (want('summary')) {
+    const rowsI = [];
+    for (const ind of Object.keys(IND_PARTS)) {
+      const lv = await levelsOf(env, fy, st, ind), plan = lv.filter(L => dueIn(L.steps, rm) || dueIn(L.gsteps, rm)).length, late = lv.filter(L => behind(L.steps, rm) || behind(L.gsteps, rm)).length;
+      rowsI.push({ ind, wf: st.wf[ind] || 'draft', plan, late });
+    }
+    const WFT = { draft: ['ยังไม่ส่ง', C.mute], submitted: ['รอตรวจ', C.blue], approved: ['อนุมัติแล้ว', C.ok], returned: ['ส่งกลับ', C.bad] };
+    const sent = rowsI.filter(x => x.wf === 'submitted' || x.wf === 'approved').length, lateTotal = rowsI.reduce((a, x) => a + x.late, 0);
+    const table = rowsI.map(x => ({ type: 'box', layout: 'horizontal', margin: 'sm', contents: [txt(x.ind, { flex: 3, weight: 'bold', color: C.ink }), txt(WFT[x.wf][0], { flex: 3, color: WFT[x.wf][1], size: 'xs', gravity: 'center' }),
+      txt(x.late ? 'เลยกำหนด ' + x.late : 'ตามแผน', { flex: 4, align: 'end', size: 'xs', color: x.late ? C.bad : C.ok, gravity: 'center' })] }));
+    const msg = flex(`สรุปผลรายเดือน ${MONTHS[rm]}: ส่งแล้ว ${sent}/8 · เลยกำหนด ${lateTotal} ระดับ`, bubble({ tone: C.navy, eyebrow: 'สรุปสำหรับ กปม.', title: `ภาพรวมรายงานเดือน ${MONTHS[rm]}`, sub: 'หลังครบกำหนด ' + due,
+      stats: [stat(sent + '/8', 'ตัวชี้วัดที่ส่งแล้ว', C.blue), stat(lateTotal, 'ระดับเลยกำหนด', lateTotal ? C.bad : C.ok)], body: [sep(), txt('รายตัวชี้วัด', { weight: 'bold', color: C.ink, margin: 'lg' })].concat(table), url: origin, button: 'เปิดภาพรวม CBE' }));
+    for (const r of links) if (sys.users[r.id].role === 'audit') await send(r, msg, 'summary');
+  }
+  if (want('closing')) for (const k of Object.keys(WIN_NAME)) {
+    const c = st.cfg[k] || {}; if (c.open === false || c.to !== todayIso(3)) continue;
+    await broadcastWindow(env, sys, links, k, c, 'closing', origin, send);
+  }
+  return { ok: true, dry, sent: out.length, messages: dry ? out : undefined };
+}
+// Plan-entry window message to every linked reporter: kind = open | close | closing
+async function broadcastWindow(env, sys, links, k, c, kind, origin, send) {
+  const range = c.from || c.to ? (c.from ? thDay(c.from) : '') + (c.to ? ' – ' + thDay(c.to) : '') : 'ไม่กำหนดวันปิด';
+  const T = { open: [C.ok, 'เปิดให้กรอก' + WIN_NAME[k], 'ช่วงเวลา: ' + range], close: [C.mute, 'ปิดรับการกรอก' + WIN_NAME[k], 'ดูแผนได้อย่างเดียว · ลงผลรายเดือนได้ตามปกติ'], closing: [C.warn, 'อีก 3 วันปิดรับ' + WIN_NAME[k], 'ปิดรับวันที่ ' + (c.to ? thDay(c.to) : '')] }[kind];
+  const msg = flex(T[1], bubble({ tone: T[0], eyebrow: 'Config การกรอกแผน', title: T[1], sub: T[2], body: [txt(kind === 'close' ? 'หากต้องแก้ไขแผนหลังปิดรับ ติดต่อ กองประเมินผล 343' : 'กรอกหรือแก้ไขแผนได้ที่หน้า ' + WIN_NAME[k] + ' ในระบบ', { wrap: true, color: C.ink })], url: origin }));
+  for (const r of links) if (sys.users[r.id].role === 'reporter') await send(r, msg, 'win-' + k + '-' + kind + '-' + (c.from || '') + (c.to || ''));
+}
+// Called after กปม. saves a Config change: tell reporters when a window opens/closes or its dates change
+async function onCfgChange(env, origin, before, ops) {
+  if (!env.LINE_CHANNEL_TOKEN) return;
+  const changed = ops.filter(op => op.s === 'cfg' && WIN_NAME[op.k] && op.v);
+  if (!changed.length) return;
+  const sys = await system(env), links = (await lineRows(env)).filter(r => r.user && sys.users[r.id]);
+  const send = (r, msg, tag) => linePush(env, r.user, [msg], tag + '|' + r.id);
+  for (const op of changed) {
+    const a = before[op.k] || {}, b = op.v, wasOpen = a.open !== false, isOpen = b.open !== false;
+    if (wasOpen !== isOpen || a.from !== b.from || a.to !== b.to) await broadcastWindow(env, sys, links, op.k, b, isOpen ? 'open' : 'close', origin, send);
+  }
 }

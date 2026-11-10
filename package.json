@@ -5,6 +5,7 @@
   "description": "ระบบรายงานผล Core Business Enablers (SE-AM) บน Google Apps Script",
   "scripts": {
     "test": "node tests/run.js",
+    "test:line": "node tests/line.test.mjs",
     "harness": "node dev/build-harness.js",
     "test:e2e": "node dev/build-harness.js && node tests/e2e.js",
     "push": "clasp push"
