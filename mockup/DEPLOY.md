@@ -129,6 +129,53 @@ refresh token เข้าถึง Drive ทั้งหมดของบั�
 - **ถ้ารหัสถูกแต่เข้าไม่ได้:** ตรวจว่ามีรหัสพนักงานในแท็บ `users` และกำหนด role ถูกต้อง ระบบแคชรายชื่อไว้ 60 วินาที
 - **ถ้าขึ้น error 1102 (Worker exceeded resource limits):** แพ็กเกจฟรีให้ CPU 10ms ต่อคำขอ ให้เปลี่ยนเป็น Workers Paid ($5/เดือน)
 
+## 6. แจ้งเตือนผ่าน LINE (Messaging API)
+
+| เมื่อ | ส่งถึง | เนื้อหา |
+|---|---|---|
+| ทุกวันที่ 1 เวลา 08:00 | ผู้รายงาน | ค่าเกณฑ์/หัวข้อ/ระดับที่มีแผนในเดือนที่ผ่านมา (ครบกำหนดส่งวันที่ 5) และงานล่าช้า/เลยกำหนด |
+| ทุกวันที่ 6 เวลา 08:00 | กปม. | สรุปภาพรวมรายเดือนทุกตัวชี้วัด และจำนวนระดับที่เลยกำหนด |
+| ทุกวัน เวลา 08:00 | ผู้รายงาน | ช่วงกรอกแผนจะปิดในอีก 3 วัน |
+| ทันทีที่ กปม. เปลี่ยน Config | ผู้รายงาน | เปิด/ปิดช่วงกรอกแผนการดำเนินงาน หรือแผนปรับปรุง GAP |
+
+ส่งเฉพาะผู้ใช้ที่เชื่อมต่อ LINE แล้ว ข้อความเป็น Flex message พร้อมปุ่มเปิดระบบ
+
+### 6.1 LINE Developers Console (บัญชี LINE OA ของหน่วยงาน)
+1. เปิด https://developers.line.biz/console/ เลือก Provider และ Channel แบบ **Messaging API** ของ OA (ถ้ายังไม่มี ให้เปิด Messaging API จาก LINE Official Account Manager → ตั้งค่า → Messaging API)
+2. แท็บ **Basic settings:** คัดลอก **Channel secret**
+3. แท็บ **Messaging API:**
+   - **Channel access token (long-lived):** กด Issue แล้วคัดลอก
+   - **Webhook URL:** `https://<โดเมนระบบ>/api/line/webhook` กด **Verify** ต้องขึ้น Success แล้วเปิด **Use webhook**
+   - **Auto-reply messages / Greeting messages:** ปิดทั้งคู่ (กดลิงก์ไปที่ OA Manager) ไม่อย่างนั้น OA จะตอบข้อความซ้ำกับระบบ
+4. คัดลอกลิงก์เพิ่มเพื่อนของ OA จาก OA Manager (รูปแบบ `https://line.me/R/ti/p/@xxxxxxx`)
+
+### 6.2 Cloudflare Pages → Settings → Variables and Secrets (Production)
+| ชื่อ | ชนิด | ค่า |
+|---|---|---|
+| `LINE_CHANNEL_SECRET` | **Secret** | Channel secret |
+| `LINE_CHANNEL_TOKEN` | **Secret** | Channel access token (long-lived) |
+| `LINE_ADD_URL` | Text | ลิงก์เพิ่มเพื่อนของ OA |
+| `CRON_KEY` | **Secret** | ข้อความสุ่มยาว 32 ตัวขึ้นไป (สร้างแบบเดียวกับ `SESSION_SECRET`) |
+
+แล้วกด **Retry deployment** ถ้ายังไม่ตั้ง `LINE_CHANNEL_TOKEN` ระบบใช้งานได้ตามปกติ แค่ไม่มีเมนูเชื่อมต่อ LINE
+
+### 6.3 ชีต CBE System
+เพิ่มแท็บ **`line`** แถวที่ 1 เป็นหัวตาราง: `id · line_user · linked_at · code · code_exp` เว้นข้อมูลว่างไว้ ระบบเขียนเอง (ห้ามแก้มือ ยกเว้นลบแถวเพื่อยกเลิกการเชื่อมต่อของคนนั้น)
+
+### 6.4 GitHub → Settings → Secrets and variables → Actions → New repository secret
+| ชื่อ | ค่า |
+|---|---|
+| `CBE_APP_URL` | ที่อยู่ระบบ เช่น `https://cbe-report.pages.dev` (ไม่มี `/` ท้าย) |
+| `CBE_CRON_KEY` | ค่าเดียวกับ `CRON_KEY` ใน Cloudflare |
+
+งานตั้งเวลาอยู่ที่ `.github/workflows/line-notify.yml` รันทุกวัน 08:00 (GitHub อาจเริ่มช้ากว่าเวลาที่ตั้ง 5–30 นาที)
+
+### 6.5 ทดสอบ
+1. เข้าระบบ → กดชื่อมุมขวาบน → **เชื่อมต่อ LINE** → เพิ่มเพื่อน → **รับรหัส** → ส่งรหัส 6 หลักในแชท OA ภายใน 10 นาที → หน้าต่างในระบบเปลี่ยนเป็น "เชื่อมต่อแล้ว"
+2. กด **ส่งข้อความทดสอบ** ต้องได้รับข้อความใน LINE
+3. GitHub → **Actions → LINE notify → Run workflow** เลือก job = `monthly` และติ๊ก **dry** ดูข้อความที่จะส่งใน log (ไม่ส่งจริง) แล้วค่อยรันแบบไม่ติ๊ก dry
+4. ทดสอบในเครื่อง: `npm run test:line` (จำลอง Google Sheets และ LINE API)
+
 ## ทดสอบในเครื่อง (ไม่ต้องมี Google / Cloudflare)
 `.test/` มีชุดทดสอบที่จำลอง Google Sheets และ Drive (อยู่ใน `.gitignore` เพราะมีข้อมูลจากแบบฟอร์มจริง)
 1. รัน `powershell -File tools\serve.ps1`

@@ -1259,6 +1259,25 @@ td, th, .trow, .pl td, .doc, .lib-head { border-color: var(--hair-in) !important
 .lg-help { margin: 0; text-align: center; font-size: 13px; color: var(--lg-ink2); }
 .tg-ro { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; margin-bottom: 14px; border-radius: var(--r-md); border: 1px dashed var(--hair-in); background: var(--field); font-size: 13px; color: var(--ink-2); }
 .tg-ro b { font-size: 18px; color: var(--ink); } .tg-ro .linkbtn { margin-left: auto; padding: 0; display: inline-flex; gap: 4px; align-items: center; font-size: 12.5px; }
+/* ===== LINE linking dialog ===== */
+.line-item > svg { color: #06C755; } .line-item > span:nth-child(2) { flex: 1; }
+.ln-new { font: 700 10.5px var(--num); padding: 1px 7px; border-radius: 99px; background: #06C755; color: #fff; }
+.ln-ok { color: var(--ok); display: inline-flex; }
+.ld-scrim { position: fixed; inset: 0; z-index: 50; background: rgba(4, 12, 40, .45); }
+.ldlg { position: fixed; z-index: 51; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(460px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow-y: auto; padding: 20px; border-radius: 22px; background-color: var(--glass-solid) !important; background-image: none !important; box-shadow: var(--float) !important; display: flex; flex-direction: column; gap: 16px; }
+.ld-head { display: flex; gap: 12px; align-items: flex-start; } .ld-head > svg { color: #06C755; flex: none; margin-top: 2px; }
+.ld-head div { flex: 1; min-width: 0; } .ld-head h2 { margin: 0; font-size: 18px; } .ld-head p { margin: 2px 0 0; font-size: 13px; color: var(--ink-3); }
+.ld-steps { margin: 0; padding: 0; list-style: none; counter-reset: s; display: flex; flex-direction: column; gap: 10px; }
+.ld-steps li { counter-increment: s; position: relative; padding: 12px 14px 12px 50px; border: 1px solid var(--hair-in); border-radius: 14px; background: var(--field); display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.ld-steps li::before { content: counter(s); position: absolute; left: 14px; top: 12px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font: 800 13px var(--num); color: #fff; background: #06C755; }
+.ld-steps b { font-size: 14.5px; }
+.ln-btn { background: #06C755 !important; color: #fff !important; border-color: #06C755 !important; text-decoration: none; }
+.ld-code { display: flex; align-items: center; gap: 10px; }
+.ld-code .num { font-size: 32px; font-weight: 800; letter-spacing: .18em; color: var(--ink); padding: 4px 12px; border-radius: 12px; background: var(--glass-solid); border: 1.5px dashed #06C755; }
+.ld-done { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px; border-radius: 14px; background: var(--ok-bg); color: var(--ok); text-align: center; }
+.ld-done b { font-size: 16px; color: var(--ink); } .ld-done span { font-size: 12.5px; color: var(--ink-3); }
+.ld-list { margin: 0; padding-left: 20px; font-size: 13.5px; color: var(--ink-2); display: flex; flex-direction: column; gap: 4px; }
+.ld-acts { display: flex; gap: 8px; flex-wrap: wrap; justify-content: space-between; }
 </style>
 </head>
 <body>
@@ -1314,6 +1333,7 @@ var ICONS = {
   undo: 'M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3',
   target: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 12h.01',
   calendar: 'M4 5h16v16H4zM4 10h16M9 3v4M15 3v4',
+  line: 'M12 3C6.5 3 2 6.6 2 11c0 3.9 3.5 7.2 8.3 7.9.3.1.8.2.9.5.1.3.1.6 0 .9l-.1.9c0 .3-.2 1 .9.5s5.8-3.4 7.9-5.9c1.5-1.6 2.1-3.2 2.1-4.8C22 6.6 17.5 3 12 3z',
   more: 'M4 12a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0M10.4 12a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0M16.8 12a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0',
   sliders: 'M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6',
   shield: 'M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6zM9 12l2 2 4-4',
@@ -1734,7 +1754,7 @@ function userMenu() {
   var av = isAudit() ? 'กป' : isExec() ? 'ผบ' : (U.part || indBy(U.ind).label).slice(0, 3);
   return '<div class="umenu glass"><button class="ubtn" data-act="umenu" aria-haspopup="menu" aria-expanded="false" aria-controls="udrop"><span class="av">' + esc(av) + '</span><span class="u-txt"><b>' + esc(userLabel()) + '</b><small>' + esc(userName()) + '</small></span>' + ico('chev', 16) + '</button>' +
     '<div class="udrop glass" id="udrop" role="menu" aria-label="บัญชีผู้ใช้">' + whoCard('u-head') +
-      '<button class="u-item danger" role="menuitem" data-act="logout">' + ico('logout', 17) + 'ออกจากระบบ</button></div></div>';
+      lineItem('u-item') + '<button class="u-item danger" role="menuitem" data-act="logout">' + ico('logout', 17) + 'ออกจากระบบ</button></div></div>';
 }
 // Mobile bottom bar (≤760px): 4 main items + "more" sheet; glass pill slides to the tapped item
 function mbItems() {
@@ -1763,10 +1783,65 @@ function mobileSheet() {
   else {
     if (U.role === 'reporter') b += '<h3>เมนูอื่น</h3>' + row('data-tab="gap"', ico('trend', 19), 'แผนปรับปรุง GAP') + row('data-tab="evidence"', ico('folder', 19), 'ทะเบียนหลักฐาน') + row('data-tab="history"', ico('history', 19), 'ผลการดำเนินงานที่ผ่านมา');
     else if (isAudit()) b += '<h3>ระบบ</h3>' + row('data-go="config"', ico('sliders', 19), 'Config การกรอกแผน') + row('data-go="users"', ico('users', 19), 'ผู้ใช้และสิทธิ์') + row('data-go="log"', ico('log', 19), 'Audit trail');
-    b += '<h3>บัญชี</h3>' + whoCard('ms-who') + row('data-act="logout"', ico('logout', 19), 'ออกจากระบบ').replace('class="ms-row"', 'class="ms-row danger"');
+    b += '<h3>บัญชี</h3>' + whoCard('ms-who') + lineItem('ms-row') + row('data-act="logout"', ico('logout', 19), 'ออกจากระบบ').replace('class="ms-row"', 'class="ms-row danger"');
   }
   if (S.sheet === 'more') b += '<p class="ms-help">' + ico('info', 15) + 'หากมีข้อสงสัยให้ติดต่อ กองประเมินผล 343</p>';
   return '<div class="ms-scrim" data-act="mb-close"></div><div class="msheet" role="dialog" aria-modal="true" aria-label="' + (S.sheet === 'inds' ? 'ตัวชี้วัด' : 'เมนูเพิ่มเติม') + '"><div class="ms-grab"></div>' + b + '</div>';
+}
+/* ---------- LINE notifications: link this account with a 6-digit code ---------- */
+function lineSt() { return API ? API.line || { enabled: false } : (S.lineMock || (S.lineMock = { enabled: true, linked: false, addUrl: '' })); }
+function lineItem(cls) {
+  var l = lineSt(); if (!l.enabled) return '';
+  return '<button class="' + cls + ' line-item" role="menuitem" data-act="line-open">' + ico('line', cls === 'ms-row' ? 19 : 17) + '<span>' + (l.linked ? 'LINE เชื่อมต่อแล้ว' : 'เชื่อมต่อ LINE') + '</span>' + (l.linked ? '<span class="ln-ok">' + ico('check', 14) + '</span>' : '<span class="ln-new">ใหม่</span>') + '</button>';
+}
+function lineDialog() {
+  if (!S.lineDlg) return '';
+  var l = lineSt(), c = S.lineCode, body;
+  if (l.linked) body = '<div class="ld-done">' + ico('check', 28) + '<b>เชื่อมต่อ LINE แล้ว</b><span>' + (l.at ? 'ตั้งแต่ ' + esc(l.at) : '') + '</span></div>' +
+    '<ul class="ld-list"><li>ทุกวันที่ 1: แผนที่ต้องรายงานเดือนที่ผ่านมา และงานล่าช้า</li><li>เมื่อ กปม. เปิด/ปิดช่วงกรอกแผน และก่อนปิด 3 วัน</li>' + (isAudit() ? '<li>วันที่ 6: สรุปภาพรวมรายเดือนทุกตัวชี้วัด</li>' : '') + '</ul>' +
+    '<div class="ld-acts"><button class="btn sm" data-act="line-test">' + ico('send', 15) + 'ส่งข้อความทดสอบ</button><button class="btn sm danger" data-act="line-unlink">ยกเลิกการเชื่อมต่อ</button></div>';
+  else body = '<ol class="ld-steps">' +
+      '<li><b>เพิ่มเพื่อน LINE Official Account</b>' + (l.addUrl ? '<a class="btn sm ln-btn" href="' + esc(l.addUrl) + '" target="_blank" rel="noopener">' + ico('line', 16) + 'เพิ่มเพื่อน</a>' : '<span class="small muted">ค้นหาบัญชี LINE ของ กองประเมินผล</span>') + '</li>' +
+      '<li><b>รับรหัส 6 หลัก</b>' + (c ? '<div class="ld-code"><span class="num" aria-label="รหัส ' + c.code.split('').join(' ') + '">' + c.code + '</span><button class="btn sm" data-act="line-copy">คัดลอก</button></div><span class="small muted">ใช้ได้อีก <b id="ldLeft" class="num">' + lineLeft() + '</b> นาที · ใช้ได้ครั้งเดียว</span>'
+        : '<button class="btn sm primary" data-act="line-code"' + (S.lineBusy ? ' disabled' : '') + '>รับรหัส</button>') + '</li>' +
+      '<li><b>ส่งรหัสในแชท LINE</b><span class="small muted">พิมพ์ตัวเลข 6 หลักแล้วส่ง ระบบจะยืนยันในแชท และหน้านี้จะเปลี่ยนเป็น "เชื่อมต่อแล้ว" เอง</span>' +
+        (c && !API ? '<button class="btn sm" data-act="line-mock">จำลองการส่งรหัส (mockup)</button>' : '') + '</li></ol>';
+  return '<div class="ld-scrim" data-act="line-close"></div><div class="ldlg glass" role="dialog" aria-modal="true" aria-labelledby="ldT"><div class="ld-head">' + ico('line', 26) +
+    '<div><h2 id="ldT">การแจ้งเตือนผ่าน LINE</h2><p>' + esc(userLabel()) + ' · ' + esc(userName()) + '</p></div><button class="icon-btn" data-act="line-close" aria-label="ปิด">' + ico('x') + '</button></div>' + body + '</div>';
+}
+function lineLeft() { var c = S.lineCode, ms = c ? c.exp - Date.now() : 0; if (ms <= 0) return '0:00'; var sec = Math.ceil(ms / 1000); return Math.floor(sec / 60) + ':' + ('0' + sec % 60).slice(-2); }
+var lineTimer = null;
+function lineTick() {
+  clearInterval(lineTimer); var n = 0;
+  lineTimer = setInterval(function () {
+    if (!S.lineDlg || !S.lineCode) return clearInterval(lineTimer);
+    var e = $('#ldLeft'); if (e) e.textContent = lineLeft();
+    if (Date.now() > S.lineCode.exp) { S.lineCode = null; clearInterval(lineTimer); return render(); }
+    if (API && ++n % 4 === 0) lineCall('status').then(function (r) { if (r.linked) { API.line = r; S.lineCode = null; clearInterval(lineTimer); render(); toast('เชื่อมต่อ LINE แล้ว', 'check'); } }).catch(function () {});
+  }, 1000);
+}
+function lineCall(path) {
+  return fetch('/api/line/' + path, { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: '{}' })
+    .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'ไม่สำเร็จ'); return j; }); });
+}
+function lineAct(act) {
+  if (act === 'line-open') { S.lineDlg = true; closeUmenu(); S.sheet = null; return render(); }
+  if (act === 'line-close') { S.lineDlg = false; clearInterval(lineTimer); return render(); }
+  if (act === 'line-copy') { var code = S.lineCode && S.lineCode.code; try { navigator.clipboard.writeText(code).then(function () { toast('คัดลอกรหัสแล้ว'); }, function () { toast('รหัส ' + code); }); } catch (e) { toast('รหัส ' + code); } return; }
+  if (!API) {
+    if (act === 'line-code') { S.lineCode = { code: String(100000 + Math.floor(Math.random() * 900000)), exp: Date.now() + 600e3 }; render(); return lineTick(); }
+    if (act === 'line-mock') { S.lineMock.linked = true; S.lineMock.at = thDate(new Date()); S.lineCode = null; render(); return toast('เชื่อมต่อ LINE แล้ว (mockup)', 'check'); }
+    if (act === 'line-unlink') { S.lineMock.linked = false; return render(); }
+    if (act === 'line-test') return toast('Mockup: ระบบจริงจะส่งข้อความทดสอบไปที่ LINE', 'send');
+    return;
+  }
+  S.lineBusy = true; render();
+  lineCall(act.slice(5)).then(function (r) {
+    S.lineBusy = false;
+    if (act === 'line-code') { S.lineCode = { code: r.code, exp: r.expiresAt }; render(); return lineTick(); }
+    if (act === 'line-unlink') { API.line.linked = false; logIt('ยกเลิกการเชื่อมต่อ LINE'); render(); return toast('ยกเลิกการเชื่อมต่อ LINE แล้ว', 'undo'); }
+    if (act === 'line-test') { render(); return toast('ส่งข้อความทดสอบแล้ว ดูใน LINE', 'send'); }
+  }).catch(function (e) { S.lineBusy = false; render(); toast(e.message, 'alert'); });
 }
 function closeUmenu() { var m = document.querySelector('.umenu.open'); if (m) { m.classList.remove('open'); m.querySelector('.ubtn').setAttribute('aria-expanded', 'false'); } }
 function render() {
@@ -1795,7 +1870,7 @@ function render() {
         : MONTHS.map(function (mm, i) { return '<option value="' + i + '"' + (i === S.month ? ' selected' : '') + '>' + mm + '</option>'; }).join('')) + '</select></label>' +
     '<i class="tb-sep"></i><button class="icon-btn" data-act="theme" aria-label="สลับเป็นธีม' + (dark ? 'สว่าง' : 'มืด') + '">' + ico(dark ? 'sun' : 'moon') + '</button></div>' + userMenu() + '</header>' +
     (FY !== CUR_FY ? '<div class="yearbar" role="status">' + ico('lock', 16) + '<span><b>ปีบัญชี ' + FY + ' · ปิดรอบแล้ว</b> ดูได้อย่างเดียว ข้อมูลผลการดำเนินงานตามแบบฟอร์มเดิม</span><button class="btn sm" data-act="back-current">กลับไปปีบัญชี ' + CUR_FY + '</button></div>' : '') +
-    '<main id="view">' + body + '</main></div></div>' + mobileBar() + planDrawer() + evDrawer();
+    '<main id="view">' + body + '</main></div></div>' + mobileBar() + planDrawer() + evDrawer() + lineDialog();
   var pill = document.querySelector('.mb-pill'); if (pill && pill.dataset.to !== String(pill.style.getPropertyValue('--x'))) requestAnimationFrame(function () { requestAnimationFrame(function () { pill.style.setProperty('--x', pill.dataset.to); }); });
   S.mbPrev = null;
   animateDv();
@@ -2895,6 +2970,7 @@ document.addEventListener('click', function (e) {
   if (d.ev != null) { var wasEv = S.ev; S.ev = d.ev || null; S.evf = 0; S.evEnter = !!S.ev && !wasEv; render(); var ep = document.querySelector('.ev-drawer .pe-panel'); if (ep) ep.focus({ preventScroll: true }); return; }
   if (d.evf != null) { S.evf = +d.evf; return render(); }
   if (d.act === 'ev-close') { var back = S.ev; S.ev = null; render(); var rb = back && document.querySelector('[data-ev="' + back + '"]'); if (rb) rb.focus(); return; }
+  if (d.act && /^line-/.test(d.act)) return lineAct(d.act);
   if (d.act === 'mb-sheet') { S.sheet = S.sheet === d.sheet ? null : d.sheet; return render(); }
   if (d.act === 'mb-close') { S.sheet = null; return render(); }
   if (S.sheet && (d.tab || d.go || d.ind || d.act === 'logout')) S.sheet = null;
@@ -3096,6 +3172,7 @@ document.addEventListener('change', function (e) {
   if (d.f || d.ev != null) logIt('แก้ไข ' + curLv().s.label + ' ระดับ ' + curLv().L.level);
 });
 document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && S.lineDlg) { lineAct('line-close'); return; }
   if (e.key === 'Escape' && S.ev && document.querySelector('.ev-drawer')) { S.ev = null; render(); return; }
   if (e.key === 'Escape' && S.sheet) { S.sheet = null; render(); return; }
   if (e.key === 'Escape' && S.pl && document.querySelector('.drawer')) { S.pl = null; S.delStep = null; render(); return; }

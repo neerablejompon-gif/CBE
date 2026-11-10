@@ -1,0 +1,38 @@
+# Daily LINE notifications for CBE Reporting System.
+# Calls POST /api/notify on the live site every morning at 08:00 Bangkok time (01:00 UTC);
+# the site decides what to send that day (1st: reporters, 6th: กปม. summary, any day: plan window closing in 3 days).
+# Repository secrets: CBE_APP_URL (e.g. https://cbe-report.pages.dev) and CBE_CRON_KEY (same value as CRON_KEY in Cloudflare).
+name: LINE notify
+
+on:
+  schedule:
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+    inputs:
+      job:
+        description: 'daily = ตามวันที่วันนี้ · monthly = เตือนผู้รายงาน · summary = สรุปให้ กปม. · closing = ใกล้ปิดช่วงกรอกแผน'
+        type: choice
+        options: [daily, monthly, summary, closing]
+        default: daily
+      dry:
+        description: 'ทดลองดูข้อความโดยไม่ส่งจริง'
+        type: boolean
+        default: true
+
+permissions: {}
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call /api/notify
+        env:
+          APP_URL: ${{ secrets.CBE_APP_URL }}
+          CRON_KEY: ${{ secrets.CBE_CRON_KEY }}
+          JOB: ${{ github.event.inputs.job || 'daily' }}
+          DRY: ${{ github.event.inputs.dry == 'true' && '1' || '0' }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_KEY" ]; then echo "Set repository secrets CBE_APP_URL and CBE_CRON_KEY"; exit 1; fi
+          curl -fsS --retry 3 --retry-delay 20 -X POST "$APP_URL/api/notify?job=$JOB&dry=$DRY" -H "x-cron-key: $CRON_KEY" -o result.json
+          if [ "$DRY" = "1" ]; then cat result.json; else head -c 300 result.json; echo; fi
