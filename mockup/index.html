@@ -803,6 +803,10 @@ select option:disabled { color: var(--ink-3); }
 .sev-seg button span { display: inline-flex; align-items: center; gap: 5px; }
 .sev-seg .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; display: inline-block; }
 .sev-seg .dot.bad { color: var(--bad); } .sev-seg .dot.warn { color: var(--warn); } .sev-seg .dot.info { color: var(--info); }
+/* two rows: the global pill shape (.seg 999px) would let the full-width first button poke out of the rounded ends */
+.seg.sev-seg { border-radius: 18px; overflow: hidden; }
+.seg.sev-seg button { border-radius: 12px; }
+.seg.sev-seg button:first-child { border-radius: 14px; }
 .sp-note { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 10px 12px; border-radius: 12px; background: var(--primary-soft); color: var(--ink-2); font-size: 13px; }
 .sp-note > span { flex: 1; min-width: 200px; }
 .act-ro { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--field); border-left: 3px solid var(--primary); white-space: pre-line; }
