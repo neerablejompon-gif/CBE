@@ -2462,7 +2462,12 @@ function guideFor(s, L) {
       .then(function (j) { GUIDE[part] = { state: 'ok', fy: j.fy, levels: j.levels || {} }; render(); })
       .catch(function () { GUIDE[part] = { state: 'err' }; render(); });
   }
-  return g.state === 'ok' ? { fy: g.fy, L: g.levels[q[2] + '|' + L.level] || null } : { state: g.state };
+  if (g.state !== 'ok') return { state: g.state };
+  var hit = g.levels[q[2] + '|' + L.level];
+  if (!hit && L.criteria) { // sub-issue renumbered since last year (e.g. SM 3.1 → 3.1.1–3.1.3): same level, closest criteria
+    var bv = .5; Object.keys(g.levels).forEach(function (k) { var x = g.levels[k]; if (+k.split('|')[1] !== L.level || !x.crit) return; var v = coverage(L.criteria, x.crit); if (v > bv) { bv = v; hit = x; } });
+  }
+  return { fy: g.fy, L: hit || null };
 }
 // Years and dates are what most often needs changing when last year's text is reused
 function hlDates(t) { return esc(t).replace(/(\d{1,2}\s?(?:ม\.ค\.|ก\.พ\.|มี\.ค\.|เม\.ย\.|พ\.ค\.|มิ\.ย\.|ก\.ค\.|ส\.ค\.|ก\.ย\.|ต\.ค\.|พ\.ย\.|ธ\.ค\.|มกราคม|กุมภาพันธ์|มีนาคม|เมษายน|พฤษภาคม|มิถุนายน|กรกฎาคม|สิงหาคม|กันยายน|ตุลาคม|พฤศจิกายน|ธันวาคม)\s?(?:25)?\d{2}|\d{1,2}\/(?:25)?\d{2}|25[5-7]\d)/g, '<mark>$1</mark>'); }

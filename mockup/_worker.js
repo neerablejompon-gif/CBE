@@ -484,14 +484,14 @@ function parseGuide(rows) {
   const h = rows.findIndex((r, i) => i < 20 && (r || []).some(x => /^รายละเอียดผลการดำเนินงาน/.test(str(x))));
   if (h < 0) return {};
   const head = rows[h].map(x => str(x).replace(/\s+/g, ' ')), col = re => head.findIndex(x => re.test(x));
-  const C = { lv: col(/^ระดับ$/), narr: col(/^รายละเอียดผลการดำเนินงาน/), req: col(/^Min/i), has: col(/^ถ้ามีเอกสาร/), ev: col(/^ชื่อหลักฐาน/), rmk: col(/^ข้อสังเกต/), pr: col(/^แผนผล$/) };
+  const C = { crit: col(/^ค่าเกณฑ์/), lv: col(/^ระดับ$/), narr: col(/^รายละเอียดผลการดำเนินงาน/), req: col(/^Min/i), has: col(/^ถ้ามีเอกสาร/), ev: col(/^ชื่อหลักฐาน/), rmk: col(/^ข้อสังเกต/), pr: col(/^แผนผล$/) };
   if (C.ev < 0 && C.has >= 0 && /^หมายเหตุ/.test(head[C.has + 1] || '')) C.ev = C.has + 1; // HCM keeps evidence names under "หมายเหตุ"
   const out = {}; let sub = null, lv = null;
   for (let i = h + 1; i < rows.length; i++) {
     const r = rows[i], a = cell(r, 0), b = cell(r, C.lv < 0 ? 1 : C.lv), m = /^ระดับ(?:ที่)?\s*(\d)/.exec(b);
-    if (/^\d{1,2}\.\d{1,2}$/.test(a)) { sub = a; lv = null; continue; }
+    if (/^\d{1,2}(\.\d{1,2}){1,2}$/.test(a)) { sub = a; lv = null; continue; }
     if (!sub) continue;
-    if (m) { lv = out[sub + '|' + m[1]] = { narr: '', mr: [], remark: '', plan: null, res: null }; }
+    if (m) { lv = out[sub + '|' + m[1]] = { narr: '', mr: [], remark: '', plan: null, res: null, crit: cell(r, C.crit).slice(0, 600) }; } // crit: to match renumbered sub-issues
     if (!lv) continue;
     const n = cell(r, C.narr); if (n) lv.narr = lv.narr ? lv.narr + '\n' + n : n;
     const k = cell(r, C.rmk); if (k && !lv.remark) lv.remark = k;
