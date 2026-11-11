@@ -426,12 +426,13 @@ function aiNeurons(model, usage, x) {
   return Math.ceil((pin * r[0] + pout * r[1]) / 1e6);
 }
 async function aiCall(env, model, messages) {
-  const base = { messages, temperature: 0.2, max_completion_tokens: 1500 };
+  // thinking off: a reasoning pass costs output Neurons and time and can use up max tokens before the JSON
+  const base = { messages, temperature: 0.2, max_completion_tokens: 1200, chat_template_kwargs: { enable_thinking: false } };
   let r;
   try { r = await env.AI.run(model, { ...base, response_format: { type: 'json_object' } }); } catch (e) { r = await env.AI.run(model, base); } // not every model takes response_format
   const c = r && r.choices && r.choices[0] && r.choices[0].message;
   const text = c ? c.content : r && r.response;
-  return { text: typeof text === 'string' ? text : JSON.stringify(text || ''), usage: (r && r.usage) || null };
+  return { text: typeof text === 'string' ? text : JSON.stringify(text || ''), usage: (r && r.usage) || null, finish: r && r.choices && r.choices[0] && r.choices[0].finish_reason };
 }
 async function aiAlert(env, used, limit) {
   if (!env.LINE_CHANNEL_TOKEN) return;
@@ -446,7 +447,8 @@ async function aiCheck(req, env, fy, ctx) {
   if (!env.AI) fail(501, 'ยังไม่ได้เปิด Workers AI (เพิ่ม binding ชื่อ AI ในการตั้งค่า Pages)');
   if (+body.fy !== fy) fail(409, 'ตรวจได้เฉพาะปีบัญชีปัจจุบัน');
   const model = env.AI_MODEL || AI_DEFAULT, limit = +env.AI_DAILY_NEURONS || 8000, day = new Date().toISOString().slice(0, 10), ukey = 'usage|' + day; // free quota resets 00:00 UTC
-  const list = (Array.isArray(body.items) ? body.items : []).slice(0, 4).map(aiItem).filter(x => AI_KEY.test(x.k));
+  // one level per request: a Thai level takes ~5–20 s and long requests are cut by the platform
+  const list = (Array.isArray(body.items) ? body.items : []).slice(0, 1).map(aiItem).filter(x => AI_KEY.test(x.k));
   const { st, at } = await loadState(env, fy), ops = [], results = {};
   const before = (st.ai[ukey] || {}).n || 0;
   let used = before, quota = false;
@@ -458,7 +460,7 @@ async function aiCheck(req, env, fy, ctx) {
     try {
       const out = await aiCall(env, model, aiPrompt(x)), parsed = aiParse(out.text);
       used += aiNeurons(model, out.usage, x);
-      rec = parsed ? { sig, at: stamp(), model, items: parsed.items, note: parsed.note } : { sig, at: stamp(), model, items: [], note: '', err: 'AI ตอบในรูปแบบที่อ่านไม่ได้' };
+      rec = parsed ? { sig, at: stamp(), model, items: parsed.items, note: parsed.note } : { sig, at: stamp(), model, items: [], note: '', err: 'AI ตอบในรูปแบบที่อ่านไม่ได้', raw: cut(out.text, 300), finish: str(out.finish), usage: out.usage };
     } catch (e) {
       console.error('ai', e.stack || e);
       if (/limit|quota|neuron|429|capacity/i.test(String(e.message))) { quota = true; break; }

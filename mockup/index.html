@@ -1729,7 +1729,7 @@ function aiRun(I) {
   S.aiRun = { done: 0, total: todo.length }; render();
   var found = 0, stop = function (msg, kind) { S.aiRun = null; delete RUNS[I.code]; render(); toast(msg, kind); };
   (function next() {
-    var batch = todo.splice(0, 2);
+    var batch = todo.splice(0, 1);
     if (!batch.length) { logIt('AI ช่วยตรวจ ' + I.label); return stop('AI ตรวจเสร็จ ' + S.aiRun.total + ' ระดับ · พบ ' + found + ' ข้อเสนอ · กปม. ยืนยันหรือตัดออกได้ตามปกติ', 'bolt'); }
     fetch('/api/ai/check', { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ fy: CUR_FY, items: batch }) })
       .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; return j; }); })
