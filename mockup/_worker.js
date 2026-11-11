@@ -73,7 +73,7 @@ const enc = new TextEncoder(), dec = new TextDecoder();
 const noStore = { 'cache-control': 'no-store' };
 const json = (o, status = 200, extra) => new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json; charset=utf-8', ...noStore, ...extra } });
 const js = s => new Response(s, { headers: { 'content-type': 'text/javascript; charset=utf-8', ...noStore } });
-function fail(status, message) { const e = new Error(message); e.status = status; throw e; }
+function fail(status, message, why) { const e = new Error(message); e.status = status; if (why) e.why = why; throw e; }
 const b64url = b => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64url = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
 const RS256 = { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' };
@@ -580,7 +580,7 @@ async function gemCall(env, p) {
     const j = await r.json().catch(() => ({}));
     if (r.status === 404 && model !== GEM_FALLBACK) continue; // alias not available: try the fallback model
     if (r.status === 429) fail(429, 'Gemini ถูกใช้เกินโควตาของบัญชี ลองใหม่ภายหลัง');
-    if (!r.ok) { console.error('gemini', model, r.status, JSON.stringify(j).slice(0, 400)); fail(502, 'เรียก Gemini ไม่สำเร็จ ลองใหม่อีกครั้ง'); }
+    if (!r.ok) { const why = model + ' ' + r.status + ' ' + str(((j.error || {}).status || '') + ' ' + ((j.error || {}).message || '')).slice(0, 160); console.error('gemini', why); fail(502, 'เรียก Gemini ไม่สำเร็จ ลองใหม่อีกครั้ง', why); }
     const c = (j.candidates || [])[0] || {};
     return { model, text: ((c.content || {}).parts || []).map(x => x.text || '').join(''), finish: c.finishReason || '', usage: j.usageMetadata || null };
   }
@@ -605,14 +605,14 @@ async function aiWrite(req, env, fy) {
   const day = todayIso(), key = 'gem|' + day, cap = +env.GEMINI_DAILY_CALLS || 800, { st, at } = await loadState(env, fy), c = st.ai[key] || { n: 0, by: {} };
   if ((c.by[u.id] || 0) >= 40) fail(429, 'วันนี้ท่านใช้ผู้ช่วยเขียนครบ 40 ครั้งแล้ว ใช้ได้อีกครั้งพรุ่งนี้');
   const p = writePrompt(mode, x, fy), ops = [];
-  let parsed = null, engine = '', model = '', err = null;
+  let parsed = null, engine = '', model = '', err = null, why = '';
   // Gemini first; no key, its daily cap reached, or any failure → Workers AI does the same job
   if (env.GEMINI_API_KEY && c.n < cap) {
     try {
       const out = await gemCall(env, p); model = out.model; parsed = writeParse(out.text);
       if (!parsed) throw Object.assign(new Error(out.finish === 'MAX_TOKENS' ? 'ข้อความยาวเกินไป ลองแบ่งให้สั้นลง' : 'Gemini ตอบในรูปแบบที่อ่านไม่ได้ ลองใหม่อีกครั้ง'), { status: 502 });
       engine = 'gemini'; c.n++;
-    } catch (e) { err = e; parsed = null; console.error('gemini → workers ai', e.status || '', e.message); }
+    } catch (e) { err = e; parsed = null; why = e.why || ((e.status || '') + ' ' + e.message); console.error('gemini → workers ai', why); }
   } else if (env.GEMINI_API_KEY) err = Object.assign(new Error('ผู้ช่วยเขียนถูกใช้ครบโควตาของวันนี้แล้ว ใช้ได้อีกครั้งพรุ่งนี้'), { status: 429 });
   if (!parsed && env.AI) {
     const ukey = 'usage|' + new Date().toISOString().slice(0, 10), limit = +env.AI_DAILY_NEURONS || 8000, before = (st.ai[ukey] || {}).n || 0;
@@ -628,7 +628,7 @@ async function aiWrite(req, env, fy) {
   if (!parsed) throw err;
   c.by[u.id] = (c.by[u.id] || 0) + 1; ops.push({ s: 'ai', k: key, v: c });
   await writeState(env, fy, at, ops, u);
-  return Object.assign(parsed, { mode, model, engine, left: 40 - c.by[u.id] });
+  return Object.assign(parsed, { mode, model, engine, left: 40 - c.by[u.id] }, why ? { fallback: why } : {}); // why Gemini was skipped (status + Google's message, never the key)
 }
 const extOf = name => (String(name).split('.').pop() || '').toLowerCase();
 async function upload(req, env, fy) {
