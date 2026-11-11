@@ -176,6 +176,15 @@ refresh token เข้าถึง Drive ทั้งหมดของบั�
 3. GitHub → **Actions → LINE notify → Run workflow** เลือก job = `monthly` และติ๊ก **dry** ดูข้อความที่จะส่งใน log (ไม่ส่งจริง) แล้วค่อยรันแบบไม่ติ๊ก dry
 4. ทดสอบในเครื่อง: `npm run test:line` (จำลอง Google Sheets และ LINE API)
 
+## 7. AI ช่วยตรวจเบื้องต้น (Workers AI · ไม่บังคับ)
+
+ปุ่ม **AI ช่วยตรวจ** ในพื้นที่ผู้ตรวจสอบ (เฉพาะ กปม.) ส่งค่าเกณฑ์ ผลการดำเนินงาน ชื่อหลักฐาน ข้อเสนอแนะ สคร. และผลตามแนวทางปรับปรุงของแต่ละระดับให้ Workers AI อ่าน ผลขึ้นเป็นข้อค้นพบ "AI" ที่ กปม. ยืนยันหรือตัดออกได้เหมือนกฎอื่น ไม่ส่งไฟล์หลักฐาน และผู้รายงานไม่เห็นผล AI
+
+1. Cloudflare → Workers & Pages → โปรเจกต์ → Settings → Bindings → Add → **Workers AI** ชื่อ `AI` แล้วกด Retry deployment
+2. (ไม่บังคับ) Variables: `AI_MODEL` (ค่าเริ่มต้น `@cf/google/gemma-4-26b-a4b-it`) และ `AI_DAILY_NEURONS` (ค่าเริ่มต้น 8000)
+
+โควตาฟรี 10,000 Neurons ต่อวัน รีเซ็ต 07:00 น. ระบบหยุดเรียก AI เมื่อถึง `AI_DAILY_NEURONS` และส่ง LINE แจ้ง กปม. เมื่อใช้ถึง 80% ระบบตรวจซ้ำเฉพาะระดับที่เนื้อหาเปลี่ยน ดูการใช้จริงได้ที่ Cloudflare → AI → Workers AI
+
 ## ทดสอบในเครื่อง (ไม่ต้องมี Google / Cloudflare)
 `.test/` มีชุดทดสอบที่จำลอง Google Sheets และ Drive (อยู่ใน `.gitignore` เพราะมีข้อมูลจากแบบฟอร์มจริง)
 1. รัน `powershell -File tools\serve.ps1`

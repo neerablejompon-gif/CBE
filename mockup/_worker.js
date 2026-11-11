@@ -15,9 +15,12 @@
 //   LINE_CHANNEL_TOKEN  (secret) long-lived channel access token: sends messages
 //   LINE_ADD_URL     add-friend link of the LINE Official Account (https://line.me/R/ti/p/@...)
 //   CRON_KEY         (secret) shared with the GitHub Actions job that calls /api/notify every morning
+//   AI               Workers AI binding (Settings → Bindings) for the กปม. AI pre-check (optional)
+//   AI_MODEL         Workers AI text model (default @cf/google/gemma-4-26b-a4b-it)
+//   AI_DAILY_NEURONS stop calling the AI after this many Neurons per UTC day (default 8000 of the free 10,000)
 
 const IND_PARTS = { CG: ['CG'], SP: ['SP'], RM: ['RM'], SCM: ['SM', 'CM'], DT: ['DT'], HCM: ['HCM'], KMIM: ['KM', 'IM'], IA: ['IA'] };
-const STORES = ['patch', 'wf', 'wfnote', 'tri', 'trinote', 'unlock', 'cfg'];
+const STORES = ['patch', 'wf', 'wfnote', 'tri', 'trinote', 'unlock', 'cfg', 'ai'];
 const WF = ['draft', 'submitted', 'approved', 'returned'];
 const MONTHS = ['ต.ค.', 'พ.ย.', 'ธ.ค.', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.'];
 const SUM_TAB = "'1.สรุปรายงานผู้บริหาร'", FORM_TAB = "'2.ผลตามเกณฑ์และ GAP'";
@@ -41,6 +44,7 @@ export default {
       if (path === '/api/login' && req.method === 'POST') return await login(req, env);
       if (path === '/api/logout' && req.method === 'POST') return json({ ok: true }, 200, { 'set-cookie': SESSION + '=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0' });
       if (path === '/api/save' && req.method === 'POST') return json(await save(req, env, fy, ctx));
+      if (path === '/api/ai/check' && req.method === 'POST') return json(await aiCheck(req, env, fy, ctx));
       if (path === '/api/line/webhook' && req.method === 'POST') return await lineWebhook(req, env);
       // config check for setup: booleans only, never values
       if (path === '/api/line/webhook' && req.method === 'GET') return json({ secret: !!env.LINE_CHANNEL_SECRET, token: !!env.LINE_CHANNEL_TOKEN, addUrl: !!env.LINE_ADD_URL, cronKey: !!env.CRON_KEY });
@@ -203,6 +207,7 @@ function stateFor(u, st) {
   const mine = k => k === u.ind || k.startsWith(u.ind + ':') || k.startsWith(u.ind + '|') || k.split('|')[1] === u.ind, out = {};
   STORES.forEach(s => { out[s] = {}; Object.keys(st[s]).filter(mine).forEach(k => { out[s][k] = st[s][k]; }); });
   out.cfg = st.cfg; // plan-entry windows apply to every reporter
+  out.ai = {}; // AI pre-check results are for กปม. only
   return out;
 }
 
@@ -316,6 +321,8 @@ async function check(env, fy, u, st, op) {
     const plans = a => JSON.stringify((a || []).map(x => (x.p || []).slice(0, 12).map(v => +v || 0)));
     if (op.v && Array.isArray(op.v.cs) && planClosed(st, 'plan') && plans(op.v.cs) !== plans(prev.cs)) fail(409, 'ปิดรับการแก้ไขแผนการดำเนินงานแล้ว');
     if (op.v && Array.isArray(op.v.gs) && planClosed(st, 'gap') && plans(op.v.gs) !== plans(prev.gs || (Array.isArray(prev.gapPlan) && prev.gapPlan.some(Number) ? [{ p: prev.gapPlan }] : []))) fail(409, 'ปิดรับการแก้ไขแผนปรับปรุง GAP แล้ว');
+  } else if (op.s === 'ai') {
+    fail(403, 'ผล AI บันทึกโดยระบบเท่านั้น');
   } else if (op.s === 'wf') {
     if (audit ? !WF.includes(op.v) : !(reporter && op.k === u.ind && op.v === 'submitted' && editable(st, u.ind))) fail(403, 'ไม่มีสิทธิ์เปลี่ยนสถานะรายงานนี้');
   } else if (op.s === 'wfnote') {
@@ -338,6 +345,16 @@ async function mirror(env, fy, ops) {
   }
   await Promise.all(Object.keys(byForm).map(id => putRanges(env, id, byForm[id])));
 }
+async function writeState(env, fy, at, ops, u) {
+  const when = stamp(), updates = [], appends = [];
+  ops.forEach(op => {
+    const vals = [fy, op.s, op.k, op.v == null ? '' : JSON.stringify(op.v), u.id, when], row = at[op.s + '\n' + op.k];
+    if (row) updates.push({ range: `state!A${row}:F${row}`, values: [vals] }); else if (op.v != null) appends.push(vals);
+  });
+  await putRanges(env, env.SYSTEM_SHEET_ID, updates);
+  await appendRows(env, env.SYSTEM_SHEET_ID, 'state!A:F', appends);
+  return when;
+}
 async function save(req, env, fy, ctx) {
   sameOrigin(req);
   const u = await me(req, env), body = await req.json().catch(() => ({}));
@@ -353,19 +370,106 @@ async function save(req, env, fy, ctx) {
   ops.filter(op => op.s === 'wf' && op.v === 'submitted').forEach(op => Object.keys(st.unlock).forEach(k => {
     if (k.startsWith(op.k + '|') && !byKey['unlock\n' + k]) ops.push(byKey['unlock\n' + k] = { s: 'unlock', k, v: null });
   }));
-  const when = stamp(), updates = [], appends = [];
-  ops.forEach(op => {
-    const vals = [fy, op.s, op.k, op.v == null ? '' : JSON.stringify(op.v), u.id, when], row = at[op.s + '\n' + op.k];
-    if (row) updates.push({ range: `state!A${row}:F${row}`, values: [vals] }); else if (op.v != null) appends.push(vals);
-  });
-  await putRanges(env, env.SYSTEM_SHEET_ID, updates);
-  await appendRows(env, env.SYSTEM_SHEET_ID, 'state!A:F', appends);
+  const when = await writeState(env, fy, at, ops, u);
   await appendRows(env, env.SYSTEM_SHEET_ID, 'log!A:D', logs.map(w => [when, u.id, label(u), w]));
   let mirrored = true;
   try { await mirror(env, fy, ops.filter(op => op.s === 'patch' && op.v && !op.k.endsWith('|self'))); } catch (e) { mirrored = false; console.error('mirror', e.stack || e); }
   const tell = onCfgChange(env, new URL(req.url).origin, cfgBefore, ops).catch(e => console.error('line cfg', e.stack || e));
   if (ctx && ctx.waitUntil) ctx.waitUntil(tell); else await tell;
   return { ok: true, at: when, mirrored };
+}
+/* ---------- AI pre-check for กปม. (Workers AI): suggestions only, กปม. confirms or dismisses each one ---------- */
+const AI_DEFAULT = '@cf/google/gemma-4-26b-a4b-it';
+// Neurons per million tokens [input, output] from the Workers AI pricing page; unknown models use a cautious rate
+const AI_RATES = { '@cf/google/gemma-4-26b-a4b-it': [9091, 27273], '@cf/qwen/qwen3-30b-a3b-fp8': [4625, 30475], '@cf/aisingapore/gemma-sea-lion-v4-27b-it': [31876, 50488], '@cf/google/gemma-3-12b-it': [31371, 50560] };
+const AI_KEY = /^[A-Z]{2,5}\|[A-Z]{2,5}\|\d{1,2}\.\d{1,2}\|[1-5]$/;
+const AI_TYPES = ['criteria', 'evidence', 'gap'];
+const cut = (v, n) => str(v).slice(0, n);
+// Same signature on the page and here: a level is re-checked only when what the AI reads has changed
+function aiSig(x) {
+  const t = [x.crit, x.narr, (x.mr || []).map(m => m.join('~')).join('^'), x.gap, x.action, x.gapNote].join('\u0001');
+  let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36) + '.' + t.length;
+}
+function aiItem(raw) {
+  const x = raw || {};
+  return { k: str(x.k), label: cut(x.label, 80), crit: cut(x.crit, 3000), narr: cut(x.narr, 3000), gap: cut(x.gap, 1200), action: cut(x.action, 1200), gapNote: cut(x.gapNote, 1500),
+    mr: (Array.isArray(x.mr) ? x.mr : []).slice(0, 8).map(m => [cut(m && m[0], 300), m && m[1] ? '1' : '', cut(m && m[2], 200), cut(m && m[3], 300)]) };
+}
+function aiPrompt(x) {
+  const mr = x.mr.length ? x.mr.map((m, i) => `${i + 1}. ข้อกำหนด: ${m[0]}\n   ติ๊กว่ามีเอกสาร: ${m[1] ? 'มี' : 'ไม่มี'} · ชื่อหลักฐาน: ${m[2] || '(ไม่ระบุ)'} · ไฟล์แนบ: ${m[3] || '(ไม่มี)'}`).join('\n') : '(ไม่มี)';
+  return [
+    { role: 'system', content: 'คุณเป็นผู้ช่วยตรวจเบื้องต้นของกองประเมินผล (กปม.) ตรวจรายงานผลการดำเนินงานของรัฐวิสาหกิจตามค่าเกณฑ์ SE-AM ' +
+      'ชี้เฉพาะจุดที่เห็นได้ชัดจากข้อความที่ให้มา ห้ามเดาหรือแต่งข้อเท็จจริง ถ้าไม่แน่ใจให้ไม่รายงาน ตอบเป็นภาษาไทย และตอบเป็น JSON อย่างเดียว' },
+    { role: 'user', content: `ประเด็น ${x.label}\n\n[ค่าเกณฑ์]\n${x.crit || '(ไม่มี)'}\n\n[ผลการดำเนินงานที่ผู้รายงานเขียน]\n${x.narr || '(ว่าง)'}\n\n[Minimum Requirement และหลักฐาน]\n${mr}\n\n` +
+      `[ข้อเสนอแนะ สคร. (GAP ปีก่อน)]\n${x.gap || '(ไม่มี)'}\n\n[แนวทางปรับปรุงที่ส่วนงานกำหนด]\n${x.action || '(ไม่มี)'}\n\n[ผลการดำเนินงานตามแนวทางปรับปรุง]\n${x.gapNote || '(ว่าง)'}\n\n` +
+      'ตรวจ 3 เรื่อง:\n' +
+      'criteria = ผลการดำเนินงานไม่ครอบคลุมองค์ประกอบของค่าเกณฑ์ (ระบุองค์ประกอบที่ขาด)\n' +
+      'evidence = ชื่อหลักฐาน/ไฟล์ไม่ตรงกับ Minimum Requirement ข้อนั้น (เฉพาะข้อที่มีชื่อหรือไฟล์)\n' +
+      'gap = มีข้อเสนอแนะ สคร. แต่ผลตามแนวทางปรับปรุงไม่ตอบข้อเสนอแนะครบทุกข้อ\n' +
+      'ตอบ JSON รูปแบบนี้เท่านั้น ไม่เกิน 4 ข้อค้นพบ ถ้าไม่พบให้ findings เป็น []:\n' +
+      '{"findings":[{"type":"criteria|evidence|gap","severity":"warning|info","title":"หัวข้อสั้นไม่เกิน 60 ตัวอักษร","detail":"ขาดอะไร อ้างข้อความจากค่าเกณฑ์หรือข้อเสนอแนะ","fix":"สิ่งที่ผู้รายงานควรทำ"}],' +
+      '"return_note":"ร่างข้อความถึงผู้รายงาน 1-3 ประโยค หรือ \\"\\" ถ้าไม่มีประเด็น"}' }
+  ];
+}
+function aiParse(text) {
+  const t = String(text || ''), a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a < 0 || b <= a) return null;
+  let o; try { o = JSON.parse(t.slice(a, b + 1)); } catch (e) { return null; }
+  const items = (Array.isArray(o.findings) ? o.findings : []).filter(f => f && AI_TYPES.includes(f.type) && str(f.title)).slice(0, 4)
+    .map(f => ({ type: f.type, sev: f.severity === 'info' ? 'info' : 'warning', title: cut(f.title, 120), detail: cut(f.detail, 600), fix: cut(f.fix, 400) }));
+  return { items, note: cut(o.return_note, 600) };
+}
+function aiNeurons(model, usage, x) {
+  const r = AI_RATES[model] || [50000, 100000], u = usage || {};
+  const pin = +u.prompt_tokens || Math.ceil(JSON.stringify(x).length / 2), pout = +u.completion_tokens || 1500;
+  return Math.ceil((pin * r[0] + pout * r[1]) / 1e6);
+}
+async function aiCall(env, model, messages) {
+  const base = { messages, temperature: 0.2, max_completion_tokens: 1500 };
+  let r;
+  try { r = await env.AI.run(model, { ...base, response_format: { type: 'json_object' } }); } catch (e) { r = await env.AI.run(model, base); } // not every model takes response_format
+  const c = r && r.choices && r.choices[0] && r.choices[0].message;
+  const text = c ? c.content : r && r.response;
+  return { text: typeof text === 'string' ? text : JSON.stringify(text || ''), usage: (r && r.usage) || null };
+}
+async function aiAlert(env, used, limit) {
+  if (!env.LINE_CHANNEL_TOKEN) return;
+  const sys = await system(env), links = (await lineRows(env)).filter(r => r.user && sys.users[r.id] && sys.users[r.id].role === 'audit');
+  const msg = { type: 'text', text: `AI ช่วยตรวจ: วันนี้ใช้โควตาฟรีไปแล้ว ${Math.min(100, Math.round(used / limit * 100))}% (${used.toLocaleString()} / ${limit.toLocaleString()} Neurons) · เต็มแล้วจะใช้ได้อีกครั้ง 07:00 น.` };
+  for (const r of links) await linePush(env, r.user, [msg], 'ai80|' + new Date().toISOString().slice(0, 10) + '|' + r.id);
+}
+async function aiCheck(req, env, fy, ctx) {
+  sameOrigin(req);
+  const u = await me(req, env), body = await req.json().catch(() => ({}));
+  if (u.role !== 'audit') fail(403, 'เฉพาะ กปม.');
+  if (!env.AI) fail(501, 'ยังไม่ได้เปิด Workers AI (เพิ่ม binding ชื่อ AI ในการตั้งค่า Pages)');
+  if (+body.fy !== fy) fail(409, 'ตรวจได้เฉพาะปีบัญชีปัจจุบัน');
+  const model = env.AI_MODEL || AI_DEFAULT, limit = +env.AI_DAILY_NEURONS || 8000, day = new Date().toISOString().slice(0, 10), ukey = 'usage|' + day; // free quota resets 00:00 UTC
+  const list = (Array.isArray(body.items) ? body.items : []).slice(0, 4).map(aiItem).filter(x => AI_KEY.test(x.k));
+  const { st, at } = await loadState(env, fy), ops = [], results = {};
+  const before = (st.ai[ukey] || {}).n || 0;
+  let used = before, quota = false;
+  for (const x of list) {
+    const sig = aiSig(x), old = st.ai[x.k];
+    if (old && old.sig === sig && !old.err) { results[x.k] = old; continue; }
+    if (used >= limit) { quota = true; break; }
+    let rec;
+    try {
+      const out = await aiCall(env, model, aiPrompt(x)), parsed = aiParse(out.text);
+      used += aiNeurons(model, out.usage, x);
+      rec = parsed ? { sig, at: stamp(), model, items: parsed.items, note: parsed.note } : { sig, at: stamp(), model, items: [], note: '', err: 'AI ตอบในรูปแบบที่อ่านไม่ได้' };
+    } catch (e) {
+      console.error('ai', e.stack || e);
+      if (/limit|quota|neuron|429|capacity/i.test(String(e.message))) { quota = true; break; }
+      rec = { sig, at: stamp(), model, items: [], note: '', err: 'เรียก AI ไม่สำเร็จ' };
+    }
+    results[x.k] = rec; ops.push({ s: 'ai', k: x.k, v: rec });
+  }
+  if (used !== before) ops.push({ s: 'ai', k: ukey, v: { n: used, limit } });
+  if (ops.length) await writeState(env, fy, at, ops, u);
+  if (before < limit * 0.8 && used >= limit * 0.8) { const p = aiAlert(env, used, limit).catch(e => console.error('ai alert', e.stack || e)); if (ctx && ctx.waitUntil) ctx.waitUntil(p); else await p; }
+  return { results, used, limit, quota, model, day };
 }
 const extOf = name => (String(name).split('.').pop() || '').toLowerCase();
 async function upload(req, env, fy) {

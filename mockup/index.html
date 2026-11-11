@@ -140,6 +140,7 @@ textarea:disabled, .input:disabled, select:disabled { opacity: .75; cursor: not-
 .btn.primary:hover { background: #1749D6; }
 .btn.ok { color: #fff; border-color: transparent; background: #0B8A60; }
 .btn.danger { color: var(--bad); }
+.ai-tag { display: inline-block; font-size: 10.5px; font-weight: 700; padding: 0 5px; border-radius: 5px; background: var(--primary); color: #fff; vertical-align: 1px; }
 .btn.sm { min-height: 34px; padding: 0 11px; font-size: 13px; }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 
@@ -1637,8 +1638,26 @@ var RULES = {
   R5: { g: 4, sev: 'warning', t: 'ผลการดำเนินงานสั้นเกินไป', fix: 'อธิบายสิ่งที่ทำ ผลลัพธ์ และอ้างอิงเอกสารแนบ' },
   R6: { g: 4, sev: 'warning', t: 'เนื้อหาอาจไม่ตอบค่าเกณฑ์', fix: 'ใช้คำสำคัญของค่าเกณฑ์และตอบให้ครบทุกองค์ประกอบ' },
   R8: { g: 4, sev: 'info', t: 'ข้อความซ้ำกับระดับอื่น', fix: 'แยกผลการดำเนินงานให้ตรงกับค่าเกณฑ์ของแต่ละระดับ' },
-  R9: { g: 4, sev: 'info', t: 'GAP ปีก่อนยังไม่มีแนวทางปรับปรุง', fix: 'กรอกแนวทางปรับปรุงในส่วนแผนปรับปรุง GAP' }
+  R9: { g: 4, sev: 'info', t: 'GAP ปีก่อนยังไม่มีแนวทางปรับปรุง', fix: 'กรอกแนวทางปรับปรุงในส่วนแผนปรับปรุง GAP' },
+  AI1: { g: 4, sev: 'warning', ai: 1, t: 'AI: ผลการดำเนินงานอาจไม่ครอบคลุมค่าเกณฑ์', fix: 'เติมผลการดำเนินงานให้ครบทุกองค์ประกอบของค่าเกณฑ์' },
+  AI2: { g: 2, sev: 'warning', ai: 1, t: 'AI: หลักฐานอาจไม่ตรงกับ Minimum Requirement', fix: 'ตรวจชื่อและไฟล์หลักฐานให้ตรงกับข้อกำหนด' },
+  AI3: { g: 4, sev: 'warning', ai: 1, t: 'AI: ผลตามแผน GAP อาจไม่ตอบข้อเสนอแนะ สคร.', fix: 'รายงานผลให้ตอบข้อเสนอแนะ สคร. ครบทุกข้อ' }
 };
+var AI_RULE = { criteria: 'AI1', evidence: 'AI2', gap: 'AI3' };
+var AI_RES = store('ai' + FY) || {}; // level key → { sig, at, model, items, note } written by the server (กปม. only)
+// What the AI reads for one level; the same cuts and signature as aiItem/aiSig in _worker.js, so unchanged levels are not sent again
+function aiCut(v, n) { return (v == null ? '' : String(v)).trim().slice(0, n); }
+function aiInput(s, L) {
+  return { k: lvKey(s, L), label: aiCut(s.label + ' ระดับ ' + L.level + ' ' + s.name, 80), crit: aiCut(L.criteria, 3000), narr: aiCut(L.narrative, 3000), gap: aiCut(L.gap, 1200), action: aiCut(L.action, 1200), gapNote: aiCut(L.gapNote, 1500),
+    mr: L.mr.slice(0, 8).map(function (r) { return [aiCut(r.req, 300), r.has ? '1' : '', aiCut(r.evidence, 200), aiCut((r.files || []).map(function (f) { return f.name; }).join(', '), 300)]; }) };
+}
+function aiSig(x) {
+  var t = [x.crit, x.narr, x.mr.map(function (m) { return m.join('~'); }).join('^'), x.gap, x.action, x.gapNote].join('\u0001'), h = 5381;
+  for (var i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36) + '.' + t.length;
+}
+function aiFresh(s, L) { var r = AI_RES[lvKey(s, L)]; return r && !r.err && r.sig === aiSig(aiInput(s, L)) ? r : null; }
+function aiUsage() { var u = AI_RES['usage|' + new Date().toISOString().slice(0, 10)]; return u ? u : null; }
 var RULE_GROUPS = ['คะแนนเทียบหลักฐาน', 'ผลการดำเนินงาน', 'Minimum Requirement และไฟล์', 'แผน/ผลรายเดือน', 'ความสอดคล้องกับค่าเกณฑ์'];
 function grams(s) { s = (s || '').replace(/[\s\d.()\/\-–:,]+/g, ''); var g = {}; for (var i = 0; i < s.length - 2; i++) g[s.substr(i, 3)] = 1; return g; }
 // Share of the criterion's 3-character fragments that also appear in the narrative (Thai has no word breaks)
@@ -1661,6 +1680,8 @@ function precheck(I, m) {
       if (isCl && L.narrative && L.criteria) { var cv = coverage(L.criteria, L.narrative); if (cv < .2) add('R6', s, L, 'ครอบคลุมคำสำคัญของค่าเกณฑ์ ' + pct(cv)); }
       if (L.narrative && s.levels.some(function (o) { return o.level < L.level && o.narrative === L.narrative; })) add('R8', s, L, 'เหมือนระดับก่อนหน้าทุกตัวอักษร');
       if (isCl && L.gap && !L.action) add('R9', s, L, L.gap.slice(0, 90));
+      var ar = aiFresh(s, L);
+      if (ar) ar.items.forEach(function (it, n) { var r = AI_RULE[it.type]; if (!r) return; out.push({ id: r + '|' + s.uid + '|' + L.level + '#' + n, r: r, sev: it.sev === 'info' ? 'info' : 'warning', s: s, L: L, detail: it.detail || it.title, fix: it.fix, aiTitle: it.title, note: ar.note }); });
     });
   });
   var order = { critical: 0, warning: 1, info: 2 };
@@ -1696,11 +1717,32 @@ function winBar(k) {
 // Switch the whole app to another fiscal year; only the current year takes edits
 function setYear(fy) {
   FY = fy; INDS = yearInds(fy);
-  P = store('patch' + fy) || {}; UNLOCK = store('unlock' + fy) || {}; WFS = store('wf' + fy) || {}; WF_NOTE = store('wfnote' + fy) || {}; TRI = store('tri' + fy) || {}; TRI_NOTE = store('trinote' + fy) || {}; CFG = store('cfg' + fy) || {};
+  P = store('patch' + fy) || {}; UNLOCK = store('unlock' + fy) || {}; WFS = store('wf' + fy) || {}; WF_NOTE = store('wfnote' + fy) || {}; TRI = store('tri' + fy) || {}; TRI_NOTE = store('trinote' + fy) || {}; CFG = store('cfg' + fy) || {}; AI_RES = store('ai' + fy) || {};
   if (fy === CUR_FY && !INDS.patched) { applyPatches(); INDS.patched = true; }
   RUNS = {}; S.month = fy === CUR_FY ? curMonth() : 11; S.rv = null; S.fid = null; S.returning = false;
 }
 function curMonth() { return (new Date().getMonth() + 3) % 12; } // ต.ค. = 0
+function aiRun(I) {
+  if (!API) return toast('AI ช่วยตรวจใช้ได้ในระบบจริงเท่านั้น', 'info');
+  var todo = []; I.subs.forEach(function (s) { s.levels.forEach(function (L) { if ((L.narrative || L.gapNote) && !aiFresh(s, L)) todo.push(aiInput(s, L)); }); });
+  if (!todo.length) return toast('ระดับที่มีเนื้อหาตรวจด้วย AI ครบแล้ว · จะตรวจใหม่เมื่อผู้รายงานแก้ไข', 'info');
+  S.aiRun = { done: 0, total: todo.length }; render();
+  var found = 0, stop = function (msg, kind) { S.aiRun = null; delete RUNS[I.code]; render(); toast(msg, kind); };
+  (function next() {
+    var batch = todo.splice(0, 2);
+    if (!batch.length) { logIt('AI ช่วยตรวจ ' + I.label); return stop('AI ตรวจเสร็จ ' + S.aiRun.total + ' ระดับ · พบ ' + found + ' ข้อเสนอ · กปม. ยืนยันหรือตัดออกได้ตามปกติ', 'bolt'); }
+    fetch('/api/ai/check', { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ fy: CUR_FY, items: batch }) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; return j; }); })
+      .then(function (j) {
+        Object.keys(j.results || {}).forEach(function (k) { AI_RES[k] = j.results[k]; found += (j.results[k].items || []).length; });
+        AI_RES['usage|' + j.day] = { n: j.used, limit: j.limit }; API.state.ai = AI_RES;
+        S.aiRun.done += Object.keys(j.results || {}).length; delete RUNS[I.code];
+        if (j.quota) return stop('โควตา AI ฟรีของวันนี้ใกล้เต็ม หยุดตรวจไว้ก่อน · ใช้ได้อีกครั้ง 07:00 น.', 'alert');
+        render(); next();
+      })
+      .catch(function (e) { stop('AI ตรวจไม่สำเร็จ' + (e && e.error ? ': ' + e.error : ' ลองใหม่อีกครั้ง'), 'alert'); });
+  })();
+}
 function runFor(I) { if (!RUNS[I.code]) RUNS[I.code] = { at: thDate(new Date()) + ' ' + new Date().toTimeString().slice(0, 5), res: precheck(I, S.month) }; return RUNS[I.code]; }
 function confirmed(I) { var r = runFor(I).res; return r.findings.filter(function (f) { return TRI[f.id] === 'confirm'; }); }
 
@@ -2066,14 +2108,15 @@ function vReview() {
   }).join('');
   var rowsHtml = S.running === I.code ? '<div class="rgroups" style="padding:12px">' + groups + '</div>' : list.length ? list.map(function (f) {
     var tri = TRI[f.id];
-    return '<button class="frow' + (tri === 'dismiss' ? ' dismiss' : '') + '" data-fsel="' + esc(f.id) + '" role="option" aria-selected="' + (f.id === S.fid) + '"><span class="dot ' + f.sev + '"></span><span style="min-width:0"><span class="t">' + esc(RULES[f.r].t) + '</span><span class="l">' + esc(f.s.label) + (f.L ? ' ระดับ ' + f.L.level : '') + '</span></span>' +
+    return '<button class="frow' + (tri === 'dismiss' ? ' dismiss' : '') + '" data-fsel="' + esc(f.id) + '" role="option" aria-selected="' + (f.id === S.fid) + '"><span class="dot ' + f.sev + '"></span><span style="min-width:0"><span class="t">' + (f.aiTitle ? '<span class="ai-tag">AI</span> ' + esc(f.aiTitle) : esc(RULES[f.r].t)) + '</span><span class="l">' + esc(f.s.label) + (f.L ? ' ระดับ ' + f.L.level : '') + '</span></span>' +
       '<span class="mk">' + (tri === 'confirm' ? '<span class="ok">' + ico('check', 16) + '</span>' : tri === 'dismiss' ? '<span class="muted">' + ico('undo', 16) + '</span>' : '') + '</span></button>';
   }).join('') : '<div class="empty">' + ico('check') + 'ไม่มีข้อค้นพบตามตัวกรองนี้</div>';
   // Pane 3: the finding next to what the reporter actually submitted
   var detail = !sel ? '<div class="empty">' + ico('shield') + 'เลือกข้อค้นพบเพื่อดูรายละเอียด</div>' : (function (f) {
     var s = f.s, L = f.L, tri = TRI[f.id], R = RULES[f.r];
     return '<div style="display:flex;flex-direction:column;gap:6px">' + chip(SEV[f.sev]) + '<h2 style="font-size:18px">' + esc(R.t) + '</h2><p class="sub" style="margin:0"><span class="code">' + esc(s.label) + (L ? ' ระดับ ' + L.level : '') + '</span> · ' + esc(s.name) + '</p></div>' +
-      '<div class="dsec"><h4>ระบบพบ</h4><p style="margin:0">' + esc(f.detail) + '</p><p class="small muted" style="margin:6px 0 0">' + ico('bolt', 13) + ' ' + esc(R.fix) + '</p></div>' +
+      '<div class="dsec"><h4>' + (R.ai ? 'AI พบ <span class="small warn" style="font-weight:500">· ข้อเสนอจาก AI อาจผิดได้ ตรวจกับรายงานก่อนยืนยัน</span>' : 'ระบบพบ') + '</h4>' + (f.aiTitle ? '<p style="margin:0 0 4px"><b>' + esc(f.aiTitle) + '</b></p>' : '') + '<p style="margin:0">' + esc(f.detail) + '</p><p class="small muted" style="margin:6px 0 0">' + ico('bolt', 13) + ' ' + esc(f.fix || R.fix) + '</p>' +
+        (f.note ? '<div class="narr-box" style="margin-top:8px"><span class="small muted">ร่างข้อความถึงผู้รายงานจาก AI</span><br>' + esc(f.note) + '</div><button class="btn sm" style="margin-top:6px" data-act="ai-note" data-fid="' + esc(f.id) + '">' + ico('edit', 14) + 'ใช้เป็นหมายเหตุ</button>' : '') + '</div>' +
       '<div class="dsec"><div class="fa" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm' + (tri === 'confirm' ? ' primary' : '') + '" data-tri="confirm" data-fid="' + esc(f.id) + '" aria-pressed="' + (tri === 'confirm') + '">' + ico('check', 15) + 'ยืนยันเป็นประเด็น <kbd>C</kbd></button>' +
         '<button class="btn sm" data-tri="dismiss" data-fid="' + esc(f.id) + '" aria-pressed="' + (tri === 'dismiss') + '">' + ico('undo', 15) + 'ไม่เป็นประเด็น <kbd>D</kbd></button>' +
         '<button class="btn sm" data-open="' + s.uid + '|' + (L ? L.level : 1) + '">' + ico('report', 15) + 'เปิดหน้ารายงาน <kbd>O</kbd></button></div>' +
@@ -2096,8 +2139,9 @@ function vReview() {
       '<button class="btn sm" data-act="keys" aria-pressed="' + !!S.keysHelp + '"><kbd>?</kbd> คีย์ลัด</button></div>' + keys +
     '<div class="rv3"><nav class="pane glass" aria-label="ตัวชี้วัดที่ส่งมาตรวจ"><div class="pane-h"><b class="small muted">ตัวชี้วัด</b></div><div class="pane-b qlist">' + queue + '</div></nav>' +
       '<div class="pane glass"><div class="pane-h"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><div style="min-width:0"><b>' + I.no + ' · ' + esc(I.label) + '</b> <span class="small muted">' + esc(WF[w].t) + '</span><div class="small muted">ตรวจล่าสุด ' + esc(run.at) + ' · ไม่มีประเด็นต้องแก้ ' + pct(res.ready) + ' ของระดับที่รายงาน</div></div>' +
+          (FY === CUR_FY ? '<button class="btn sm" data-act="ai-run"' + (S.aiRun ? ' disabled' : '') + ' title="ให้ AI อ่านผลการดำเนินงาน หลักฐาน และผลตามแผน GAP ของระดับที่มีเนื้อหา">' + (S.aiRun ? '<span class="spin" aria-hidden="true"></span>AI ตรวจ ' + S.aiRun.done + '/' + S.aiRun.total : ico('bolt', 15) + 'AI ช่วยตรวจ') + '</button>' : '') +
           '<button class="icon-btn" data-act="rerun" aria-label="ตรวจเบื้องต้นอีกครั้ง" title="ตรวจเบื้องต้นอีกครั้ง (R)"' + (S.running ? ' disabled' : '') + '>' + ico('bolt') + '</button></div>' + sevSeg + ruleSel +
-          '<span class="small muted">แสดง ' + list.length + ' · คัดกรองแล้ว ' + triaged + '/' + res.findings.length + '</span></div><div class="pane-b" role="listbox" aria-label="ข้อค้นพบ" id="flist">' + rowsHtml + '</div></div>' +
+          '<span class="small muted">แสดง ' + list.length + ' · คัดกรองแล้ว ' + triaged + '/' + res.findings.length + (aiUsage() ? ' · AI วันนี้ใช้โควตา ' + Math.min(100, Math.round(aiUsage().n / aiUsage().limit * 100)) + '%' : '') + '</span></div><div class="pane-b" role="listbox" aria-label="ข้อค้นพบ" id="flist">' + rowsHtml + '</div></div>' +
       '<div class="pane glass"><div class="pane-b" style="padding:18px 20px" id="fdetail">' + detail + '</div></div></div>' +
     decide + '</section>';
 }
@@ -3007,6 +3051,8 @@ document.addEventListener('click', function (e) {
   if (d.dm) { S.dm = d.dm; return render(); }
   if (d.act === 'side-toggle') { S.mini = !S.mini; store('mini', S.mini); return render(); }
   if (d.act === 'pedit' || d.act === 'gedit') { S[d.act] = !S[d.act]; return render(); }
+  if (d.act === 'ai-note') { var fn = runFor(indBy(S.rv)).res.findings.filter(function (f) { return f.id === d.fid; })[0]; if (fn && fn.note) { TRI_NOTE[d.fid] = fn.note; store('trinote' + FY, TRI_NOTE); render(); toast('ใส่ร่างข้อความเป็นหมายเหตุแล้ว แก้ไขต่อได้'); } return; }
+  if (d.act === 'ai-run') return aiRun(indBy(S.rv));
   if (d.act === 'rerun') {
     var code = S.rv; delete RUNS[code];
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) { render(); return toast('ตรวจเบื้องต้นเสร็จแล้ว', 'bolt'); }
