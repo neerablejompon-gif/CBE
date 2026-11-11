@@ -554,7 +554,7 @@ async function guide(req, env) {
   return { fy: GUIDE_FY, part, levels };
 }
 /* ---------- writing assistant for reporters (Gemini): drafts only, the reporter reviews and saves ---------- */
-const GEM_DEFAULT = 'gemini-flash-latest', GEM_FALLBACK = 'gemini-2.5-flash', GEM_URL = 'https://generativelanguage.googleapis.com/v1beta/models/';
+const GEM_DEFAULT = 'gemini-flash-latest', GEM_FALLBACK = 'gemini-3.8-flash', GEM_URL = 'https://generativelanguage.googleapis.com/v1beta/models/';
 const WRITE_MODES = {
   draft: 'เรียบเรียงข้อความของผู้รายงานใหม่ให้ตอบค่าเกณฑ์ครบทุกองค์ประกอบ เรียงตามลำดับข้อของค่าเกณฑ์',
   guide: 'ปรับผลการดำเนินงานปีก่อนให้เป็นร่างของปีบัญชีนี้ คงโครงสร้างที่ดีไว้ แต่วันที่ ครั้งที่ประชุม เลขคำสั่ง ตัวเลข และชื่อเอกสารของปีก่อนต้องเปลี่ยนเป็นช่องให้ระบุทั้งหมด',
