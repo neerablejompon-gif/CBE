@@ -105,6 +105,29 @@ await ok('expired code is refused', async () => {
   const c2 = (await (await post('/api/line/code', aud)).json()).code; await hook([msgEv('U-aud', c2)]);
   assert.equal(books.sys.line.find(r => r[0] === '1000')[1], 'U-aud');
 });
+await ok('rich menu: สถานะ → reporter status card with deep link', async () => {
+  lineCalls.length = 0; await hook([msgEv('U-rep', 'สถานะ')]);
+  const m = lineCalls.at(-1).body.messages[0], flat = JSON.stringify(m.contents);
+  assert.equal(m.type, 'flex'); assert.match(m.altText, /สถานะรายงานผลเดือน/); assert.ok(flat.includes('สถานะรายงาน:')); assert.ok(flat.includes('/?tab=dash'));
+});
+await ok('rich menu: สถานะ for กปม. → all-indicator summary', async () => {
+  lineCalls.length = 0; await hook([msgEv('U-aud', 'สถานะ')]);
+  assert.match(lineCalls.at(-1).body.messages[0].altText, /ส่งแล้ว \d\/8/);
+});
+await ok('rich menu: สถานะ from an unlinked LINE user → how to link', async () => {
+  lineCalls.length = 0; await hook([msgEv('U-nobody', 'สถานะ')]);
+  assert.equal(lineCalls.at(-1).body.messages[0].altText, 'ยังไม่ได้เชื่อมต่อบัญชี');
+});
+await ok('rich menu: กำหนดส่ง and ช่วยเหลือ', async () => {
+  lineCalls.length = 0; await hook([msgEv('U-nobody', 'กำหนดส่ง'), msgEv('U-nobody', 'ช่วยเหลือ')]);
+  assert.match(lineCalls[0].body.messages[0].altText, /^กำหนดส่งรายงานเดือน .+: 5 /); assert.ok(JSON.stringify(lineCalls[0].body.messages[0].contents).includes('ช่วงกรอกแผน'));
+  assert.equal(lineCalls[1].body.messages[0].altText, 'ช่วยเหลือ'); assert.ok(JSON.stringify(lineCalls[1].body.messages[0].contents).includes('343'));
+});
+await ok('webhook error → apology reply instead of silence', async () => {
+  const saved = books.sys.line; books.sys.line = null; lineCalls.length = 0;
+  try { const r = await hook([msgEv('U-rep', 'สถานะ')]); assert.equal(r.status, 200); assert.match(lineCalls.at(-1).body.messages[0].text, /ระบบขัดข้อง/); }
+  finally { books.sys.line = saved; }
+});
 await ok('notify needs the cron key', async () => {
   const r = await call('/api/notify?day=1', { method: 'POST' }); assert.equal(r.status, 401);
 });

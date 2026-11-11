@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="cbe-build" content="2026-11-10.2">
+<meta name="cbe-build" content="2026-11-11.1">
 <title>CBE Report Platform</title>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png">
@@ -1754,6 +1754,8 @@ function confirmed(I) { var r = runFor(I).res; return r.findings.filter(function
 /* ================= session / access ================= */
 var S = { mini: !!store('mini'), view: 'home', ind: null, tab: 'dash', sub: 0, level: 0, month: curMonth(), filter: 'all', q: '', yr: 2568, returning: false, theme: store('theme') };
 INDS.patched = true;
+// deep link from the LINE rich menu: ?tab=dash|report|score|plan|gap|evidence (kept through sign-in, then removed from the URL)
+var DEEP = (function () { try { var t = new URLSearchParams(location.search).get('tab'); return /^(dash|report|score|plan|gap|evidence|history)$/.test(t || '') ? t : null; } catch (e) { return null; } })();
 var U = store('user');
 if (U && U.ind && !indBy(U.ind)) U = null; // indicator codes changed between mockup versions
 function isAudit() { return U && U.role === 'audit'; }
@@ -1902,6 +1904,7 @@ function render() {
   if (!window.CBE_FORMS) { $('#root').innerHTML = '<main class="login"><div class="login-form glass" style="max-width:560px"><h2>' + ico('info') + ' ยังไม่มีไฟล์ข้อมูล data.js</h2><p class="lead">data.js สร้างจากแบบฟอร์มรายงานผล Excel และไม่ได้เก็บใน repo สร้างด้วยคำสั่งใน mockup/README.md แล้วเปิดหน้านี้อีกครั้ง</p></div></main>'; return; }
   if (!U) { $('#root').innerHTML = vLogin(); return; }
   if (U.role === 'reporter') { S.view = 'ind'; S.ind = U.ind; }
+  if (DEEP) { if (U.role === 'reporter') S.tab = DEEP; DEEP = null; try { history.replaceState(null, '', location.pathname); } catch (e) {} }
   var I = S.ind && indBy(S.ind);
   var body, crumb, badge, eye = 'Core Business Enablers';
   if (S.view === 'ind' && !canSee(S.ind)) { body = v403(); crumb = 'ไม่มีสิทธิ์'; badge = ico('lock', 18); }
