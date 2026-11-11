@@ -140,6 +140,13 @@ textarea:disabled, .input:disabled, select:disabled { opacity: .75; cursor: not-
 .btn.primary:hover { background: #1749D6; }
 .btn.ok { color: #fff; border-color: transparent; background: #0B8A60; }
 .btn.danger { color: var(--bad); }
+.aiw { margin-top: 12px; padding: 12px; border-radius: 12px; border: 1px solid var(--hair); background: var(--field); }
+.aiw-h { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; font-size: 14px; }
+.aiw-items { display: grid; gap: 4px; margin-top: 10px; } .aiw-it { display: flex; gap: 6px; align-items: flex-start; font-size: 13px; }
+.aiw .aiw-it { color: var(--ink); } .aiw .aiw-it .small { color: var(--ink-2); }
+.aiw-it.ok > svg { color: var(--ok); } .aiw-it.warn > svg { color: var(--warn); } .aiw-it.bad > svg { color: var(--bad); }
+.aiw-draft { max-height: 320px; } mark.ph { background: rgba(255, 196, 0, .4); color: inherit; border-radius: 3px; padding: 0 2px; }
+.aiw-tips { margin: 8px 0 0; padding-left: 18px; color: var(--ink-2); }
 /* overview charts */
 .org-trend .chart .hz { fill: transparent; cursor: crosshair; } .org-trend .chart .hz:hover { fill: var(--primary-soft); }
 svg rect.mbar { display: inline; } /* chart bars share the class name of the mobile bottom bar */
@@ -1590,6 +1597,7 @@ function lvIssues(L, m, monthly) {
   var out = [], ls = lvStatus(L, m);
   if (monthly ? ls === 'late' : ls !== 'done') out.push('ผลยังไม่ครบตามแผน');
   if (!L.narrative) out.push('ยังไม่มีผลการดำเนินงาน');
+  else if (L.narrative.indexOf('【') >= 0) out.push('ยังมีช่อง 【ระบุ】');
   if (reqDocs(L).some(function (r) { return !r.has; })) out.push('หลักฐานยังไม่ครบ');
   else if (L.mr.length && !L.mr.some(function (r) { return r.evidence; })) out.push('ยังไม่ระบุชื่อหลักฐาน'); // old forms list file names once per level
   return out;
@@ -2274,6 +2282,7 @@ function vInd(I) {
 /* ================= reporter home: what is left to do this round ================= */
 var REP_TABS = [['score', 'ภาพรวมตัวชี้วัด', 'target'], ['dash', 'งานของฉัน', 'home'], ['plan', 'แผนการดำเนินงาน', 'calendar'], ['gap', 'แผนปรับปรุง GAP', 'trend'], ['report', 'รายงานผลตามเกณฑ์', 'report'], ['evidence', 'ทะเบียนหลักฐาน', 'folder']];
 var TODO_KIND = [
+  ['ยังมีช่อง 【ระบุ】', 'ยังมีช่อง 【ระบุ】 ในผลการดำเนินงาน', 'แทนที่ข้อความใน 【 】 ด้วยข้อมูลจริงก่อนส่งตรวจ', 'warn', 'edit'],
   ['หลักฐานยังไม่ครบ', 'ยังแนบหลักฐานไม่ครบ', 'ติ๊กเอกสาร Minimum Requirement ที่มีแล้ว และแนบส่วนที่ขาด', 'bad', 'folder'],
   ['ยังไม่มีผลการดำเนินงาน', 'ยังไม่เขียนผลการดำเนินงาน', 'ระดับที่รายงานคะแนนไว้ต้องมีคำอธิบายผล', 'bad', 'report'],
   ['ผลยังไม่ครบตามแผน', 'ผลยังไม่ครบตามแผน', 'อัปเดตความคืบหน้า (ยอดสะสม) หรือชี้แจงเหตุที่ล่าช้า', 'warn', 'calendar'],
@@ -2568,6 +2577,27 @@ function guidePanel(s, L, ed) {
       (ed ? '<button class="btn sm" data-act="guide-use"' + ((L.narrative || '').trim() ? ' disabled title="ช่องผลการดำเนินงานมีข้อความแล้ว ใช้คัดลอกแทน"' : '') + '>' + ico('edit', 14) + 'ใช้เป็นร่าง</button>' : '') + '</div>';
   return '<details class="guide"' + (open ? ' open' : '') + ' data-guide><summary>' + ico('history', 15) + ' ผลปี ' + (gg.fy || CLOSED_FY) + ' ของระดับนี้ (แนวทาง)</summary><div class="guide-b">' + inner + '</div></details>';
 }
+// Writing assistant (Gemini, server-side key): suggests text, the reporter decides what goes into the report
+function hlPh(t) { return esc(t).replace(/【[^】]*】/g, '<mark class="ph">$&</mark>'); }
+var AIW_ST = { covered: ['ok', 'check', 'ครบ'], partial: ['warn', 'alert', 'บางส่วน'], missing: ['bad', 'x', 'ยังขาด'] };
+function writePanel(s, L, ed) {
+  if (!API || !API.write || U.role !== 'reporter' || !ed || FY !== CUR_FY) return '';
+  var w = S.aiw && S.aiw.k === lvKey(s, L) ? S.aiw : null, gg = guideFor(s, L), prev = gg && gg.L && gg.L.narr;
+  var btn = function (mode, label, icon, off, why) { return '<button class="btn sm" data-act="aiw-run" data-mode="' + mode + '"' + (off || (w && w.busy) ? ' disabled' : '') + (why ? ' title="' + why + '"' : '') + '>' + ico(icon, 14) + label + '</button>'; };
+  var body = '';
+  if (w && w.busy) body = '<p class="small muted" style="margin:8px 0 0"><span class="spin" aria-hidden="true"></span> Gemini กำลังเรียบเรียง… (ประมาณ 5–20 วินาที)</p>';
+  else if (w && w.res) {
+    var r = w.res;
+    body = (r.items.length ? '<div class="aiw-items">' + r.items.map(function (i) { var t = AIW_ST[i.status]; return '<div class="aiw-it ' + t[0] + '">' + ico(t[1], 14) + '<span><b>' + esc(i.item) + '</b> <span class="small">' + t[2] + (i.note ? ' · ' + esc(i.note) : '') + '</span></span></div>'; }).join('') + '</div>' : '') +
+      (r.draft ? '<p class="small warn" style="margin:10px 0 4px">' + ico('alert', 13) + ' ร่างจาก AI ตรวจทานก่อนใช้ · ช่อง <mark class="ph">【ระบุ…】</mark> ต้องแทนที่ด้วยข้อมูลจริง ระบบจะไม่นับว่าพร้อมส่งจนกว่าจะแก้ครบ</p><div class="narr-box aiw-draft">' + hlPh(r.draft) + '</div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn sm primary" data-act="aiw-use">' + ico('edit', 14) + ((L.narrative || '').trim() ? 'แทนที่ข้อความเดิม' : 'ใช้ข้อความนี้') + '</button><button class="btn sm" data-act="aiw-copy">' + ico('file', 14) + 'คัดลอก</button><button class="btn sm" data-act="aiw-close">ปิด</button></div>' : '<div style="margin-top:8px"><button class="btn sm" data-act="aiw-close">ปิด</button></div>') +
+      (r.tips.length ? '<ul class="aiw-tips small">' + r.tips.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>' : '') +
+      '<p class="small muted" style="margin:6px 0 0">วันนี้ใช้ได้อีก ' + r.left + ' ครั้ง</p>';
+  }
+  if (w && w.undo != null) body += '<p class="small" style="margin:8px 0 0">' + ico('check', 13) + ' ใส่ข้อความแล้ว · <button class="linkbtn" data-act="aiw-undo">ย้อนกลับเป็นข้อความเดิม</button></p>';
+  return '<div class="aiw"><div class="aiw-h">' + ico('bolt', 15) + '<b>ผู้ช่วยเขียน (Gemini)</b><span class="small muted">ร่างให้ ท่านตรวจทานและตัดสินใจเอง</span></div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">' + btn('draft', 'เรียบเรียงตามค่าเกณฑ์', 'list', !(L.narrative || '').trim(), 'พิมพ์ข้อเท็จจริงสั้น ๆ ก่อน') + btn('guide', 'ปรับจากผลปี ' + ((gg && gg.fy) || CLOSED_FY), 'history', !prev, 'ไม่มีผลปีก่อนของระดับนี้') + btn('gaps', 'ตรวจว่ายังขาดอะไร', 'eye', !(L.narrative || '').trim()) + '</div>' + body + '</div>';
+}
 function curSub(I) { return I.subs[Math.min(S.sub, I.subs.length - 1)]; }
 function vReport(I) {
   var m = S.month, s = curSub(I), L = s.levels[Math.min(S.level, s.levels.length - 1)], ed = canEdit(I, s), aud = isAudit();
@@ -2614,7 +2644,7 @@ function vReport(I) {
     }).join('') + (ed ? '<p class="small muted" style="margin:2px 0 0">' + ico('info', 13) + ' PDF, Word, Excel, PowerPoint, JPG, PNG · ไม่เกิน 10 MB ต่อไฟล์ · ลากไฟล์มาวางบนรายการได้ · แนบแล้วระบบติ๊ก "มีเอกสาร" ให้</p>' : '')
     : '<div class="empty" style="padding:12px">ไม่มีรายการ Minimum Requirement</div>') + '</div>';
   else if (sx.g === 'a') body = '<div class="panel-head" style="margin-bottom:8px"><p class="sub" style="margin:0">เรียบเรียงตามค่าเกณฑ์ เพื่อนำไปกรอกในระบบ SEAM</p><button class="btn sm" data-act="copy">คัดลอก</button></div>' +
-      '<label class="sr" for="narr">ผลการดำเนินงาน</label><textarea id="narr" data-f="narrative" rows="9" placeholder="สิ่งที่ดำเนินการ ผลลัพธ์ และเอกสารอ้างอิง"' + dis + '>' + esc(L.narrative) + '</textarea>' + guidePanel(s, L, ed) +
+      '<label class="sr" for="narr">ผลการดำเนินงาน</label><textarea id="narr" data-f="narrative" rows="9" placeholder="สิ่งที่ดำเนินการ ผลลัพธ์ และเอกสารอ้างอิง"' + dis + '>' + esc(L.narrative) + '</textarea>' + writePanel(s, L, ed) + guidePanel(s, L, ed) +
       (aud || L.remark ? '<label class="label" for="rmk">ข้อสังเกต กปม.</label><textarea id="rmk" data-f="remark" rows="3" placeholder="เขียนข้อสังเกตถึงผู้รายงาน"' + (aud && !isSelfRv(I.code) ? '' : ' disabled') + '>' + esc(L.remark) + '</textarea>' : '');
   else if (sx.n === 1) body = gapBox(L) +
       '<label class="label">แนวทางปรับปรุง / กิจกรรม</label>' + ((L.action || '').trim() ? '<p class="act-ro">' + esc(L.action) + '</p>' : '<p class="small muted" style="margin:0">ยังไม่ระบุแนวทางปรับปรุง · กำหนดได้ที่หน้าแผนปรับปรุง GAP</p>') +
@@ -3278,6 +3308,24 @@ document.addEventListener('click', function (e) {
     WFS[S.ind] = 'returned'; WF_NOTE[S.ind] = why.trim(); store('wf' + FY, WFS); store('wfnote' + FY, WF_NOTE); S.returning = false; logIt('ส่งกลับ ' + S.ind + ': ' + why.trim()); render(); return toast('ส่งกลับ ' + S.ind + ' ให้ผู้รายงานแก้ไขแล้ว', 'undo');
   }
   if (d.wf) { WFS[S.ind] = d.wf; store('wf' + FY, WFS); logIt((d.wf === 'approved' ? 'อนุมัติผล ' : 'ปลดล็อก ') + S.ind); render(); return toast(d.wf === 'approved' ? 'อนุมัติผล ' + S.ind + ' แล้ว' : 'ปลดล็อก ' + S.ind + ' แล้ว'); }
+  if (d.act && d.act.indexOf('aiw-') === 0) {
+    var cw = curLv(), kw = lvKey(cw.s, cw.L), w0 = S.aiw && S.aiw.k === kw ? S.aiw : null;
+    if (d.act === 'aiw-close') { S.aiw = null; return render(); }
+    if (d.act === 'aiw-copy' && w0 && w0.res) { (navigator.clipboard ? navigator.clipboard.writeText(w0.res.draft) : Promise.reject()).then(function () { toast('คัดลอกร่างแล้ว'); }, function () { toast('คัดลอกไม่ได้', 'alert'); }); return; }
+    if (!canEdit(cw.I, cw.s)) return;
+    if (d.act === 'aiw-use' && w0 && w0.res) { var old = cw.L.narrative || ''; cw.L.narrative = w0.res.draft; savePatch(cw.s, cw.L); logIt('ใช้ร่างจากผู้ช่วยเขียน ' + cw.s.label + ' ระดับ ' + cw.L.level); S.aiw = { k: kw, undo: old }; render(); return toast('ใส่ร่างแล้ว · แทนที่ช่อง 【ระบุ】 ให้ครบก่อนส่งตรวจ', 'edit'); }
+    if (d.act === 'aiw-undo' && w0 && w0.undo != null) { cw.L.narrative = w0.undo; savePatch(cw.s, cw.L); S.aiw = null; render(); return toast('ย้อนกลับเป็นข้อความเดิมแล้ว', 'undo'); }
+    if (d.act === 'aiw-run') {
+      var gw = guideFor(cw.s, cw.L);
+      S.aiw = { k: kw, busy: true }; render();
+      fetch('/api/ai/write', { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ k: kw, mode: d.mode, label: cw.s.label + ' ระดับ ' + cw.L.level + ' ' + cw.s.name,
+        crit: cw.L.criteria, narr: cw.L.narrative || '', prev: d.mode === 'guide' && gw && gw.L ? gw.L.narr : '', ev: cw.L.mr.map(function (r) { return r.evidence; }).filter(Boolean) }) })
+        .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; return j; }); })
+        .then(function (j) { if (S.aiw && S.aiw.k === kw) { S.aiw = { k: kw, res: j }; render(); } })
+        .catch(function (e) { if (S.aiw && S.aiw.k === kw) S.aiw = null; render(); toast((e && e.error) || 'ผู้ช่วยเขียนไม่ตอบ ลองใหม่อีกครั้ง', 'alert'); });
+    }
+    return;
+  }
   if (d.act === 'guide-copy' || d.act === 'guide-use' || d.act === 'guide-ev') {
     var cg = curLv(), gg2 = guideFor(cg.s, cg.L), gl = gg2 && gg2.L; if (!gl) return;
     if (d.act === 'guide-copy') { (navigator.clipboard ? navigator.clipboard.writeText(gl.narr) : Promise.reject()).then(function () { toast('คัดลอกผลปี ' + gg2.fy + ' แล้ว'); }, function () { toast('คัดลอกไม่ได้ เลือกข้อความแล้วกด Ctrl+C', 'alert'); }); return; }
@@ -3293,6 +3341,7 @@ document.addEventListener('input', function (e) {
   var t = e.target, d = t.dataset;
   if (d.f) {
     var c = lvCtx(); if (d.f === 'action' && !winOpen('gap')) return; c.L[d.f] = t.value; savePatch(c.s, c.L);
+    if (d.f === 'narrative') document.querySelectorAll('[data-act="aiw-run"][data-mode="draft"], [data-act="aiw-run"][data-mode="gaps"]').forEach(function (b) { b.disabled = !t.value.trim() || !!(S.aiw && S.aiw.busy); });
     if (d.f === 'action' && S.pl) { // redraw only when the split button should appear or its count changes, keeping the caret
       var sb = document.querySelector('[data-act="split-steps"][data-kind="gs"]'), np = spArr(c.L, 'gs').some(function (x) { return x.src === 'crit'; }) ? 0 : splitCriteria(t.value).length;
       if ((sb ? +sb.dataset.n : 0) !== np) { var pos = t.selectionStart; render(); var a = $('#ac'); if (a) { a.focus(); a.setSelectionRange(pos, pos); } }
