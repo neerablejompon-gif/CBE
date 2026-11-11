@@ -44,6 +44,7 @@ export default {
       if (path === '/data.js' || path === '/history.js' || path === '/history-axes.js') { try { return js(await archive(req, env, { '/data.js': 'ARCHIVE', '/history.js': 'HISTORY', '/history-axes.js': 'HISTORY_AXES' }[path])); } catch (e) { if (e.status !== 401) throw e; return js(''); } }
       if (path === '/api/login' && req.method === 'POST') return await login(req, env);
       if (path === '/api/logout' && req.method === 'POST') return json({ ok: true }, 200, { 'set-cookie': SESSION + '=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0' });
+      if (path === '/api/role' && req.method === 'POST') return await switchRole(req, env);
       if (path === '/api/save' && req.method === 'POST') return json(await save(req, env, fy, ctx));
       if (path === '/api/guide' && req.method === 'GET') return json(await guide(req, env));
       if (path === '/api/ai/check' && req.method === 'POST') return json(await aiCheck(req, env, fy, ctx));
@@ -102,7 +103,7 @@ async function sessionId(req, env) {
   let body = null;
   try { if (await crypto.subtle.verify('HMAC', key, unb64url(s || ''), enc.encode(p))) body = JSON.parse(dec.decode(unb64url(p))); } catch (e) { /* malformed cookie */ }
   if (!body || body.exp < Date.now()) fail(401, 'หมดเวลาการใช้งาน กรุณาเข้าสู่ระบบใหม่');
-  return body.id;
+  return body;
 }
 // Browsers send SameSite=Strict cookies only from this site; the Origin check also blocks forms posted from elsewhere
 function sameOrigin(req) { const o = req.headers.get('origin'); if (o && o !== new URL(req.url).origin) fail(403, 'คำขอไม่ได้มาจากหน้าระบบ'); }
@@ -120,10 +121,25 @@ async function login(req, env) {
   }
   delete FAILS[slot];
   checkUser(u);
-  const p = b64url(enc.encode(JSON.stringify({ id, exp: now + SESSION_HOURS * 3600e3 })));
+  // Several roles: ask which one first (password already checked; nothing is issued until a role is chosen)
+  if (u.roles.length > 1 && !Number.isInteger(b.r)) return json({ choose: u.roles.map((x, i) => ({ r: i, label: roleLabel(x) })), name: u.name });
+  const cu = asRole(u, b.r);
+  await appendRows(env, env.SYSTEM_SHEET_ID, 'log!A:D', [[stamp(), id, label(cu), 'เข้าสู่ระบบ']]);
+  return json({ ok: true }, 200, { 'set-cookie': await sessionCookie(env, id, cu.r) });
+}
+async function sessionCookie(env, id, r) {
+  const p = b64url(enc.encode(JSON.stringify({ id, r, exp: Date.now() + SESSION_HOURS * 3600e3 })));
   const token = p + '.' + b64url(await crypto.subtle.sign('HMAC', await hmacKey(env), enc.encode(p)));
-  await appendRows(env, env.SYSTEM_SHEET_ID, 'log!A:D', [[stamp(), id, label(u), 'เข้าสู่ระบบ']]);
-  return json({ ok: true }, 200, { 'set-cookie': `${SESSION}=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_HOURS * 3600}` });
+  return `${SESSION}=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_HOURS * 3600}`;
+}
+async function switchRole(req, env) {
+  sameOrigin(req);
+  const s = await sessionId(req, env), u = (await system(env)).users[s.id], b = await req.json().catch(() => ({}));
+  if (!u) fail(401, 'บัญชีนี้ถูกยกเลิกแล้ว');
+  if (!Number.isInteger(b.r) || b.r < 0 || b.r >= u.roles.length) fail(400, 'ไม่มีบทบาทนี้');
+  const cu = asRole(u, b.r); checkUser(cu);
+  await appendRows(env, env.SYSTEM_SHEET_ID, 'log!A:D', [[stamp(), u.id, label(cu), 'สลับบทบาทเป็น ' + roleLabel(cu)]]);
+  return json({ ok: true }, 200, { 'set-cookie': await sessionCookie(env, u.id, cu.r) });
 }
 
 /* ---------- Google APIs (service account) ---------- */
@@ -175,22 +191,40 @@ function system(env) {
   return cached('system', TTL, async () => {
     const [users, forms] = await getRanges(env, env.SYSTEM_SHEET_ID, ['users!A2:E', 'forms!A2:C']);
     const byId = {};
-    users.forEach(r => { const id = str(r[0]); if (id) byId[id] = { id, role: str(r[1]), ind: str(r[2]) || null, part: str(r[3]) || null, name: str(r[4]) }; });
+    users.forEach(r => {
+      const id = str(r[0]); if (!id) return;
+      const x = { role: str(r[1]).toLowerCase(), ind: str(r[2]).toUpperCase() || null, part: str(r[3]).toUpperCase() || null };
+      const u = byId[id] = byId[id] || { id, name: '', roles: [] };
+      if (!u.name) u.name = str(r[4]);
+      if (!u.roles.some(y => y.role === x.role && y.ind === x.ind && y.part === x.part)) u.roles.push(x);
+    });
+    // Rows with a valid role come first; the first one is the default, invalid rows only matter when nothing else is valid
+    Object.values(byId).forEach(u => { const ok = u.roles.filter(roleOk); if (ok.length) u.roles = ok; Object.assign(u, u.roles[0]); });
     return { users: byId, forms: forms.filter(r => str(r[1]) && str(r[2])).map(r => ({ fy: +r[0] || 0, code: str(r[1]), id: str(r[2]) })) };
   });
 }
+const roleOk = x => x.role === 'audit' || x.role === 'exec' || (x.role === 'reporter' && !!IND_PARTS[x.ind] && (!x.part || IND_PARTS[x.ind].includes(x.part)));
 function checkUser(u) {
-  const ok = u.role === 'audit' || u.role === 'exec' || (u.role === 'reporter' && IND_PARTS[u.ind] && (!u.part || IND_PARTS[u.ind].includes(u.part)));
-  if (!ok) fail(403, `รหัสพนักงาน ${u.id} ยังไม่ได้กำหนดสิทธิ์ในระบบ ติดต่อ กปม.`);
+  if (!roleOk(u)) fail(403, `รหัสพนักงาน ${u.id} ยังไม่ได้กำหนดสิทธิ์ในระบบ ติดต่อ กปม.`);
 }
+const rolesOf = u => u.roles || [u];
+const roleLabel = x => x.role === 'audit' ? 'กปม.' : x.role === 'exec' ? 'ผู้บริหาร' : 'ผู้รายงาน ' + (x.part || x.ind);
+// The role in use for this session; `self` lists indicators the person reports, which they may not review as กปม.
+function asRole(u, r) {
+  const i = Number.isInteger(r) && r >= 0 && r < u.roles.length ? r : 0;
+  return Object.assign({}, u, u.roles[i], { r: i, self: [...new Set(u.roles.filter(x => x.role === 'reporter').map(x => x.ind))] });
+}
+const SELF_MSG = 'ตัวชี้วัดที่ท่านรายงานเอง ต้องให้ กปม. ท่านอื่นตรวจ';
+const isSelf = (u, ind) => u.role === 'audit' && (u.self || []).includes(ind);
 // A user removed from the "users" tab loses access within a minute (system() cache), even with a valid cookie
 async function me(req, env) {
-  const id = await sessionId(req, env), u = (await system(env)).users[id];
-  if (!u) fail(401, 'บัญชีนี้ถูกยกเลิกแล้ว');
+  const s = await sessionId(req, env), base = (await system(env)).users[s.id];
+  if (!base) fail(401, 'บัญชีนี้ถูกยกเลิกแล้ว');
+  const u = asRole(base, s.r);
   checkUser(u);
   return u;
 }
-const label = u => u.name || (u.role === 'audit' ? 'กปม.' : u.role === 'exec' ? 'ผู้บริหาร' : 'ผู้รายงาน ' + (u.part || u.ind));
+const label = u => (u.name || roleLabel(u)) + (u.roles && u.roles.length > 1 ? ' (' + roleLabel(u) + ')' : '');
 // One row per (fy, store, key): A fy | B store | C key | D JSON value | E by | F at
 async function loadState(env, fy) {
   const [rows] = await getRanges(env, env.SYSTEM_SHEET_ID, ['state!A2:D']), st = {}, at = {};
@@ -284,7 +318,7 @@ async function boot(req, env, fy) {
     getRanges(env, env.SYSTEM_SHEET_ID, ['log!A2:D']).then(([rows]) => rows.slice(-60).reverse().map(r => ({ t: str(r[0]), who: str(r[2]), what: str(r[3]) })))]);
   const data = {};
   codes.forEach((c, i) => { if (forms[i]) data[c] = forms[i].data; });
-  const api = { me: { role: u.role, ind: u.ind, part: u.part, name: u.name, id: u.id }, state: stateFor(u, st), log, openFrom: openFrom(), line: await lineStatus(env, u.id) };
+  const api = { me: { role: u.role, ind: u.ind, part: u.part, name: u.name, id: u.id, r: u.r, self: u.role === 'audit' ? u.self : [], roles: u.roles.map((x, i) => ({ r: i, label: roleLabel(x) })) }, state: stateFor(u, st), log, openFrom: openFrom(), line: await lineStatus(env, u.id) };
   return `window.CBE_FORMS_${fy}=${JSON.stringify(data, hideRows)};\nwindow.CBE_API=${JSON.stringify(api)};`;
 }
 // FY2569 (closed year) and the indicator seed: the data.js built by tools/forms-to-json.ps1, kept as a Drive file
@@ -306,6 +340,7 @@ async function check(env, fy, u, st, op) {
   const audit = u.role === 'audit', reporter = u.role === 'reporter';
   if (op.s === 'patch') {
     // กปม. writes only the remark: keep everything else as the reporter saved it
+    if (audit && isSelf(u, op.k.split('|')[0])) fail(403, SELF_MSG);
     if (audit && !op.k.endsWith('|self')) { op.v = Object.assign({}, st.patch[op.k] || {}, { remark: String((op.v || {}).remark || '').slice(0, 5000) }); return; }
     if (!own(u, op.k)) fail(403, 'แก้ไขได้เฉพาะส่วนที่รับผิดชอบ');
     if (!editable(st, u.ind)) fail(409, 'รายงานนี้ส่งตรวจแล้ว แก้ไขได้เมื่อ กปม. ส่งกลับ');
@@ -325,6 +360,8 @@ async function check(env, fy, u, st, op) {
     if (op.v && Array.isArray(op.v.gs) && planClosed(st, 'gap') && plans(op.v.gs) !== plans(prev.gs || (Array.isArray(prev.gapPlan) && prev.gapPlan.some(Number) ? [{ p: prev.gapPlan }] : []))) fail(409, 'ปิดรับการแก้ไขแผนปรับปรุง GAP แล้ว');
   } else if (op.s === 'ai') {
     fail(403, 'ผล AI บันทึกโดยระบบเท่านั้น');
+  } else if (audit && (op.s === 'wf' ? isSelf(u, op.k) : op.s === 'wfnote' ? isSelf(u, op.k.split(':')[0]) : op.s === 'tri' || op.s === 'trinote' ? isSelf(u, op.k.split('|')[1]) : op.s === 'unlock' ? isSelf(u, op.k.split('|')[0]) : false)) {
+    fail(403, SELF_MSG);
   } else if (op.s === 'wf') {
     if (audit ? !WF.includes(op.v) : !(reporter && op.k === u.ind && op.v === 'submitted' && editable(st, u.ind))) fail(403, 'ไม่มีสิทธิ์เปลี่ยนสถานะรายงานนี้');
   } else if (op.s === 'wfnote') {
@@ -438,7 +475,7 @@ async function aiCall(env, model, messages) {
 }
 async function aiAlert(env, used, limit) {
   if (!env.LINE_CHANNEL_TOKEN) return;
-  const sys = await system(env), links = (await lineRows(env)).filter(r => r.user && sys.users[r.id] && sys.users[r.id].role === 'audit');
+  const sys = await system(env), links = (await lineRows(env)).filter(r => r.user && sys.users[r.id] && rolesOf(sys.users[r.id]).some(x => x.role === 'audit'));
   const msg = { type: 'text', text: `AI ช่วยตรวจ: วันนี้ใช้โควตาฟรีไปแล้ว ${Math.min(100, Math.round(used / limit * 100))}% (${used.toLocaleString()} / ${limit.toLocaleString()} Neurons) · เต็มแล้วจะใช้ได้อีกครั้ง 07:00 น.` };
   for (const r of links) await linePush(env, r.user, [msg], 'ai80|' + new Date().toISOString().slice(0, 10) + '|' + r.id);
 }
@@ -451,6 +488,7 @@ async function aiCheck(req, env, fy, ctx) {
   const model = env.AI_MODEL || AI_DEFAULT, limit = +env.AI_DAILY_NEURONS || 8000, day = new Date().toISOString().slice(0, 10), ukey = 'usage|' + day; // free quota resets 00:00 UTC
   // one level per request: a Thai level takes ~5–20 s and long requests are cut by the platform
   const list = (Array.isArray(body.items) ? body.items : []).slice(0, 1).map(aiItem).filter(x => AI_KEY.test(x.k));
+  if (list.some(x => isSelf(u, x.k.split('|')[0]))) fail(403, SELF_MSG);
   const { st, at } = await loadState(env, fy), ops = [], results = {};
   const before = (st.ai[ukey] || {}).n || 0;
   let used = before, quota = false;
@@ -625,7 +663,10 @@ async function lineEvent(env, fy, origin, ev, uid) {
     const sys = await system(env), r = (await lineRows(env)).find(x => x.user === uid && sys.users[x.id]);
     if (!r) return lineReply(env, ev.replyToken, [helpMsg('ยังไม่ได้เชื่อมต่อบัญชี', origin)]);
     const u = sys.users[r.id], { st } = await loadState(env, fy), m = openFrom();
-    return lineReply(env, ev.replyToken, [u.role === 'reporter' ? await reporterMsg(env, fy, st, u, m, origin, 'status') : await summaryMsg(env, fy, st, m, origin, 'status')]);
+    const rs = rolesOf(u), msgs = [];
+    for (const x of rs.filter(x => x.role === 'reporter')) msgs.push(await reporterMsg(env, fy, st, Object.assign({}, u, x), m, origin, 'status')); // every indicator the person reports
+    if (!msgs.length || rs.some(x => x.role !== 'reporter')) msgs.push(await summaryMsg(env, fy, st, m, origin, 'status'));
+    return lineReply(env, ev.replyToken, msgs.slice(0, 5));
   }
   if (!/^\d{6}$/.test(text)) return lineReply(env, ev.replyToken, [helpMsg('พิมพ์รหัส 6 หลักเพื่อเชื่อมต่อบัญชี', origin)]);
   const rows = await lineRows(env), r = rows.find(x => x.code === text);
@@ -736,12 +777,14 @@ async function notify(req, env, fy) {
   const want = j => jobs.includes(j) || (jobs.includes('daily') && ((j === 'monthly' && day === 1) || (j === 'summary' && day === 6) || j === 'closing'));
   const rm = (fyMonth(bkk()) + 11) % 12;
   if (want('monthly')) for (const r of links) {
-    const u = sys.users[r.id]; if (u.role !== 'reporter') continue;
-    await send(r, await reporterMsg(env, fy, st, u, rm, origin, 'monthly'), 'monthly');
+    for (const x of rolesOf(sys.users[r.id]).filter(x => x.role === 'reporter')) { // one card per indicator the person reports
+      const u = Object.assign({}, sys.users[r.id], x);
+      await send(r, await reporterMsg(env, fy, st, u, rm, origin, 'monthly'), 'monthly-' + u.ind);
+    }
   }
   if (want('summary')) {
     const msg = await summaryMsg(env, fy, st, rm, origin, 'monthly');
-    for (const r of links) if (sys.users[r.id].role === 'audit') await send(r, msg, 'summary');
+    for (const r of links) if (rolesOf(sys.users[r.id]).some(x => x.role === 'audit')) await send(r, msg, 'summary');
   }
   if (want('closing')) for (const k of Object.keys(WIN_NAME)) {
     const c = st.cfg[k] || {}; if (c.open === false || c.to !== todayIso(3)) continue;
@@ -814,7 +857,7 @@ async function broadcastWindow(env, sys, links, k, c, kind, origin, send) {
   const range = c.from || c.to ? (c.from ? thDay(c.from) : '') + (c.to ? ' – ' + thDay(c.to) : '') : 'ไม่กำหนดวันปิด';
   const T = { open: [C.ok, 'เปิดให้กรอก' + WIN_NAME[k], 'ช่วงเวลา: ' + range], close: [C.mute, 'ปิดรับการกรอก' + WIN_NAME[k], 'ดูแผนได้อย่างเดียว · ลงผลรายเดือนได้ตามปกติ'], closing: [C.warn, 'อีก 3 วันปิดรับ' + WIN_NAME[k], 'ปิดรับวันที่ ' + (c.to ? thDay(c.to) : '')] }[kind];
   const msg = flex(T[1], bubble({ tone: T[0], tag: 'ช่วงกรอกแผน', eyebrow: 'กองประเมินผล', title: T[1], sub: T[2], body: [txt(kind === 'close' ? 'หากต้องแก้ไขแผนหลังปิดรับ ติดต่อ กองประเมินผล 343' : 'กรอกหรือแก้ไขแผนได้ที่หน้า ' + WIN_NAME[k] + ' ในระบบ', { wrap: true, color: C.ink })], url: origin }));
-  for (const r of links) if (sys.users[r.id].role === 'reporter') await send(r, msg, 'win-' + k + '-' + kind + '-' + (c.from || '') + (c.to || ''));
+  for (const r of links) if (rolesOf(sys.users[r.id]).some(x => x.role === 'reporter')) await send(r, msg, 'win-' + k + '-' + kind + '-' + (c.from || '') + (c.to || ''));
 }
 // Called after กปม. saves a Config change: tell reporters when a window opens/closes or its dates change
 async function onCfgChange(env, origin, before, ops) {

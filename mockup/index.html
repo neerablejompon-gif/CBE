@@ -140,6 +140,8 @@ textarea:disabled, .input:disabled, select:disabled { opacity: .75; cursor: not-
 .btn.primary:hover { background: #1749D6; }
 .btn.ok { color: #fff; border-color: transparent; background: #0B8A60; }
 .btn.danger { color: var(--bad); }
+.role-pick { display: flex; flex-direction: column; gap: 8px; align-items: stretch; text-align: left; }
+.role-pick .btn { justify-content: flex-start; }
 .guide { margin-top: 12px; border: 1px dashed var(--line, rgba(0,0,0,.15)); border-radius: 12px; background: var(--primary-soft); }
 .guide > summary { cursor: pointer; padding: 10px 12px; font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 6px; }
 .guide-b { padding: 0 12px 12px; }
@@ -1759,6 +1761,13 @@ var DEEP = (function () { try { var t = new URLSearchParams(location.search).get
 var U = store('user');
 if (U && U.ind && !indBy(U.ind)) U = null; // indicator codes changed between mockup versions
 function isAudit() { return U && U.role === 'audit'; }
+// A กปม. who also reports an indicator may not review it (the server refuses too)
+function isSelfRv(code) { return isAudit() && !!U.self && U.self.indexOf(code) >= 0; }
+var SELF_MSG = 'ตัวชี้วัดที่ท่านรายงานเอง ต้องให้ กปม. ท่านอื่นตรวจ';
+function roleItems(cls) {
+  if (!API || !U.roles || U.roles.length < 2) return '';
+  return U.roles.map(function (x) { return x.r === U.r ? '' : '<button class="' + cls + '" role="menuitem" data-role-switch="' + x.r + '">' + ico('users', 17) + 'สลับเป็น ' + esc(x.label) + '</button>'; }).join('');
+}
 function isExec() { return U && U.role === 'exec'; }
 function canSee(code) { return U && (U.role !== 'reporter' || U.ind === code); }
 // A part reporter (SM, CM, KM, IM) sees the whole indicator but edits only its own part
@@ -1804,7 +1813,7 @@ function userMenu() {
   var av = isAudit() ? 'กป' : isExec() ? 'ผบ' : (U.part || indBy(U.ind).label).slice(0, 3);
   return '<div class="umenu glass"><button class="ubtn" data-act="umenu" aria-haspopup="menu" aria-expanded="false" aria-controls="udrop"><span class="av">' + esc(av) + '</span><span class="u-txt"><b>' + esc(userLabel()) + '</b><small>' + esc(userName()) + '</small></span>' + ico('chev', 16) + '</button>' +
     '<div class="udrop glass" id="udrop" role="menu" aria-label="บัญชีผู้ใช้">' + whoCard('u-head') +
-      lineItem('u-item') + '<button class="u-item danger" role="menuitem" data-act="logout">' + ico('logout', 17) + 'ออกจากระบบ</button></div></div>';
+      roleItems('u-item') + lineItem('u-item') + '<button class="u-item danger" role="menuitem" data-act="logout">' + ico('logout', 17) + 'ออกจากระบบ</button></div></div>';
 }
 // Mobile bottom bar (≤760px): 4 main items + "more" sheet; glass pill slides to the tapped item
 function mbItems() {
@@ -1833,7 +1842,7 @@ function mobileSheet() {
   else {
     if (U.role === 'reporter') b += '<h3>เมนูอื่น</h3>' + row('data-tab="gap"', ico('trend', 19), 'แผนปรับปรุง GAP') + row('data-tab="evidence"', ico('folder', 19), 'ทะเบียนหลักฐาน') + row('data-tab="history"', ico('history', 19), 'ผลการดำเนินงานที่ผ่านมา');
     else if (isAudit()) b += '<h3>ระบบ</h3>' + row('data-go="config"', ico('sliders', 19), 'Config การกรอกแผน') + row('data-go="users"', ico('users', 19), 'ผู้ใช้และสิทธิ์') + row('data-go="log"', ico('log', 19), 'Audit trail');
-    b += '<h3>บัญชี</h3>' + whoCard('ms-who') + lineItem('ms-row') + row('data-act="logout"', ico('logout', 19), 'ออกจากระบบ').replace('class="ms-row"', 'class="ms-row danger"');
+    b += '<h3>บัญชี</h3>' + whoCard('ms-who') + roleItems('ms-row') + lineItem('ms-row') + row('data-act="logout"', ico('logout', 19), 'ออกจากระบบ').replace('class="ms-row"', 'class="ms-row danger"');
   }
   if (S.sheet === 'more') b += '<p class="ms-help">' + ico('info', 15) + 'หากมีข้อสงสัยให้ติดต่อ กองประเมินผล 343</p>';
   return '<div class="ms-scrim" data-act="mb-close"></div><div class="msheet" role="dialog" aria-modal="true" aria-label="' + (S.sheet === 'inds' ? 'ตัวชี้วัด' : 'เมนูเพิ่มเติม') + '"><div class="ms-grab"></div>' + b + '</div>';
@@ -2125,17 +2134,17 @@ function vReview() {
     return '<div style="display:flex;flex-direction:column;gap:6px">' + chip(SEV[f.sev]) + '<h2 style="font-size:18px">' + esc(R.t) + '</h2><p class="sub" style="margin:0"><span class="code">' + esc(s.label) + (L ? ' ระดับ ' + L.level : '') + '</span> · ' + esc(s.name) + '</p></div>' +
       '<div class="dsec"><h4>' + (R.ai ? 'AI พบ <span class="small warn" style="font-weight:500">· ข้อเสนอจาก AI อาจผิดได้ ตรวจกับรายงานก่อนยืนยัน</span>' : 'ระบบพบ') + '</h4>' + (f.aiTitle ? '<p style="margin:0 0 4px"><b>' + esc(f.aiTitle) + '</b></p>' : '') + '<p style="margin:0">' + esc(f.detail) + '</p><p class="small muted" style="margin:6px 0 0">' + ico('bolt', 13) + ' ' + esc(f.fix || R.fix) + '</p>' +
         (f.note ? '<div class="narr-box" style="margin-top:8px"><span class="small muted">ร่างข้อความถึงผู้รายงานจาก AI</span><br>' + esc(f.note) + '</div><button class="btn sm" style="margin-top:6px" data-act="ai-note" data-fid="' + esc(f.id) + '">' + ico('edit', 14) + 'ใช้เป็นหมายเหตุ</button>' : '') + '</div>' +
-      '<div class="dsec"><div class="fa" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm' + (tri === 'confirm' ? ' primary' : '') + '" data-tri="confirm" data-fid="' + esc(f.id) + '" aria-pressed="' + (tri === 'confirm') + '">' + ico('check', 15) + 'ยืนยันเป็นประเด็น <kbd>C</kbd></button>' +
-        '<button class="btn sm" data-tri="dismiss" data-fid="' + esc(f.id) + '" aria-pressed="' + (tri === 'dismiss') + '">' + ico('undo', 15) + 'ไม่เป็นประเด็น <kbd>D</kbd></button>' +
+      '<div class="dsec"><div class="fa" style="display:flex;gap:8px;flex-wrap:wrap">' + (isSelfRv(s.uid.split('|')[0]) ? '<p class="small warn" style="margin:0;flex-basis:100%">' + ico('lock', 13) + ' ' + SELF_MSG + '</p>' : '') + '<button class="btn sm' + (tri === 'confirm' ? ' primary' : '') + '"' + (isSelfRv(s.uid.split('|')[0]) ? ' disabled' : '') + ' data-tri="confirm" data-fid="' + esc(f.id) + '" aria-pressed="' + (tri === 'confirm') + '">' + ico('check', 15) + 'ยืนยันเป็นประเด็น <kbd>C</kbd></button>' +
+        '<button class="btn sm"' + (isSelfRv(s.uid.split('|')[0]) ? ' disabled' : '') + ' data-tri="dismiss" data-fid="' + esc(f.id) + '" aria-pressed="' + (tri === 'dismiss') + '">' + ico('undo', 15) + 'ไม่เป็นประเด็น <kbd>D</kbd></button>' +
         '<button class="btn sm" data-open="' + s.uid + '|' + (L ? L.level : 1) + '">' + ico('report', 15) + 'เปิดหน้ารายงาน <kbd>O</kbd></button></div>' +
-        '<label class="label" for="tnote">หมายเหตุถึงผู้รายงาน (แนบไปกับการส่งกลับ)</label><textarea id="tnote" data-tnote="' + esc(f.id) + '" rows="2" placeholder="เช่น แนบรายงานการประชุมครั้งที่ 3/2569 เพิ่ม">' + esc(TRI_NOTE[f.id]) + '</textarea></div>' +
+        '<label class="label" for="tnote">หมายเหตุถึงผู้รายงาน (แนบไปกับการส่งกลับ)</label><textarea id="tnote" data-tnote="' + esc(f.id) + '"' + (isSelfRv(s.uid.split('|')[0]) ? ' disabled' : '') + ' rows="2" placeholder="เช่น แนบรายงานการประชุมครั้งที่ 3/2569 เพิ่ม">' + esc(TRI_NOTE[f.id]) + '</textarea></div>' +
       '<div class="dsec"><h4>คะแนนประเด็นนี้</h4><div class="scoreline"><div><span>เป้าหมายสิ้นปี</span><b class="num">' + fmt(subScore(s, S.month), 2) + '</b></div><div><span>หลักฐานรองรับ</span><b class="num">' + subSys(s, S.month) + '</b></div><div><span>น้ำหนัก</span><b class="num">' + fmt(s.weight, s.weight % 1 ? 2 : 0) + '</b></div></div></div>' +
       (L ? '<div class="dsec"><h4>ค่าเกณฑ์ระดับ ' + L.level + '</h4><p class="criteria clamp" style="font-size:13.5px">' + esc(L.criteria) + '</p></div>' +
         '<div class="dsec"><h4>ผลการดำเนินงานที่ส่งมา</h4>' + (L.narrative ? '<div class="narr-box">' + esc(L.narrative) + '</div>' : '<p class="bad" style="margin:0">ยังไม่มีผลการดำเนินงาน</p>') + '</div>' +
         '<div class="dsec"><h4>หลักฐาน ' + reqDocs(L).filter(function (r) { return r.has; }).length + '/' + reqDocs(L).length + '</h4>' + (L.mr.length ? L.mr.map(function (r) { return '<div class="small" style="display:flex;gap:8px;padding:4px 0"><span class="' + (r.has ? 'ok' : 'bad') + '">' + ico(r.has ? 'check' : 'alert', 15) + '</span><span style="min-width:0">' + esc(r.req.slice(0, 160)) + (r.evidence ? '<br><span class="muted">' + esc(r.evidence.slice(0, 160)) + '</span>' : '') + ((r.files || []).length ? '<br><span class="info">' + ico('clip', 13) + ' ' + r.files.map(function (f) { return esc(f.name); }).join(', ') + '</span>' : '') + '</span></div>'; }).join('') : '<p class="muted small" style="margin:0">ไม่มีรายการ</p>') + '</div>' +
         (L.steps.length ? '<div class="dsec"><h4>ผลสะสมเทียบแผน ณ ' + MONTHS[S.month] + '</h4>' + L.steps.map(function (st) { return '<div class="small" style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:4px 0"><span>' + esc(st.name.slice(0, 120)) + '</span><b class="num ' + (cum(st.result, S.month) < cum(st.plan, S.month) ? 'bad' : '') + '">' + cum(st.result, S.month) + ' / ' + cum(st.plan, S.month) + '</b></div>'; }).join('') + '</div>' : '') : '');
   })(sel);
-  var decide = FY !== CUR_FY ? '<div class="decide glass"><div class="sum">' + ico('lock', 15) + ' ปีบัญชี ' + FY + ' ปิดรอบแล้ว · ดูข้อค้นพบได้อย่างเดียว</div></div>' : w === 'submitted'
+  var decide = isSelfRv(I.code) ? '<div class="decide glass"><div class="sum">' + ico('lock', 15) + ' ' + SELF_MSG + ' · ดูข้อค้นพบได้อย่างเดียว</div></div>' : FY !== CUR_FY ? '<div class="decide glass"><div class="sum">' + ico('lock', 15) + ' ปีบัญชี ' + FY + ' ปิดรอบแล้ว · ดูข้อค้นพบได้อย่างเดียว</div></div>' : w === 'submitted'
     ? '<div class="decide glass"><div class="sum"><b>ยืนยันแล้ว ' + conf.length + ' ประเด็น</b> · ' + (conf.filter(function (f) { return f.sev === 'critical'; }).length) + ' ต้องแก้ไข<br><span class="muted small">ส่งกลับจะแนบรายการที่ยืนยันให้ผู้รายงานอัตโนมัติ</span></div>' +
       '<button class="btn danger" data-act="return-findings"' + (conf.length ? '' : ' disabled') + '>' + ico('undo', 16) + 'ส่งกลับพร้อมข้อค้นพบ</button><button class="btn ok" data-act="approve-rv">' + ico('shield', 16) + 'อนุมัติผล</button></div>' +
       (S.approveWarn ? '<div class="return-box"><b class="bad">ยังมีประเด็น "ต้องแก้ไข" ที่ยืนยันแล้ว ' + conf.filter(function (f) { return f.sev === 'critical'; }).length + ' รายการ</b><span>อนุมัติทั้งที่ยังมีประเด็นค้าง?</span><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn sm" data-act="cancel-approve">ยกเลิก</button><button class="btn sm primary" data-act="force-approve">อนุมัติ</button></div></div>' : '')
@@ -2147,7 +2156,7 @@ function vReview() {
       '<button class="btn sm" data-act="keys" aria-pressed="' + !!S.keysHelp + '"><kbd>?</kbd> คีย์ลัด</button></div>' + keys +
     '<div class="rv3"><nav class="pane glass" aria-label="ตัวชี้วัดที่ส่งมาตรวจ"><div class="pane-h"><b class="small muted">ตัวชี้วัด</b></div><div class="pane-b qlist">' + queue + '</div></nav>' +
       '<div class="pane glass"><div class="pane-h"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><div style="min-width:0"><b>' + I.no + ' · ' + esc(I.label) + '</b> <span class="small muted">' + esc(WF[w].t) + '</span><div class="small muted">ตรวจล่าสุด ' + esc(run.at) + ' · ไม่มีประเด็นต้องแก้ ' + pct(res.ready) + ' ของระดับที่รายงาน</div></div>' +
-          (FY === CUR_FY ? '<button class="btn sm" data-act="ai-run"' + (S.aiRun ? ' disabled' : '') + ' title="ให้ AI อ่านผลการดำเนินงาน หลักฐาน และผลตามแผน GAP ของระดับที่มีเนื้อหา">' + (S.aiRun ? '<span class="spin" aria-hidden="true"></span>AI ตรวจ ' + S.aiRun.done + '/' + S.aiRun.total : ico('bolt', 15) + 'AI ช่วยตรวจ') + '</button>' : '') +
+          (FY === CUR_FY && !isSelfRv(I.code) ? '<button class="btn sm" data-act="ai-run"' + (S.aiRun ? ' disabled' : '') + ' title="ให้ AI อ่านผลการดำเนินงาน หลักฐาน และผลตามแผน GAP ของระดับที่มีเนื้อหา">' + (S.aiRun ? '<span class="spin" aria-hidden="true"></span>AI ตรวจ ' + S.aiRun.done + '/' + S.aiRun.total : ico('bolt', 15) + 'AI ช่วยตรวจ') + '</button>' : '') +
           '<button class="icon-btn" data-act="rerun" aria-label="ตรวจเบื้องต้นอีกครั้ง" title="ตรวจเบื้องต้นอีกครั้ง (R)"' + (S.running ? ' disabled' : '') + '>' + ico('bolt') + '</button></div>' + sevSeg + ruleSel +
           '<span class="small muted">แสดง ' + list.length + ' · คัดกรองแล้ว ' + triaged + '/' + res.findings.length + (aiUsage() ? ' · AI วันนี้ใช้โควตา ' + Math.min(100, Math.round(aiUsage().n / aiUsage().limit * 100)) + '%' : '') + '</span></div><div class="pane-b" role="listbox" aria-label="ข้อค้นพบ" id="flist">' + rowsHtml + '</div></div>' +
       '<div class="pane glass"><div class="pane-b" style="padding:18px 20px" id="fdetail">' + detail + '</div></div></div>' +
@@ -2180,6 +2189,7 @@ function vInd(I) {
   var acts = '';
   if (FY !== CUR_FY) acts = chip({ t: 'ปิดรอบแล้ว · ดูอย่างเดียว', c: 'mute', i: 'lock' });
   else if (U.role === 'reporter') acts = ed ? '' : '<span class="chip info">' + ico('lock') + 'ล็อกระหว่างตรวจ</span>';
+  else if (isSelfRv(I.code)) acts = chip({ t: SELF_MSG, c: 'mute', i: 'lock' });
   else if (isAudit()) acts = w === 'submitted' ? '<button class="btn danger" data-act="ask-return">' + ico('undo', 16) + 'ส่งกลับแก้ไข</button><button class="btn ok" data-wf="approved">' + ico('shield', 16) + 'อนุมัติผล</button>'
     : w === 'approved' ? '<button class="btn" data-wf="draft">' + ico('undo', 16) + 'ปลดล็อก</button>' : '<span class="chip mute">' + ico('clock') + 'รอผู้รายงานส่งตรวจ</span>';
   var rep = U.role === 'reporter', ov = rep ? 'score' : 'dash';
@@ -2540,7 +2550,7 @@ function vReport(I) {
     : '<div class="empty" style="padding:12px">ไม่มีรายการ Minimum Requirement</div>') + '</div>';
   else if (sx.g === 'a') body = '<div class="panel-head" style="margin-bottom:8px"><p class="sub" style="margin:0">เรียบเรียงตามค่าเกณฑ์ เพื่อนำไปกรอกในระบบ SEAM</p><button class="btn sm" data-act="copy">คัดลอก</button></div>' +
       '<label class="sr" for="narr">ผลการดำเนินงาน</label><textarea id="narr" data-f="narrative" rows="9" placeholder="สิ่งที่ดำเนินการ ผลลัพธ์ และเอกสารอ้างอิง"' + dis + '>' + esc(L.narrative) + '</textarea>' + guidePanel(s, L, ed) +
-      (aud || L.remark ? '<label class="label" for="rmk">ข้อสังเกต กปม.</label><textarea id="rmk" data-f="remark" rows="3" placeholder="เขียนข้อสังเกตถึงผู้รายงาน"' + (aud ? '' : ' disabled') + '>' + esc(L.remark) + '</textarea>' : '');
+      (aud || L.remark ? '<label class="label" for="rmk">ข้อสังเกต กปม.</label><textarea id="rmk" data-f="remark" rows="3" placeholder="เขียนข้อสังเกตถึงผู้รายงาน"' + (aud && !isSelfRv(I.code) ? '' : ' disabled') + '>' + esc(L.remark) + '</textarea>' : '');
   else if (sx.n === 1) body = gapBox(L) +
       '<label class="label">แนวทางปรับปรุง / กิจกรรม</label>' + ((L.action || '').trim() ? '<p class="act-ro">' + esc(L.action) + '</p>' : '<p class="small muted" style="margin:0">ยังไม่ระบุแนวทางปรับปรุง · กำหนดได้ที่หน้าแผนปรับปรุง GAP</p>') +
       spList(s, L, 'gs', ed, false);
@@ -2623,7 +2633,7 @@ function stepChecks(stp, n, m) {
 function unlockBar(s, L, m) {
   var k = lvKey(s, L), open = !!UNLOCK[k], hasPast = m > 0 && L.steps.some(function (st) { return cum(st.result, m - 1) > 0; });
   if (FY !== CUR_FY || (!hasPast && !open)) return '';
-  if (isAudit()) return '<div class="unlockbar' + (open ? ' on' : '') + '">' + ico(open ? 'undo' : 'lock', 16) + '<span>' + (open ? 'ปลดล็อกแล้ว · ผู้รายงานแก้ยอดของเดือนก่อนหน้าได้จนกว่าจะส่งตรวจครั้งถัดไป' : 'ผลของเดือนก่อนหน้าล็อกอยู่') + '</span>' +
+  if (isAudit() && !isSelfRv(s.uid.split('|')[0])) return '<div class="unlockbar' + (open ? ' on' : '') + '">' + ico(open ? 'undo' : 'lock', 16) + '<span>' + (open ? 'ปลดล็อกแล้ว · ผู้รายงานแก้ยอดของเดือนก่อนหน้าได้จนกว่าจะส่งตรวจครั้งถัดไป' : 'ผลของเดือนก่อนหน้าล็อกอยู่') + '</span>' +
     '<button class="btn sm' + (open ? '' : ' primary') + '" data-act="' + (open ? 'relock-lv' : 'unlock-lv') + '">' + (open ? 'ล็อกกลับ' : 'ปลดล็อกให้แก้ย้อนหลัง') + '</button></div>';
   return open ? '<div class="unlockbar on">' + ico('undo', 16) + '<span><b>กปม. ปลดล็อกให้แก้ย้อนหลัง</b> · กรอกยอดสะสมที่ถูกต้องได้แม้ต่ำกว่าเดิม ระบบจะหักออกจากเดือนล่าสุดก่อน</span></div>' : '';
 }
@@ -3048,11 +3058,25 @@ document.addEventListener('submit', function (e) {
   e.preventDefault(); var m = $('#loginMsg');
   if (API) {
     var btn = e.target.querySelector('button[type=submit]'); btn.disabled = true; btn.classList.add('busy'); m.textContent = '';
-    return fetch('/api/login', { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ id: $('#em').value.trim(), password: $('#pw').value }) })
-      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; location.reload(); }); })
+    LOGIN = { id: $('#em').value.trim(), password: $('#pw').value };
+    return fetch('/api/login', { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(LOGIN) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j;
+        if (j.choose) { btn.disabled = false; btn.classList.remove('busy'); m.innerHTML = '<span class="role-pick"><b>' + esc(j.name || '') + '</b> มีหลายบทบาท เลือกบทบาทที่จะใช้งาน' +
+          j.choose.map(function (x) { return '<button type="button" class="btn" data-role-login="' + x.r + '">' + ico('users', 16) + esc(x.label) + '</button>'; }).join('') + '<small class="muted">สลับบทบาทได้ภายหลังจากเมนูบัญชีมุมขวาบน</small></span>'; return; }
+        location.reload(); }); })
       .catch(function (j) { btn.disabled = false; btn.classList.remove('busy'); m.innerHTML = ico('alert', 14) + esc((j && j.error) || 'เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง'); });
   } if (m) m.innerHTML = ico('info', 14) + 'Mockup นี้ยังไม่เชื่อมระบบยืนยันตัวตน · เลือกบัญชีทดลองด้านล่าง'; });
+var LOGIN = null;
+function roleCall(url, body, msgEl) {
+  return fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(body) })
+    .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; location.reload(); }); })
+    .catch(function (j) { var t = (j && j.error) || 'เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง'; if (msgEl) msgEl.innerHTML = ico('alert', 14) + esc(t); else toast(t, 'alert'); });
+}
 document.addEventListener('click', function (e) {
+  var rl = e.target.closest && e.target.closest('[data-role-login]');
+  if (rl && LOGIN) { rl.disabled = true; return roleCall('/api/login', { id: LOGIN.id, password: LOGIN.password, r: +rl.dataset.roleLogin }, $('#loginMsg')); }
+  var rs = e.target.closest && e.target.closest('[data-role-switch]');
+  if (rs) { flush(); rs.disabled = true; return SENDING.then(function () { return roleCall('/api/role', { r: +rs.dataset.roleSwitch }); }); }
   if (!e.target.closest || !e.target.closest('.umenu')) closeUmenu();
   else if (e.target.closest('[data-act="umenu"]')) {
     var um = e.target.closest('.umenu'), op = um.classList.toggle('open');
@@ -3334,6 +3358,7 @@ document.addEventListener('keydown', function (e) {
 function openRv(code) { S.view = 'review'; S.ind = null; S.rv = code; S.rule = ''; S.rpart = ''; S.sev = 'all'; S.fid = null; S.approveWarn = false; document.body.classList.remove('nav-open'); render(); }
 // Marking a finding moves to the next one, like an inbox
 function triage(fid, kind) {
+  if (isSelfRv(fid.split('|')[1])) return toast(SELF_MSG, 'lock');
   if (FY !== CUR_FY) return toast('ปีบัญชี ' + FY + ' ปิดรอบแล้ว แก้ไขไม่ได้', 'lock');
   var set = TRI[fid] !== kind;
   TRI[fid] = set ? kind : undefined; store('tri' + FY, TRI);
