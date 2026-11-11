@@ -554,7 +554,7 @@ async function guide(req, env) {
   return { fy: GUIDE_FY, part, levels };
 }
 /* ---------- writing assistant for reporters (Gemini): drafts only, the reporter reviews and saves ---------- */
-const GEM_DEFAULT = 'gemini-flash-latest', GEM_FALLBACK = 'gemini-3.8-flash', GEM_URL = 'https://generativelanguage.googleapis.com/v1beta/models/';
+const GEM_DEFAULT = 'gemini-flash-latest', GEM_FALLBACK = 'gemini-3.8-flash', GEM_LITE = 'gemini-flash-lite-latest', GEM_URL = 'https://generativelanguage.googleapis.com/v1beta/models/';
 const WRITE_MODES = {
   draft: 'เรียบเรียงข้อความของผู้รายงานใหม่ให้ตอบค่าเกณฑ์ครบทุกองค์ประกอบ เรียงตามลำดับข้อของค่าเกณฑ์',
   guide: 'ปรับผลการดำเนินงานปีก่อนให้เป็นร่างของปีบัญชีนี้ คงโครงสร้างที่ดีไว้ แต่วันที่ ครั้งที่ประชุม เลขคำสั่ง ตัวเลข และชื่อเอกสารของปีก่อนต้องเปลี่ยนเป็นช่องให้ระบุทั้งหมด',
@@ -575,15 +575,22 @@ function writePrompt(mode, x, fy) {
 async function gemCall(env, p) {
   const body = JSON.stringify({ systemInstruction: { parts: [{ text: p.system }] }, contents: [{ role: 'user', parts: [{ text: p.user }] }],
     generationConfig: { temperature: 0.3, maxOutputTokens: 8192, responseMimeType: 'application/json' } });
-  for (const model of [env.GEMINI_MODEL || GEM_DEFAULT, GEM_FALLBACK]) {
-    const r = await fetch(GEM_URL + model + ':generateContent', { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY }, body });
-    const j = await r.json().catch(() => ({}));
-    if (r.status === 404 && model !== GEM_FALLBACK) continue; // alias not available: try the fallback model
-    if (r.status === 429) fail(429, 'Gemini ถูกใช้เกินโควตาของบัญชี ลองใหม่ภายหลัง');
-    if (!r.ok) { const why = model + ' ' + r.status + ' ' + str(((j.error || {}).status || '') + ' ' + ((j.error || {}).message || '')).slice(0, 160); console.error('gemini', why); fail(502, 'เรียก Gemini ไม่สำเร็จ ลองใหม่อีกครั้ง', why); }
+  // Several models in turn (missing or overloaded → next); at most ~15 s on Gemini so Workers AI still has time before the platform cuts the request
+  const models = [...new Set([env.GEMINI_MODEL || GEM_DEFAULT, GEM_FALLBACK, GEM_LITE])], end = Date.now() + 15e3;
+  let why = '';
+  for (const model of models) {
+    const left = end - Date.now(); if (left < 3e3) break;
+    let r, j;
+    try { r = await fetch(GEM_URL + model + ':generateContent', { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY }, body, signal: AbortSignal.timeout(Math.min(10e3, left)) }); j = await r.json().catch(() => ({})); }
+    catch (e) { why = model + ' timeout'; console.error('gemini', why); break; }
+    if (r.status === 429) fail(429, 'Gemini ถูกใช้เกินโควตาของบัญชี ลองใหม่ภายหลัง', model + ' 429 ' + str((j.error || {}).message).slice(0, 120));
+    why = model + ' ' + r.status + ' ' + str(((j.error || {}).status || '') + ' ' + ((j.error || {}).message || '')).slice(0, 160);
+    if (r.status === 404 || r.status === 503 || r.status === 500) { console.error('gemini', why); continue; }
+    if (!r.ok) { console.error('gemini', why); fail(502, 'เรียก Gemini ไม่สำเร็จ ลองใหม่อีกครั้ง', why); }
     const c = (j.candidates || [])[0] || {};
     return { model, text: ((c.content || {}).parts || []).map(x => x.text || '').join(''), finish: c.finishReason || '', usage: j.usageMetadata || null };
   }
+  fail(503, 'Gemini ไม่พร้อมใช้ขณะนี้', why);
 }
 function writeParse(text) {
   const t = String(text || ''), a = t.indexOf('{'), b = t.lastIndexOf('}');
