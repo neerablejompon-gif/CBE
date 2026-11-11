@@ -206,7 +206,7 @@ refresh token เข้าถึง Drive ทั้งหมดของบั�
 1. aistudio.google.com → Get API key → Create API key (แบบฟรีไม่ต้องผูกบัตร) แล้วดูโควตาที่ Usage / Rate limits
 2. Cloudflare → Pages โปรเจกต์ → Settings → Variables and Secrets (**Production**)
    - `GEMINI_API_KEY` ชนิด Secret
-   - `GEMINI_MODEL` เช่น `gemini-2.5-flash` (ไม่ตั้ง = `gemini-flash-latest`)
+   - `GEMINI_MODEL` เช่น `gemini-3.8-flash` (ไม่ตั้ง = `gemini-flash-latest` · รุ่น 2.5 ใช้กับคีย์ใหม่ไม่ได้แล้ว)
    - `GEMINI_DAILY_CALLS` ต่ำกว่าโควตารายวันเล็กน้อย (แบบฟรี 20 ครั้ง/วัน → ตั้ง 18)
    - `GEMINI_TIER=paid` เมื่อเปลี่ยนเป็นแบบชำระเงิน (ซ่อนคำเตือนแบบฟรี)
 3. **Retry deployment** ค่าที่เพิ่มมีผลเมื่อ deploy ครั้งถัดไป
