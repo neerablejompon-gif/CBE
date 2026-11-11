@@ -552,7 +552,6 @@ async function download(req, env, fy, id) {
 const LINE_API = 'https://api.line.me/v2/bot/message/', CODE_MIN = 10, THAI_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 const WIN_NAME = { plan: 'แผนการดำเนินงาน', gap: 'แผนปรับปรุง GAP' };
 const C = { navy: '#0B2E9E', blue: '#1F5BFF', ink: '#0E1A3A', mute: '#5E6B88', line: '#E3E8F3', ok: '#0B8A60', bad: '#C4253F', warn: '#B86E00', gap: '#D9730D', soft: '#F3F6FC' };
-const TONE_END = { [C.ok]: '#05664A', [C.warn]: '#7A4200', [C.mute]: '#36405A', [C.bad]: '#8C1028' };
 const thDay = iso => { const [y, m, d] = iso.split('-').map(Number); return `${d} ${THAI_MONTHS[m - 1]} ${y + 543}`; };
 const todayIso = (plus = 0) => new Date(Date.now() + 7 * 3600e3 + plus * 864e5).toISOString().slice(0, 10);
 
@@ -589,7 +588,7 @@ async function lineApi(req, env, path) {
   if (path === 'test') {
     const r = rows.find(x => x.id === u.id);
     if (!r || !r.user) fail(409, 'ยังไม่ได้เชื่อมต่อ LINE');
-    await linePush(env, r.user, [flex('ทดสอบการแจ้งเตือน CBE', bubble({ tone: C.blue, eyebrow: 'CBE Reporting System', title: 'ทดสอบการแจ้งเตือน', sub: label(u),
+    await linePush(env, r.user, [flex('ทดสอบการแจ้งเตือน CBE', bubble({ tag: 'ทดสอบ', eyebrow: label(u), title: 'ทดสอบการแจ้งเตือน',
       body: [txt('การแจ้งเตือนผ่าน LINE ใช้งานได้แล้ว คุณจะได้รับสรุปงานทุกวันที่ 1 ของเดือน', { wrap: true, color: C.ink })], url: new URL(req.url).origin }))], 'test|' + u.id + '|' + Date.now());
     return { ok: true };
   }
@@ -635,17 +634,17 @@ async function lineEvent(env, fy, origin, ev, uid) {
   await lineSet(env, Object.assign(r, { user: uid, at: stamp(), code: '', exp: 0 }));
   const u = (await system(env)).users[r.id] || { id: r.id, role: '' };
   await logLine(env, u, 'เชื่อมต่อ LINE');
-  return lineReply(env, ev.replyToken, [flex('เชื่อมต่อ LINE สำเร็จ', bubble({ tone: C.ok, eyebrow: 'เชื่อมต่อสำเร็จ', title: label(u), sub: 'รหัสพนักงาน ' + r.id,
+  return lineReply(env, ev.replyToken, [flex('เชื่อมต่อ LINE สำเร็จ', bubble({ tag: 'เชื่อมต่อสำเร็จ', eyebrow: 'รหัสพนักงาน ' + r.id, title: label(u), url: origin + '/?tab=dash', button: 'เปิดงานของฉัน',
     body: [txt('คุณจะได้รับการแจ้งเตือนจาก CBE Reporting System ทาง LINE นี้', { wrap: true, color: C.ink }), txt('กดเมนูด้านล่างเพื่อดูสถานะงานหรือกำหนดส่งได้ทุกเมื่อ', { size: 'xs', color: C.mute, margin: 'md', wrap: true }), txt('ยกเลิกได้ที่เมนูบัญชีในระบบ', { size: 'xs', color: C.mute, margin: 'sm' })] }))]);
 }
-const helpMsg = (title, url) => flex(title, bubble({ tone: C.blue, eyebrow: 'CBE Reporting System', title, body: [
+const helpMsg = (title, url) => flex(title, bubble({ tag: 'ช่วยเหลือ', eyebrow: 'CBE Reporting System', title, panels: [[
   txt('วิธีเชื่อมต่อ', { weight: 'bold', color: C.ink }),
   txt('1. เข้าระบบ CBE แล้วกดชื่อของคุณที่มุมขวาบน', { wrap: true, size: 'sm', color: C.ink, margin: 'sm' }),
   txt('2. เลือก "เชื่อมต่อ LINE" แล้วกด "รับรหัส"', { wrap: true, size: 'sm', color: C.ink }),
-  txt('3. ส่งรหัส 6 หลักในแชทนี้ (ใช้ได้ภายใน 10 นาที)', { wrap: true, size: 'sm', color: C.ink }),
-  sep(), txt('คำสั่งในแชท', { weight: 'bold', color: C.ink, margin: 'lg' }),
-  row('สถานะ', 'สรุปงานที่ต้องรายงานและงานล่าช้า'), row('กำหนดส่ง', 'วันส่งรายงานและช่วงกรอกแผน'),
-  sep(), txt('ติดต่อสอบถาม กองประเมินผล โทร 343', { wrap: true, size: 'sm', color: C.mute, margin: 'lg' })], url }));
+  txt('3. ส่งรหัส 6 หลักในแชทนี้ (ใช้ได้ภายใน 10 นาที)', { wrap: true, size: 'sm', color: C.ink })], [
+  txt('คำสั่งในแชท', { weight: 'bold', color: C.ink }),
+  row('สถานะ', 'สรุปงานที่ต้องรายงานและงานล่าช้า'), row('กำหนดส่ง', 'วันส่งรายงานและช่วงกรอกแผน')]],
+  body: [txt('ติดต่อสอบถาม กองประเมินผล โทร 343', { wrap: true, size: 'sm', color: C.ink, align: 'center' })], url }));
 const plain = text => ({ type: 'text', text });
 
 async function lineCall(env, path, body, retryKey) {
@@ -660,23 +659,44 @@ async function uuidFrom(s) {
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}`;
 }
 
-/* Flex building blocks */
+/* Flex building blocks: blue→white gradient, logo header, frosted-glass panels (translucent white + white edge) */
 const flex = (altText, contents) => ({ type: 'flex', altText: altText.slice(0, 400), contents });
 const txt = (text, o = {}) => ({ type: 'text', text: String(text).slice(0, 2000) || ' ', size: 'sm', ...o });
-const row = (left, right, o = {}) => ({ type: 'box', layout: 'horizontal', spacing: 'md', margin: 'sm', contents: [txt(left, { flex: 0, color: o.lc || C.blue, weight: 'bold' }), txt(right, { flex: 1, wrap: true, color: C.ink, size: 'sm' })] });
-const stat = (n, label, color) => ({ type: 'box', layout: 'vertical', flex: 1, paddingAll: '10px', cornerRadius: '10px', backgroundColor: C.soft, contents: [txt(String(n), { size: 'xxl', weight: 'bold', color, align: 'center' }), txt(label, { size: 'xs', color: C.mute, align: 'center', wrap: true })] });
-const sep = () => ({ type: 'separator', margin: 'lg', color: C.line });
-function bubble({ tone, eyebrow, title, sub, stats, body = [], url, button = 'เปิดระบบรายงานผล' }) {
+const box = (layout, contents, o = {}) => ({ type: 'box', layout, contents: contents.length ? contents : [{ type: 'filler' }], ...o });
+const row = (left, right, o = {}) => box('horizontal', [txt(left, { flex: 0, color: o.lc || C.blue, weight: 'bold', size: 'xs' }), txt(right, { flex: 1, wrap: true, color: C.ink, size: 'sm' })], { spacing: 'md', margin: 'sm' });
+const glass = (contents, o = {}) => box('vertical', contents, { backgroundColor: '#FFFFFFA6', borderWidth: '1px', borderColor: '#FFFFFF', cornerRadius: '14px', paddingAll: '12px', ...o });
+const stat = (n, label, color) => glass([txt(String(n), { size: 'xxl', weight: 'bold', color, align: 'center' }), txt(label, { size: 'xxs', color: C.mute, align: 'center', wrap: true })], { flex: 1, paddingAll: '10px' });
+const sep = () => ({ type: 'separator', margin: 'lg', color: '#D6E4FA' });
+const chip = (text, color) => box('vertical', [txt(text, { size: 'xxs', weight: 'bold', color, align: 'center' })], { flex: 0, backgroundColor: color + '1F', cornerRadius: '10px', paddingStart: '8px', paddingEnd: '8px', paddingTop: '1px', paddingBottom: '1px' });
+const pct = x => Math.max(0, Math.min(100, Math.round(x)));
+// Progress / bar track: width in %, gradient or solid fill
+function bar(p, color, h = '9px') {
+  const fill = p > 0 ? [box('vertical', [], { width: Math.max(4, pct(p)) + '%', height: h, cornerRadius: '6px', ...(color ? { backgroundColor: color } : { background: { type: 'linearGradient', angle: '90deg', startColor: '#3F8CFF', endColor: C.blue } }) })] : [];
+  return box('horizontal', fill, { height: h, cornerRadius: '6px', backgroundColor: '#D6E4FA' });
+}
+// 12 small columns (fiscal months), the current one highlighted
+function columns(vals, cur) {
+  const max = Math.max(1, ...vals);
+  return [box('horizontal', vals.map((v, i) => box('vertical', [box('vertical', [], { height: Math.max(3, Math.round(v / max * 46)) + 'px', cornerRadius: '3px', backgroundColor: i === cur ? C.blue : i < cur ? '#1F5BFF66' : '#BFD6FB' })], { flex: 1, justifyContent: 'flex-end' })), { height: '48px', spacing: '4px', margin: 'md' }),
+    box('horizontal', MONTHS.map((m, i) => txt(m.replace(/\./g, ''), { size: 'xxs', color: i === cur ? C.blue : C.mute, align: 'center', flex: 1, weight: i === cur ? 'bold' : 'regular' })), { spacing: '4px', margin: 'xs' })];
+}
+const TONES = { [C.blue]: ['#1F5BFF', '#3F8CFF', '#7CC0FF'], [C.navy]: ['#0B2E9E', '#1F5BFF', '#5FA8FF'], [C.ok]: ['#0B6E50', '#0B8A60', '#4CC79A'], [C.warn]: ['#B05A00', '#E07F00', '#FFC266'], [C.mute]: ['#36405A', '#5E6B88', '#9AA6C0'], [C.bad]: ['#8C1028', '#C4253F', '#F06C80'] };
+function bubble({ tone = C.blue, tag, eyebrow, title, sub, stats, panels = [], body = [], url, button = 'เปิดระบบรายงานผล' }) {
+  const g = TONES[tone] || TONES[C.blue], origin = url ? new URL(url).origin : '';
+  const top = box('horizontal', [].concat(origin ? [{ type: 'image', url: origin + '/assets/line-logo.png', size: '86px', aspectRatio: '900:314', aspectMode: 'fit', flex: 0, align: 'start' }] : [txt('CBE', { weight: 'bold', color: '#FFFFFF', size: 'md', flex: 0 })], [{ type: 'filler' }],
+    tag ? [box('vertical', [txt(tag, { size: 'xxs', weight: 'bold', color: '#FFFFFF', align: 'center' })], { flex: 0, backgroundColor: '#FFFFFF33', borderWidth: '1px', borderColor: '#FFFFFF99', cornerRadius: '12px', paddingStart: '10px', paddingEnd: '10px', paddingTop: '3px', paddingBottom: '3px' })] : []), { alignItems: 'center' });
   const b = { type: 'bubble', size: 'mega',
-    header: { type: 'box', layout: 'vertical', paddingAll: '18px', spacing: 'xs', background: { type: 'linearGradient', angle: '135deg', startColor: tone, endColor: TONE_END[tone] || C.navy },
-      contents: [txt(eyebrow, { size: 'xs', color: '#FFFFFFCC', weight: 'bold' }), txt(title, { size: 'lg', color: '#FFFFFF', weight: 'bold', wrap: true })].concat(sub ? [txt(sub, { size: 'xs', color: '#FFFFFFCC', wrap: true })] : []) },
-    body: { type: 'box', layout: 'vertical', paddingAll: '16px', spacing: 'sm', contents: (stats ? [{ type: 'box', layout: 'horizontal', spacing: 'sm', contents: stats }] : []).concat(body.length ? body : [txt(' ')]) } };
-  if (url) b.footer = { type: 'box', layout: 'vertical', paddingAll: '12px', contents: [{ type: 'button', style: 'primary', color: C.blue, height: 'sm', action: { type: 'uri', label: button, uri: url } }] };
+    header: box('vertical', [top].concat(eyebrow ? [txt(eyebrow, { size: 'xs', color: '#FFFFFFD9', margin: 'lg' })] : [], [txt(title, { size: 'lg', color: '#FFFFFF', weight: 'bold', wrap: true, margin: eyebrow ? 'none' : 'lg' })], sub ? [txt(sub, { size: 'xs', color: '#FFFFFFD9', wrap: true })] : []),
+      { paddingAll: '16px', paddingBottom: '18px', background: { type: 'linearGradient', angle: '135deg', startColor: g[0], centerColor: g[1], endColor: g[2] } }),
+    body: box('vertical', [].concat(stats ? [box('horizontal', stats, { spacing: 'sm' })] : [], panels.map(x => glass(x)), body.length ? [glass(body)] : []),
+      { paddingAll: '14px', spacing: 'md', background: { type: 'linearGradient', angle: '180deg', startColor: '#D3E5FF', centerColor: '#EAF3FF', endColor: '#F5F9FF' } }),
+    styles: { footer: { backgroundColor: '#F5F9FF' } } };
+  if (url) b.footer = box('vertical', [box('vertical', [txt(button, { color: '#FFFFFF', weight: 'bold', align: 'center', size: 'md' })], { paddingAll: '11px', cornerRadius: '12px', background: { type: 'linearGradient', angle: '90deg', startColor: C.blue, endColor: '#3F8CFF' }, action: { type: 'uri', label: button.slice(0, 20), uri: url } })], { paddingAll: '14px', paddingTop: '0px' });
   return b;
 }
-function listBlock(head, color, items, max = 8) {
+function listBlock(head, color, items, max = 8, first) {
   if (!items.length) return [];
-  return [sep(), txt(head, { weight: 'bold', color, margin: 'lg' })].concat(items.slice(0, max).map(x => row(x[0], x[1], { lc: color })))
+  return [txt(head, { weight: 'bold', color, margin: first ? 'none' : 'lg' })].concat(items.slice(0, max).map(x => row(x[0], x[1], { lc: color })))
     .concat(items.length > max ? [txt(`และอีก ${items.length - max} รายการ`, { size: 'xs', color: C.mute, margin: 'sm' })] : []);
 }
 
@@ -733,50 +753,67 @@ async function notify(req, env, fy) {
 function dueOf(fy, m) { const d = new Date(Date.UTC(fy - 543 - (m < 3 ? 1 : 0), (m + 9) % 12 + 1, 5)); return { iso: d.toISOString().slice(0, 10), th: `5 ${THAI_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear() + 543}` }; }
 const daysTo = iso => Math.round((Date.parse(iso) - Date.parse(todayIso())) / 864e5);
 const WFT = { draft: ['ยังไม่ส่ง', C.mute], submitted: ['รอ กปม. ตรวจ', C.blue], approved: ['อนุมัติแล้ว', C.ok], returned: ['ส่งกลับให้แก้ไข', C.bad] };
-// One reporter's month: levels planned this month + late ones. mode 'monthly' (day-1 push) or 'status' (rich menu)
+const allPlanned = L => L.steps.concat(L.gsteps).filter(hasPlan);
+const levelDone = L => { const a = allPlanned(L); return a.length > 0 && a.every(st => cum(st.result, 11) >= stTarget(st)); };
+// One reporter's month: levels planned this month + late ones, year progress and a 12-month plan chart.
+// mode 'monthly' (day-1 push) or 'status' (rich menu)
 async function reporterMsg(env, fy, st, u, rm, origin, mode) {
-  const lv = await levelsOf(env, fy, st, u.ind, u.part), due = dueOf(fy, rm);
+  const lv = await levelsOf(env, fy, st, u.ind, u.part), due = dueOf(fy, rm), status = mode === 'status';
   const now = lv.filter(L => dueIn(L.steps, rm) || dueIn(L.gsteps, rm)).map(L => [L.label, (dueIn(L.gsteps, rm) && !dueIn(L.steps, rm) ? '[GAP] ' : '') + L.name]);
   const late = lv.filter(L => behind(L.steps, rm - 1) || behind(L.gsteps, rm - 1)).map(L => [L.label, L.name + (behind(L.gsteps, rm - 1) ? ' · แผน GAP' : '')]);
-  const wf = st.wf[u.ind] || 'draft', left = daysTo(due.iso), status = mode === 'status';
-  const head = status ? [txt('สถานะรายงาน: ' + WFT[wf][0], { color: WFT[wf][1], weight: 'bold', margin: 'md' }), txt(left > 0 ? `เหลืออีก ${left} วันถึงกำหนดส่ง` : left === 0 ? 'ครบกำหนดส่งวันนี้' : `เลยกำหนดส่งมา ${-left} วัน`, { size: 'xs', color: left < 0 && wf !== 'approved' && wf !== 'submitted' ? C.bad : C.mute })]
-    : wf === 'returned' ? [txt('กปม. ส่งกลับรายงานให้แก้ไข', { color: C.bad, weight: 'bold', margin: 'md' })] : [];
-  return flex(`${status ? 'สถานะ' : ''}รายงานผลเดือน ${MONTHS[rm]} ครบกำหนด ${due.th}`, bubble({ tone: C.blue, eyebrow: status ? 'สถานะของฉัน · ' + thDay(todayIso()) : 'แจ้งเตือนรายงานผลประจำเดือน', title: `รายงานผลเดือน ${MONTHS[rm]}`, sub: `${label(u)} · ครบกำหนด ${due.th}`,
-    stats: [stat(now.length, 'ระดับที่ต้องรายงาน', C.blue), stat(late.length, 'ล่าช้า/เลยกำหนด', late.length ? C.bad : C.ok)],
-    body: head.concat(listBlock('ค่าเกณฑ์ที่มีแผนเดือน ' + MONTHS[rm], C.blue, now), listBlock('งานล่าช้า / เลยกำหนด', C.bad, late))
-      .concat(now.length || late.length ? [] : [txt('ไม่มีแผนที่ต้องรายงานในเดือนนี้', { color: C.ok, margin: 'md' })]), url: origin + '/?tab=' + (status ? 'dash' : 'report'), button: status ? 'เปิดงานของฉัน' : 'เปิดหน้ารายงานผล' }));
+  const planned = lv.filter(L => allPlanned(L).length), done = planned.filter(levelDone).length;
+  const perMonth = MONTHS.map((_, m) => lv.filter(L => dueIn(L.steps, m) || dueIn(L.gsteps, m)).length);
+  const wf = st.wf[u.ind] || 'draft', left = daysTo(due.iso), overdue = left < 0 && wf !== 'approved' && wf !== 'submitted';
+  const progress = [box('horizontal', [txt('ความคืบหน้าทั้งปี', { weight: 'bold', color: C.ink, flex: 1 }), txt(`${done} / ${planned.length} ระดับ`, { weight: 'bold', color: C.blue, flex: 0, size: 'sm' })]),
+    box('vertical', [bar(planned.length ? done / planned.length * 100 : 0)], { margin: 'md' })].concat(columns(perMonth, rm), [txt('จำนวนระดับที่มีแผนแต่ละเดือน', { size: 'xxs', color: C.mute, margin: 'sm' })]);
+  const lists = listBlock('มีแผนเดือน ' + MONTHS[rm], C.ink, now, 8, true).concat(listBlock('ล่าช้า / เลยกำหนด', C.bad, late, 8, !now.length));
+  return flex(`${status ? 'สถานะ' : ''}รายงานผลเดือน ${MONTHS[rm]} ครบกำหนด ${due.th}`, bubble({ tag: status ? 'สถานะของฉัน' : 'แจ้งเตือนรายเดือน',
+    eyebrow: label(u) + ' · ' + thDay(todayIso()), title: `รายงานผลเดือน ${MONTHS[rm]}`,
+    sub: `ครบกำหนด ${due.th} · ` + (status ? WFT[wf][0] + (overdue ? ` · เลยกำหนด ${-left} วัน` : left >= 0 && wf !== 'approved' && wf !== 'submitted' ? ` · เหลือ ${left} วัน` : '') : wf === 'returned' ? 'กปม. ส่งกลับให้แก้ไข' : 'ส่งผลภายในวันที่ 5'),
+    panels: [progress], stats: [stat(now.length, 'ต้องรายงานเดือนนี้', C.blue), stat(late.length, 'ล่าช้า', late.length ? C.bad : C.ok)],
+    body: lists.length ? lists : [txt('ไม่มีแผนที่ต้องรายงานในเดือนนี้', { color: C.ok, align: 'center' })],
+    url: origin + '/?tab=' + (status ? 'dash' : 'report'), button: status ? 'เปิดงานของฉัน' : 'เปิดหน้ารายงานผล' }));
 }
-// All indicators for กปม./ผู้บริหาร
+// All indicators for กปม./ผู้บริหาร: share of levels on plan (not behind) as horizontal bars, coloured by report status
 async function summaryMsg(env, fy, st, rm, origin, mode) {
   const rowsI = [];
   for (const ind of Object.keys(IND_PARTS)) {
-    const lv = await levelsOf(env, fy, st, ind), late = lv.filter(L => behind(L.steps, rm) || behind(L.gsteps, rm)).length;
-    rowsI.push({ ind, wf: st.wf[ind] || 'draft', late });
+    const lv = await levelsOf(env, fy, st, ind), due = lv.filter(L => allPlanned(L).some(x => cum(x.plan, rm) > 0)), late = due.filter(L => behind(L.steps, rm) || behind(L.gsteps, rm)).length;
+    rowsI.push({ ind, wf: st.wf[ind] || 'draft', late, p: due.length ? (due.length - late) / due.length * 100 : null });
   }
   const n = rowsI.length, sent = rowsI.filter(x => x.wf === 'submitted' || x.wf === 'approved').length, lateTotal = rowsI.reduce((a, x) => a + x.late, 0), status = mode === 'status';
-  const table = rowsI.map(x => ({ type: 'box', layout: 'horizontal', margin: 'sm', contents: [txt(x.ind, { flex: 3, weight: 'bold', color: C.ink }), txt(WFT[x.wf][0], { flex: 4, color: WFT[x.wf][1], size: 'xs', gravity: 'center' }),
-    txt(x.late ? 'เลยกำหนด ' + x.late : 'ตามแผน', { flex: 3, align: 'end', size: 'xs', color: x.late ? C.bad : C.ok, gravity: 'center' })] }));
-  return flex(`สรุปผลรายเดือน ${MONTHS[rm]}: ส่งแล้ว ${sent}/${n} · เลยกำหนด ${lateTotal} ระดับ`, bubble({ tone: C.navy, eyebrow: status ? 'สถานะภาพรวม · ' + thDay(todayIso()) : 'สรุปสำหรับ กปม.', title: `ภาพรวมรายงานเดือน ${MONTHS[rm]}`, sub: (status ? 'กำหนดส่ง ' : 'หลังครบกำหนด ') + dueOf(fy, rm).th,
-    stats: [stat(sent + '/' + n, 'ตัวชี้วัดที่ส่งแล้ว', C.blue), stat(lateTotal, 'ระดับเลยกำหนด', lateTotal ? C.bad : C.ok)], body: [sep(), txt('รายตัวชี้วัด', { weight: 'bold', color: C.ink, margin: 'lg' })].concat(table), url: origin + '/?tab=score', button: 'เปิดภาพรวม CBE' }));
+  const CHIP = { draft: ['ยังไม่ส่ง', C.mute], submitted: ['รอตรวจ', C.blue], approved: ['อนุมัติ', C.ok], returned: ['ส่งกลับ', C.bad] };
+  const table = [box('horizontal', [txt('ระดับที่เป็นไปตามแผน', { weight: 'bold', color: C.ink, flex: 1 }), txt('%', { size: 'xs', color: C.mute, flex: 0 })])].concat(rowsI.map(x =>
+    box('horizontal', [box('vertical', [txt(x.ind, { weight: 'bold', color: C.ink, size: 'xs' })], { width: '44px', flex: 0 }),
+      box('vertical', [bar(x.p || 0, CHIP[x.wf][1] === C.mute ? '#8D99B3' : CHIP[x.wf][1], '8px')], { flex: 1, justifyContent: 'center' }),
+      box('vertical', [txt(x.p == null ? '–' : String(pct(x.p)), { size: 'xxs', color: C.mute, align: 'end' })], { width: '26px', flex: 0 }), chip(CHIP[x.wf][0], CHIP[x.wf][1])],
+      { spacing: 'sm', margin: 'md', alignItems: 'center' })));
+  return flex(`สรุปผลรายเดือน ${MONTHS[rm]}: ส่งแล้ว ${sent}/${n} · เลยกำหนด ${lateTotal} ระดับ`, bubble({ tone: C.navy, tag: status ? 'ภาพรวม' : 'สรุปสำหรับ กปม.',
+    eyebrow: (status ? 'กำหนดส่ง ' : 'หลังครบกำหนด ') + dueOf(fy, rm).th, title: `ภาพรวมรายงานเดือน ${MONTHS[rm]}`,
+    stats: [stat(sent + '/' + n, 'ตัวชี้วัดที่ส่งแล้ว', C.blue), stat(lateTotal, 'ระดับเลยกำหนด', lateTotal ? C.bad : C.ok)], body: table, url: origin + '/?tab=score', button: 'เปิดภาพรวม CBE' }));
 }
-// Rich menu "กำหนดส่ง": this month's report deadline + plan-entry windows
+// Rich menu "กำหนดส่ง": countdown, where today sits in the reporting cycle, and the plan-entry windows
 async function deadlineMsg(env, fy, origin) {
-  const { st } = await loadState(env, fy), m = openFrom(), due = dueOf(fy, m), left = daysTo(due.iso), t = todayIso();
+  const { st } = await loadState(env, fy), m = openFrom(), due = dueOf(fy, m), left = daysTo(due.iso), t = todayIso(), day = +t.slice(8);
+  const seg = day <= 5 ? 3 : day <= 10 ? 0 : day <= 20 ? 1 : 2, nextM = THAI_MONTHS[(+due.iso.slice(5, 7)) - 1];
+  const tl = box('horizontal', ['1–10', '11–20', '21–สิ้นเดือน', '1–5 ' + nextM].map((lb, i) => box('vertical', [box('vertical', [], { height: '8px', cornerRadius: '3px', backgroundColor: i === 3 ? (seg === 3 ? '#F06A1D' : '#FFB27A') : i === seg ? C.blue : i < seg ? '#1F5BFF66' : '#D6E4FA' }),
+    txt(lb, { size: 'xxs', align: 'center', color: i === 3 ? '#E2600F' : i === seg ? C.blue : C.mute, weight: i === 3 || i === seg ? 'bold' : 'regular', margin: 'xs' })], { flex: 1 })), { spacing: '3px', margin: 'lg' });
   const winRow = k => {
-    const c = st.cfg[k] || {}, open = c.open !== false && (!c.from || t >= c.from) && (!c.to || t <= c.to);
-    const when = c.open === false ? 'ปิดรับการแก้ไข' : c.from && t < c.from ? 'เปิด ' + thDay(c.from) + (c.to ? ' – ' + thDay(c.to) : '') : c.to && t > c.to ? 'ปิดแล้วเมื่อ ' + thDay(c.to) : 'เปิดอยู่' + (c.to ? ' ถึง ' + thDay(c.to) : '');
-    return { type: 'box', layout: 'horizontal', margin: 'md', spacing: 'md', contents: [txt(WIN_NAME[k], { flex: 4, color: C.ink, weight: 'bold', wrap: true }), txt(when, { flex: 5, size: 'xs', align: 'end', wrap: true, gravity: 'center', color: open ? C.ok : C.mute })] };
+    const c = st.cfg[k] || {}, open = c.open !== false && (!c.from || t >= c.from) && (!c.to || t <= c.to), soon = c.open !== false && c.from && t < c.from;
+    const when = c.open === false ? 'ปิดรับการแก้ไข' : soon ? 'เปิด ' + thDay(c.from) + (c.to ? ' – ' + thDay(c.to) : '') : c.to && t > c.to ? 'ปิดแล้วเมื่อ ' + thDay(c.to) : c.to ? 'ถึง ' + thDay(c.to) : 'ไม่กำหนดวันปิด';
+    return box('horizontal', [box('vertical', [txt(WIN_NAME[k], { color: C.ink, weight: 'bold' }), txt(when, { size: 'xxs', color: C.mute, wrap: true })], { flex: 1 }),
+      chip(open ? 'เปิดอยู่' : soon ? 'ยังไม่เปิด' : 'ปิดแล้ว', open ? C.ok : C.mute)], { margin: 'md', alignItems: 'center', spacing: 'md' });
   };
-  return flex(`กำหนดส่งรายงานเดือน ${MONTHS[m]}: ${due.th}`, bubble({ tone: left <= 2 ? C.warn : C.blue, eyebrow: 'กำหนดส่ง · ' + thDay(t), title: `ส่งรายงานเดือน ${MONTHS[m]}`, sub: 'ภายใน ' + due.th,
-    stats: [stat(Math.max(0, left), left > 0 ? 'วันก่อนครบกำหนด' : 'ครบกำหนดวันนี้', left <= 2 ? C.warn : C.blue)],
-    body: [txt('รายงานผลทุกเดือน ภายในวันที่ 5 ของเดือนถัดไป', { size: 'xs', color: C.mute, wrap: true, margin: 'md' }), sep(), txt('ช่วงกรอกแผน', { weight: 'bold', color: C.ink, margin: 'lg' })].concat(Object.keys(WIN_NAME).map(winRow)),
-    url: origin + '/?tab=report', button: 'เปิดหน้ารายงานผล' }));
+  return flex(`กำหนดส่งรายงานเดือน ${MONTHS[m]}: ${due.th}`, bubble({ tag: 'กำหนดส่ง', eyebrow: thDay(t), title: `ส่งรายงานเดือน ${MONTHS[m]}`, sub: 'ภายใน ' + due.th,
+    panels: [[box('horizontal', [txt(String(Math.max(0, left)), { size: '3xl', weight: 'bold', color: left <= 2 ? '#E2600F' : C.blue, flex: 0 }), txt(left > 0 ? 'วันก่อนครบกำหนด' : 'ครบกำหนดวันนี้', { size: 'sm', color: C.ink, weight: 'bold', flex: 0, gravity: 'bottom', margin: 'md' })], { justifyContent: 'center' }),
+      tl, txt('รายงานผลทุกเดือน ภายในวันที่ 5 ของเดือนถัดไป', { size: 'xxs', color: C.mute, align: 'center', margin: 'md' })]],
+    body: [txt('ช่วงกรอกแผน', { weight: 'bold', color: C.ink })].concat(Object.keys(WIN_NAME).map(winRow)), url: origin + '/?tab=report', button: 'เปิดหน้ารายงานผล' }));
 }
 // Plan-entry window message to every linked reporter: kind = open | close | closing
 async function broadcastWindow(env, sys, links, k, c, kind, origin, send) {
   const range = c.from || c.to ? (c.from ? thDay(c.from) : '') + (c.to ? ' – ' + thDay(c.to) : '') : 'ไม่กำหนดวันปิด';
   const T = { open: [C.ok, 'เปิดให้กรอก' + WIN_NAME[k], 'ช่วงเวลา: ' + range], close: [C.mute, 'ปิดรับการกรอก' + WIN_NAME[k], 'ดูแผนได้อย่างเดียว · ลงผลรายเดือนได้ตามปกติ'], closing: [C.warn, 'อีก 3 วันปิดรับ' + WIN_NAME[k], 'ปิดรับวันที่ ' + (c.to ? thDay(c.to) : '')] }[kind];
-  const msg = flex(T[1], bubble({ tone: T[0], eyebrow: 'Config การกรอกแผน', title: T[1], sub: T[2], body: [txt(kind === 'close' ? 'หากต้องแก้ไขแผนหลังปิดรับ ติดต่อ กองประเมินผล 343' : 'กรอกหรือแก้ไขแผนได้ที่หน้า ' + WIN_NAME[k] + ' ในระบบ', { wrap: true, color: C.ink })], url: origin }));
+  const msg = flex(T[1], bubble({ tone: T[0], tag: 'ช่วงกรอกแผน', eyebrow: 'กองประเมินผล', title: T[1], sub: T[2], body: [txt(kind === 'close' ? 'หากต้องแก้ไขแผนหลังปิดรับ ติดต่อ กองประเมินผล 343' : 'กรอกหรือแก้ไขแผนได้ที่หน้า ' + WIN_NAME[k] + ' ในระบบ', { wrap: true, color: C.ink })], url: origin }));
   for (const r of links) if (sys.users[r.id].role === 'reporter') await send(r, msg, 'win-' + k + '-' + kind + '-' + (c.from || '') + (c.to || ''));
 }
 // Called after กปม. saves a Config change: tell reporters when a window opens/closes or its dates change

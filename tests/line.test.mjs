@@ -108,7 +108,7 @@ await ok('expired code is refused', async () => {
 await ok('rich menu: สถานะ → reporter status card with deep link', async () => {
   lineCalls.length = 0; await hook([msgEv('U-rep', 'สถานะ')]);
   const m = lineCalls.at(-1).body.messages[0], flat = JSON.stringify(m.contents);
-  assert.equal(m.type, 'flex'); assert.match(m.altText, /สถานะรายงานผลเดือน/); assert.ok(flat.includes('สถานะรายงาน:')); assert.ok(flat.includes('/?tab=dash'));
+  assert.equal(m.type, 'flex'); assert.match(m.altText, /สถานะรายงานผลเดือน/); assert.ok(flat.includes('ความคืบหน้าทั้งปี')); assert.ok(flat.includes('/assets/line-logo.png')); assert.ok(flat.includes('/?tab=dash'));
 });
 await ok('rich menu: สถานะ for กปม. → all-indicator summary', async () => {
   lineCalls.length = 0; await hook([msgEv('U-aud', 'สถานะ')]);
@@ -179,6 +179,7 @@ if (process.env.DUMP_FLEX) {
   const realNow = Date.now; Date.now = () => Date.UTC(2026, 11, 1, 2);
   for (const j of ['monthly', 'summary']) { const r = await (await call('/api/notify?dry=1&job=' + j, { method: 'POST', headers: { 'x-cron-key': 'cron-key' } })).json(); writeFileSync(join(process.env.DUMP_FLEX, j + '.json'), JSON.stringify(r.messages[0].contents, null, 2)); }
   Date.now = realNow;
+  for (const [w, u, f] of [['สถานะ', 'U-rep', 'status'], ['กำหนดส่ง', 'U-rep', 'deadline'], ['ช่วยเหลือ', 'U-rep', 'help']]) { lineCalls.length = 0; await hook([msgEv(u, w)]); writeFileSync(join(process.env.DUMP_FLEX, f + '.json'), JSON.stringify(lineCalls.at(-1).body.messages[0].contents, null, 2)); }
   const r = await (await call('/api/notify?dry=1&job=closing', { method: 'POST', headers: { 'x-cron-key': 'cron-key' } })).json(); writeFileSync(join(process.env.DUMP_FLEX, 'closing.json'), JSON.stringify(r.messages[0].contents, null, 2));
 }
 console.log(`\n${n} ผ่าน`);
