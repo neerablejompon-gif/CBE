@@ -322,7 +322,7 @@ async function boot(req, env, fy) {
     getRanges(env, env.SYSTEM_SHEET_ID, ['log!A2:D']).then(([rows]) => rows.slice(-60).reverse().map(r => ({ t: str(r[0]), who: str(r[2]), what: str(r[3]) })))]);
   const data = {};
   codes.forEach((c, i) => { if (forms[i]) data[c] = forms[i].data; });
-  const api = { write: !!env.GEMINI_API_KEY, writeFree: env.GEMINI_TIER !== 'paid', me: { role: u.role, ind: u.ind, part: u.part, name: u.name, id: u.id, r: u.r, self: u.role === 'audit' ? u.self : [], roles: u.roles.map((x, i) => ({ r: i, label: roleLabel(x) })) }, state: stateFor(u, st), log, openFrom: openFrom(), line: await lineStatus(env, u.id) };
+  const api = { write: !!(env.GEMINI_API_KEY || env.AI), writeGemini: !!env.GEMINI_API_KEY, writeFree: env.GEMINI_TIER !== 'paid', me: { role: u.role, ind: u.ind, part: u.part, name: u.name, id: u.id, r: u.r, self: u.role === 'audit' ? u.self : [], roles: u.roles.map((x, i) => ({ r: i, label: roleLabel(x) })) }, state: stateFor(u, st), log, openFrom: openFrom(), line: await lineStatus(env, u.id) };
   return `window.CBE_FORMS_${fy}=${JSON.stringify(data, hideRows)};\nwindow.CBE_API=${JSON.stringify(api)};`;
 }
 // FY2569 (closed year) and the indicator seed: the data.js built by tools/forms-to-json.ps1, kept as a Drive file
@@ -468,9 +468,9 @@ function aiNeurons(model, usage, x) {
   const pin = +u.prompt_tokens || Math.ceil(JSON.stringify(x).length / 2), pout = +u.completion_tokens || 1500;
   return Math.ceil((pin * r[0] + pout * r[1]) / 1e6);
 }
-async function aiCall(env, model, messages) {
+async function aiCall(env, model, messages, maxTokens) {
   // thinking off: a reasoning pass costs output Neurons and time and can use up max tokens before the JSON
-  const base = { messages, temperature: 0.2, max_completion_tokens: 1200, chat_template_kwargs: { enable_thinking: false } };
+  const base = { messages, temperature: 0.2, max_completion_tokens: maxTokens || 1200, chat_template_kwargs: { enable_thinking: false } };
   let r;
   try { r = await env.AI.run(model, { ...base, response_format: { type: 'json_object' } }); } catch (e) { r = await env.AI.run(model, base); } // not every model takes response_format
   const c = r && r.choices && r.choices[0] && r.choices[0].message;
@@ -594,7 +594,7 @@ function writeParse(text) {
 async function aiWrite(req, env, fy) {
   sameOrigin(req);
   const u = await me(req, env), b = await req.json().catch(() => ({}));
-  if (!env.GEMINI_API_KEY) fail(501, 'ยังไม่ได้ตั้งค่า Gemini (GEMINI_API_KEY)');
+  if (!env.GEMINI_API_KEY && !env.AI) fail(501, 'ยังไม่ได้ตั้งค่า AI สำหรับผู้ช่วยเขียน');
   const k = str(b.k), mode = str(b.mode);
   if (!AI_KEY.test(k) || !WRITE_MODES[mode]) fail(400, 'คำขอไม่ถูกต้อง');
   if (!own(u, k)) fail(403, 'ใช้ผู้ช่วยเขียนได้เฉพาะตัวชี้วัดของตน');
@@ -603,13 +603,32 @@ async function aiWrite(req, env, fy) {
   if (mode === 'guide' && !x.prev) fail(400, 'ไม่มีผลปีก่อนของระดับนี้');
   // daily caps: whole system and per person (kept in the ai store, which reporters cannot read or write)
   const day = todayIso(), key = 'gem|' + day, cap = +env.GEMINI_DAILY_CALLS || 800, { st, at } = await loadState(env, fy), c = st.ai[key] || { n: 0, by: {} };
-  if (c.n >= cap) fail(429, 'ผู้ช่วยเขียนถูกใช้ครบโควตาของวันนี้แล้ว ใช้ได้อีกครั้งพรุ่งนี้');
   if ((c.by[u.id] || 0) >= 40) fail(429, 'วันนี้ท่านใช้ผู้ช่วยเขียนครบ 40 ครั้งแล้ว ใช้ได้อีกครั้งพรุ่งนี้');
-  const out = await gemCall(env, writePrompt(mode, x, fy)), parsed = writeParse(out.text);
-  c.n++; c.by[u.id] = (c.by[u.id] || 0) + 1;
-  await writeState(env, fy, at, [{ s: 'ai', k: key, v: c }], u);
-  if (!parsed) { console.error('gemini parse', out.finish, out.text.slice(0, 300)); fail(502, out.finish === 'MAX_TOKENS' ? 'ข้อความยาวเกินไป ลองแบ่งให้สั้นลง' : 'Gemini ตอบในรูปแบบที่อ่านไม่ได้ ลองใหม่อีกครั้ง'); }
-  return Object.assign(parsed, { mode, model: out.model, left: 40 - c.by[u.id] });
+  const p = writePrompt(mode, x, fy), ops = [];
+  let parsed = null, engine = '', model = '', err = null;
+  // Gemini first; no key, its daily cap reached, or any failure → Workers AI does the same job
+  if (env.GEMINI_API_KEY && c.n < cap) {
+    try {
+      const out = await gemCall(env, p); model = out.model; parsed = writeParse(out.text);
+      if (!parsed) throw Object.assign(new Error(out.finish === 'MAX_TOKENS' ? 'ข้อความยาวเกินไป ลองแบ่งให้สั้นลง' : 'Gemini ตอบในรูปแบบที่อ่านไม่ได้ ลองใหม่อีกครั้ง'), { status: 502 });
+      engine = 'gemini'; c.n++;
+    } catch (e) { err = e; parsed = null; console.error('gemini → workers ai', e.status || '', e.message); }
+  } else if (env.GEMINI_API_KEY) err = Object.assign(new Error('ผู้ช่วยเขียนถูกใช้ครบโควตาของวันนี้แล้ว ใช้ได้อีกครั้งพรุ่งนี้'), { status: 429 });
+  if (!parsed && env.AI) {
+    const ukey = 'usage|' + new Date().toISOString().slice(0, 10), limit = +env.AI_DAILY_NEURONS || 8000, before = (st.ai[ukey] || {}).n || 0;
+    if (before >= limit) fail(429, 'โควตา AI ของวันนี้หมดแล้ว ใช้ได้อีกครั้ง 07:00 น.');
+    model = env.AI_MODEL || AI_DEFAULT;
+    let r;
+    try { r = await aiCall(env, model, [{ role: 'system', content: p.system }, { role: 'user', content: p.user }], 2400); }
+    catch (e) { console.error('workers ai write', e.stack || e); fail(502, 'ผู้ช่วยเขียนไม่ตอบ ลองใหม่อีกครั้ง'); }
+    ops.push({ s: 'ai', k: ukey, v: { n: before + aiNeurons(model, r.usage, x), limit } });
+    parsed = writeParse(r.text); engine = 'workers';
+    if (!parsed) { console.error('workers ai write parse', String(r.text).slice(0, 300)); await writeState(env, fy, at, ops, u); fail(502, 'ผู้ช่วยเขียนตอบในรูปแบบที่อ่านไม่ได้ ลองใหม่อีกครั้ง'); }
+  }
+  if (!parsed) throw err;
+  c.by[u.id] = (c.by[u.id] || 0) + 1; ops.push({ s: 'ai', k: key, v: c });
+  await writeState(env, fy, at, ops, u);
+  return Object.assign(parsed, { mode, model, engine, left: 40 - c.by[u.id] });
 }
 const extOf = name => (String(name).split('.').pop() || '').toLowerCase();
 async function upload(req, env, fy) {

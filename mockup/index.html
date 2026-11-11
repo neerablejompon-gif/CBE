@@ -2585,18 +2585,18 @@ function writePanel(s, L, ed) {
   var w = S.aiw && S.aiw.k === lvKey(s, L) ? S.aiw : null, gg = guideFor(s, L), prev = gg && gg.L && gg.L.narr;
   var btn = function (mode, label, icon, off, why) { return '<button class="btn sm" data-act="aiw-run" data-mode="' + mode + '"' + (off || (w && w.busy) ? ' disabled' : '') + (why ? ' title="' + why + '"' : '') + '>' + ico(icon, 14) + label + '</button>'; };
   var body = '';
-  if (w && w.busy) body = '<p class="small muted" style="margin:8px 0 0"><span class="spin" aria-hidden="true"></span> Gemini กำลังเรียบเรียง… (ประมาณ 5–20 วินาที)</p>';
+  if (w && w.busy) body = '<p class="small muted" style="margin:8px 0 0"><span class="spin" aria-hidden="true"></span> AI กำลังเรียบเรียง… (ประมาณ 5–20 วินาที)</p>';
   else if (w && w.res) {
     var r = w.res;
     body = (r.items.length ? '<div class="aiw-items">' + r.items.map(function (i) { var t = AIW_ST[i.status]; return '<div class="aiw-it ' + t[0] + '">' + ico(t[1], 14) + '<span><b>' + esc(i.item) + '</b> <span class="small">' + t[2] + (i.note ? ' · ' + esc(i.note) : '') + '</span></span></div>'; }).join('') + '</div>' : '') +
       (r.draft ? '<p class="small warn" style="margin:10px 0 4px">' + ico('alert', 13) + ' ร่างจาก AI ตรวจทานก่อนใช้ · ช่อง <mark class="ph">【ระบุ…】</mark> ต้องแทนที่ด้วยข้อมูลจริง ระบบจะไม่นับว่าพร้อมส่งจนกว่าจะแก้ครบ</p><div class="narr-box aiw-draft">' + hlPh(r.draft) + '</div>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn sm primary" data-act="aiw-use">' + ico('edit', 14) + ((L.narrative || '').trim() ? 'แทนที่ข้อความเดิม' : 'ใช้ข้อความนี้') + '</button><button class="btn sm" data-act="aiw-copy">' + ico('file', 14) + 'คัดลอก</button><button class="btn sm" data-act="aiw-close">ปิด</button></div>' : '<div style="margin-top:8px"><button class="btn sm" data-act="aiw-close">ปิด</button></div>') +
       (r.tips.length ? '<ul class="aiw-tips small">' + r.tips.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>' : '') +
-      '<p class="small muted" style="margin:6px 0 0">วันนี้ใช้ได้อีก ' + r.left + ' ครั้ง</p>';
+      '<p class="small muted" style="margin:6px 0 0">' + (r.engine === 'workers' && API.writeGemini ? 'Gemini ไม่พร้อมใช้ขณะนี้ ใช้ Workers AI แทนชั่วคราว · ' : '') + 'วันนี้ใช้ได้อีก ' + r.left + ' ครั้ง</p>';
   }
   if (w && w.undo != null) body += '<p class="small" style="margin:8px 0 0">' + ico('check', 13) + ' ใส่ข้อความแล้ว · <button class="linkbtn" data-act="aiw-undo">ย้อนกลับเป็นข้อความเดิม</button></p>';
-  return '<div class="aiw"><div class="aiw-h">' + ico('bolt', 15) + '<b>ผู้ช่วยเขียน (Gemini)</b><span class="small muted">ร่างให้ ท่านตรวจทานและตัดสินใจเอง</span></div>' +
-    (API.writeFree ? '<p class="small warn" style="margin:0 0 8px">' + ico('info', 13) + ' ใช้ Gemini แบบฟรี: ข้อความที่ส่งอาจถูก Google ใช้ปรับปรุงบริการ · ห้ามใส่ข้อมูลส่วนบุคคลหรือข้อมูลลับ</p>' : '') +
+  return '<div class="aiw"><div class="aiw-h">' + ico('bolt', 15) + '<b>ผู้ช่วยเขียน (AI)</b><span class="small muted">ร่างให้ ท่านตรวจทานและตัดสินใจเอง</span></div>' +
+    (API.writeGemini && API.writeFree ? '<p class="small warn" style="margin:0 0 8px">' + ico('info', 13) + ' ใช้ Gemini แบบฟรี: ข้อความที่ส่งอาจถูก Google ใช้ปรับปรุงบริการ · ห้ามใส่ข้อมูลส่วนบุคคลหรือข้อมูลลับ</p>' : '') +
     '<div style="display:flex;gap:8px;flex-wrap:wrap">' + btn('draft', 'เรียบเรียงตามค่าเกณฑ์', 'list', !(L.narrative || '').trim(), 'พิมพ์ข้อเท็จจริงสั้น ๆ ก่อน') + btn('guide', 'ปรับจากผลปี ' + ((gg && gg.fy) || CLOSED_FY), 'history', !prev, 'ไม่มีผลปีก่อนของระดับนี้') + btn('gaps', 'ตรวจว่ายังขาดอะไร', 'eye', !(L.narrative || '').trim()) + '</div>' + body + '</div>';
 }
 function curSub(I) { return I.subs[Math.min(S.sub, I.subs.length - 1)]; }
