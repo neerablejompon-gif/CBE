@@ -483,7 +483,8 @@ async function resetYear(req, env, fy) {
   if (+body.fy !== fy || body.confirm !== `ลบผลและแผนปี ${fy}`) fail(400, `พิมพ์ยืนยัน "ลบผลและแผนปี ${fy}"`);
   const out = { dry, forms: {}, state: 0 };
   for (const f of (await system(env)).forms.filter(x => x.fy === fy && x.id)) {
-    const [sum, rows] = await getRanges(env, f.id, [SUM_TAB + '!A1:D400', FORM_TAB + '!A1:AA2000']);
+    let sum, rows;
+    try { [sum, rows] = await getRanges(env, f.id, [SUM_TAB + '!A1:D400', FORM_TAB + '!A1:AA2000']); } catch (e) { out.forms[f.code] = { error: 'อ่านไม่ได้: ' + String(e.message).slice(0, 300) }; continue; }
     const data = parseForm(sum, rows), ranges = [], tab = FORM_TAB;
     sum.forEach((r, i) => { if (i + 1 >= 13 && /^\d/.test(str((r || [])[0])) && str((r || [])[3]) !== '') ranges.push(`${SUM_TAB}!D${i + 1}`); }); // sub-issue target scores
     let levels = 0;
@@ -493,7 +494,10 @@ async function resetYear(req, env, fy) {
       L.mrRows.forEach(r => ranges.push(`${tab}!X${r}:Y${r}`)); // evidence tick and name (W = requirement stays)
     }));
     out.forms[f.code] = { levels, ranges: ranges.length };
-    if (!dry && ranges.length) for (let i = 0; i < ranges.length; i += 400) await g(env, `${SHEETS}${f.id}/values:batchClear`, { method: 'POST', json: { ranges: ranges.slice(i, i + 400) } });
+    if (!dry && ranges.length) {
+      try { for (let i = 0; i < ranges.length; i += 400) await g(env, `${SHEETS}${f.id}/values:batchClear`, { method: 'POST', json: { ranges: ranges.slice(i, i + 400) } }); out.forms[f.code].cleared = true; }
+      catch (e) { out.forms[f.code].error = String(e.message).slice(0, 300); } // keep going: clearing is idempotent, re-run fixes the rest
+    }
   }
   const [rows] = await getRanges(env, env.SYSTEM_SHEET_ID, ['state!A2:D']), clear = [];
   rows.forEach((r, i) => { if (+r[0] === fy && RESET_STORES.includes(str(r[1])) && str(r[3]) !== '' && !(str(r[1]) === 'ai' && str(r[2]).startsWith('usage|'))) clear.push(`state!D${i + 2}`); });
