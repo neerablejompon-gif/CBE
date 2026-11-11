@@ -15,6 +15,7 @@
 //   LINE_CHANNEL_TOKEN  (secret) long-lived channel access token: sends messages
 //   LINE_ADD_URL     add-friend link of the LINE Official Account (https://line.me/R/ti/p/@...)
 //   CRON_KEY         (secret) shared with the GitHub Actions job that calls /api/notify every morning
+//   GUIDE_SHEET_ID   last year's consolidated report (one tab per part) shown as a writing guide (default: the 2569 sheet)
 //   AI               Workers AI binding (Settings → Bindings) for the กปม. AI pre-check (optional)
 //   AI_MODEL         Workers AI text model (default @cf/google/gemma-4-26b-a4b-it)
 //   AI_DAILY_NEURONS stop calling the AI after this many Neurons per UTC day (default 8000 of the free 10,000)
@@ -44,6 +45,7 @@ export default {
       if (path === '/api/login' && req.method === 'POST') return await login(req, env);
       if (path === '/api/logout' && req.method === 'POST') return json({ ok: true }, 200, { 'set-cookie': SESSION + '=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0' });
       if (path === '/api/save' && req.method === 'POST') return json(await save(req, env, fy, ctx));
+      if (path === '/api/guide' && req.method === 'GET') return json(await guide(req, env));
       if (path === '/api/ai/check' && req.method === 'POST') return json(await aiCheck(req, env, fy, ctx));
       if (path === '/api/line/webhook' && req.method === 'POST') return await lineWebhook(req, env);
       // config check for setup: booleans only, never values
@@ -472,6 +474,42 @@ async function aiCheck(req, env, fy, ctx) {
   if (ops.length) await writeState(env, fy, at, ops, u);
   if (before < limit * 0.8 && used >= limit * 0.8) { const p = aiAlert(env, used, limit).catch(e => console.error('ai alert', e.stack || e)); if (ctx && ctx.waitUntil) ctx.waitUntil(p); else await p; }
   return { results, used, limit, quota, model, day };
+}
+/* ---------- last year's results as a writing guide (read-only, from the consolidated 2569 report) ---------- */
+const GUIDE_DEFAULT = '1k5D_YOgOx-e8f6QYOzUvJYsVSTRkY9388fyeI_PqrXs', GUIDE_FY = 2569;
+const gNum = v => { const n = Number(String(v == null ? '' : v).replace(/[,\s]/g, '')); return isNaN(n) ? 0 : n; };
+// Tabs differ per indicator, so columns are found by their header text
+function parseGuide(rows) {
+  const cell = (r, c) => c < 0 ? '' : str((r || [])[c]).replace(/\r/g, '');
+  const h = rows.findIndex((r, i) => i < 20 && (r || []).some(x => /^รายละเอียดผลการดำเนินงาน/.test(str(x))));
+  if (h < 0) return {};
+  const head = rows[h].map(x => str(x).replace(/\s+/g, ' ')), col = re => head.findIndex(x => re.test(x));
+  const C = { lv: col(/^ระดับ$/), narr: col(/^รายละเอียดผลการดำเนินงาน/), req: col(/^Min/i), has: col(/^ถ้ามีเอกสาร/), ev: col(/^ชื่อหลักฐาน/), rmk: col(/^ข้อสังเกต/), pr: col(/^แผนผล$/) };
+  if (C.ev < 0 && C.has >= 0 && /^หมายเหตุ/.test(head[C.has + 1] || '')) C.ev = C.has + 1; // HCM keeps evidence names under "หมายเหตุ"
+  const out = {}; let sub = null, lv = null;
+  for (let i = h + 1; i < rows.length; i++) {
+    const r = rows[i], a = cell(r, 0), b = cell(r, C.lv < 0 ? 1 : C.lv), m = /^ระดับ(?:ที่)?\s*(\d)/.exec(b);
+    if (/^\d{1,2}\.\d{1,2}$/.test(a)) { sub = a; lv = null; continue; }
+    if (!sub) continue;
+    if (m) { lv = out[sub + '|' + m[1]] = { narr: '', mr: [], remark: '', plan: null, res: null }; }
+    if (!lv) continue;
+    const n = cell(r, C.narr); if (n) lv.narr = lv.narr ? lv.narr + '\n' + n : n;
+    const k = cell(r, C.rmk); if (k && !lv.remark) lv.remark = k;
+    const q = cell(r, C.req); if (q) lv.mr.push([q, /^(true|✓|1)$/i.test(cell(r, C.has)), cell(r, C.ev)]);
+    if (C.pr >= 0) { const t = cell(r, C.pr), v = Array.from({ length: 12 }, (_, j) => gNum((r || [])[C.pr + 1 + j])); if (t === 'แผน' && !lv.plan) lv.plan = v; if (t === 'ผล' && !lv.res) lv.res = v; }
+  }
+  return out;
+}
+async function guide(req, env) {
+  const u = await me(req, env), part = str(new URL(req.url).searchParams.get('part')).toUpperCase();
+  if (!Object.values(IND_PARTS).some(p => p.includes(part))) fail(400, 'ไม่รู้จักส่วนนี้');
+  if (u.role === 'reporter' && !(IND_PARTS[u.ind] || []).includes(part)) fail(403, 'ดูได้เฉพาะตัวชี้วัดของตน');
+  const id = env.GUIDE_SHEET_ID || GUIDE_DEFAULT;
+  const levels = await cached('guide:' + id + ':' + part, 10 * 60e3, async () => {
+    try { const [rows] = await getRanges(env, id, [`'${part}'!A1:BE1000`]); return parseGuide(rows); }
+    catch (e) { if (e.google === 400) return {}; throw e; } // no tab for this part (e.g. CM)
+  });
+  return { fy: GUIDE_FY, part, levels };
 }
 const extOf = name => (String(name).split('.').pop() || '').toLowerCase();
 async function upload(req, env, fy) {
