@@ -199,6 +199,20 @@ refresh token เข้าถึง Drive ทั้งหมดของบั�
 
 โควตาฟรี 10,000 Neurons ต่อวัน รีเซ็ต 07:00 น. ระบบหยุดเรียก AI เมื่อถึง `AI_DAILY_NEURONS` และส่ง LINE แจ้ง กปม. เมื่อใช้ถึง 80% ระบบตรวจซ้ำเฉพาะระดับที่เนื้อหาเปลี่ยน ดูการใช้จริงได้ที่ Cloudflare → AI → Workers AI
 
+## 8. ผู้ช่วยเขียนสำหรับผู้รายงาน (Gemini + Workers AI สำรอง)
+
+แผง "ผู้ช่วยเขียน (AI)" ในขั้น ② ผลการดำเนินงาน ช่วยเรียบเรียงตามค่าเกณฑ์ ปรับจากผลปีก่อน และตรวจว่ายังขาดอะไร ผู้รายงานตรวจทานและกดใช้เอง ข้อมูลที่ไม่มีจะเป็นช่อง 【ระบุ …】 และระบบไม่นับว่าพร้อมส่งจนกว่าจะแก้ครบ
+
+1. aistudio.google.com → Get API key → Create API key (แบบฟรีไม่ต้องผูกบัตร) แล้วดูโควตาที่ Usage / Rate limits
+2. Cloudflare → Pages โปรเจกต์ → Settings → Variables and Secrets (**Production**)
+   - `GEMINI_API_KEY` ชนิด Secret
+   - `GEMINI_MODEL` เช่น `gemini-2.5-flash` (ไม่ตั้ง = `gemini-flash-latest`)
+   - `GEMINI_DAILY_CALLS` ต่ำกว่าโควตารายวันเล็กน้อย (แบบฟรี 20 ครั้ง/วัน → ตั้ง 18)
+   - `GEMINI_TIER=paid` เมื่อเปลี่ยนเป็นแบบชำระเงิน (ซ่อนคำเตือนแบบฟรี)
+3. **Retry deployment** ค่าที่เพิ่มมีผลเมื่อ deploy ครั้งถัดไป
+
+ไม่มีคีย์ โควตาหมด หรือ Gemini เรียกไม่สำเร็จ ระบบใช้ Workers AI (ข้อ 7) แทนอัตโนมัติ · จำกัด 40 ครั้งต่อคนต่อวัน
+
 ## ทดสอบในเครื่อง (ไม่ต้องมี Google / Cloudflare)
 `.test/` มีชุดทดสอบที่จำลอง Google Sheets และ Drive (อยู่ใน `.gitignore` เพราะมีข้อมูลจากแบบฟอร์มจริง)
 1. รัน `powershell -File tools\serve.ps1`
