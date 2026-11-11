@@ -45,6 +45,7 @@ export default {
       if (path === '/api/logout' && req.method === 'POST') return json({ ok: true }, 200, { 'set-cookie': SESSION + '=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0' });
       if (path === '/api/save' && req.method === 'POST') return json(await save(req, env, fy, ctx));
       if (path === '/api/ai/check' && req.method === 'POST') return json(await aiCheck(req, env, fy, ctx));
+      if (path === '/api/admin/reset-year' && req.method === 'POST') return json(await resetYear(req, env, fy)); // one-time, removed after go-live
       if (path === '/api/line/webhook' && req.method === 'POST') return await lineWebhook(req, env);
       // config check for setup: booleans only, never values
       if (path === '/api/line/webhook' && req.method === 'GET') return json({ secret: !!env.LINE_CHANNEL_SECRET, token: !!env.LINE_CHANNEL_TOKEN, addUrl: !!env.LINE_ADD_URL, cronKey: !!env.CRON_KEY });
@@ -472,6 +473,36 @@ async function aiCheck(req, env, fy, ctx) {
   if (ops.length) await writeState(env, fy, at, ops, u);
   if (before < limit * 0.8 && used >= limit * 0.8) { const p = aiAlert(env, used, limit).catch(e => console.error('ai alert', e.stack || e)); if (ctx && ctx.waitUntil) ctx.waitUntil(p); else await p; }
   return { results, used, limit, quota, model, day };
+}
+/* ---------- one-time reset before go-live: clears results and plans of the year, keeps criteria, Minimum Requirement, สคร. GAP, users, log ---------- */
+const RESET_STORES = ['patch', 'wf', 'wfnote', 'tri', 'trinote', 'unlock', 'ai'];
+async function resetYear(req, env, fy) {
+  sameOrigin(req);
+  const u = await me(req, env), body = await req.json().catch(() => ({})), dry = body.dry !== false;
+  if (u.role !== 'audit') fail(403, 'เฉพาะ กปม.');
+  if (+body.fy !== fy || body.confirm !== `ลบผลและแผนปี ${fy}`) fail(400, `พิมพ์ยืนยัน "ลบผลและแผนปี ${fy}"`);
+  const out = { dry, forms: {}, state: 0 };
+  for (const f of (await system(env)).forms.filter(x => x.fy === fy && x.id)) {
+    const [sum, rows] = await getRanges(env, f.id, [SUM_TAB + '!A1:D400', FORM_TAB + '!A1:AA2000']);
+    const data = parseForm(sum, rows), ranges = [], tab = FORM_TAB;
+    sum.forEach((r, i) => { if (i + 1 >= 13 && /^\d/.test(str((r || [])[0])) && str((r || [])[3]) !== '') ranges.push(`${SUM_TAB}!D${i + 1}`); }); // sub-issue target scores
+    let levels = 0;
+    data.subs.forEach(s => s.levels.forEach(L => {
+      levels++;
+      ranges.push(`${tab}!D${L.row}:E${L.row}`, `${tab}!G${L.row}:R${L.row + 1}`, `${tab}!V${L.row}`); // target, unit, plan + result rows, narrative
+      L.mrRows.forEach(r => ranges.push(`${tab}!X${r}:Y${r}`)); // evidence tick and name (W = requirement stays)
+    }));
+    out.forms[f.code] = { levels, ranges: ranges.length };
+    if (!dry && ranges.length) for (let i = 0; i < ranges.length; i += 400) await g(env, `${SHEETS}${f.id}/values:batchClear`, { method: 'POST', json: { ranges: ranges.slice(i, i + 400) } });
+  }
+  const [rows] = await getRanges(env, env.SYSTEM_SHEET_ID, ['state!A2:D']), clear = [];
+  rows.forEach((r, i) => { if (+r[0] === fy && RESET_STORES.includes(str(r[1])) && str(r[3]) !== '' && !(str(r[1]) === 'ai' && str(r[2]).startsWith('usage|'))) clear.push(`state!D${i + 2}`); });
+  out.state = clear.length;
+  if (!dry) {
+    for (let i = 0; i < clear.length; i += 400) await g(env, `${SHEETS}${env.SYSTEM_SHEET_ID}/values:batchClear`, { method: 'POST', json: { ranges: clear.slice(i, i + 400) } });
+    await appendRows(env, env.SYSTEM_SHEET_ID, 'log!A:D', [[stamp(), u.id, label(u), `ล้างผลและแผนปี ${fy} ก่อนเปิดใช้ระบบ (${Object.keys(out.forms).length} แบบฟอร์ม, state ${clear.length} แถว)`]]);
+  }
+  return out;
 }
 const extOf = name => (String(name).split('.').pop() || '').toLowerCase();
 async function upload(req, env, fy) {
