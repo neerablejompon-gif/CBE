@@ -16,6 +16,8 @@
 //   LINE_ADD_URL     add-friend link of the LINE Official Account (https://line.me/R/ti/p/@...)
 //   CRON_KEY         (secret) shared with the GitHub Actions job that calls /api/notify every morning
 //   GUIDE_SHEET_ID   last year's consolidated report (one tab per part) shown as a writing guide (default: the 2569 sheet)
+//   GEMINI_API_KEY   (secret) Google Gemini API key for the reporters' writing assistant (optional; paid tier: data not used for training)
+//   GEMINI_MODEL     Gemini model (default gemini-flash-latest) · GEMINI_DAILY_CALLS cap per day (default 800), 40 per person
 //   AI               Workers AI binding (Settings → Bindings) for the กปม. AI pre-check (optional)
 //   AI_MODEL         Workers AI text model (default @cf/google/gemma-4-26b-a4b-it)
 //   AI_DAILY_NEURONS stop calling the AI after this many Neurons per UTC day (default 8000 of the free 10,000)
@@ -47,6 +49,7 @@ export default {
       if (path === '/api/role' && req.method === 'POST') return await switchRole(req, env);
       if (path === '/api/save' && req.method === 'POST') return json(await save(req, env, fy, ctx));
       if (path === '/api/guide' && req.method === 'GET') return json(await guide(req, env));
+      if (path === '/api/ai/write' && req.method === 'POST') return json(await aiWrite(req, env, fy));
       if (path === '/api/ai/check' && req.method === 'POST') return json(await aiCheck(req, env, fy, ctx));
       if (path === '/api/line/webhook' && req.method === 'POST') return await lineWebhook(req, env, fy);
       // config check for setup: booleans only, never values
@@ -318,7 +321,7 @@ async function boot(req, env, fy) {
     getRanges(env, env.SYSTEM_SHEET_ID, ['log!A2:D']).then(([rows]) => rows.slice(-60).reverse().map(r => ({ t: str(r[0]), who: str(r[2]), what: str(r[3]) })))]);
   const data = {};
   codes.forEach((c, i) => { if (forms[i]) data[c] = forms[i].data; });
-  const api = { me: { role: u.role, ind: u.ind, part: u.part, name: u.name, id: u.id, r: u.r, self: u.role === 'audit' ? u.self : [], roles: u.roles.map((x, i) => ({ r: i, label: roleLabel(x) })) }, state: stateFor(u, st), log, openFrom: openFrom(), line: await lineStatus(env, u.id) };
+  const api = { write: !!env.GEMINI_API_KEY, me: { role: u.role, ind: u.ind, part: u.part, name: u.name, id: u.id, r: u.r, self: u.role === 'audit' ? u.self : [], roles: u.roles.map((x, i) => ({ r: i, label: roleLabel(x) })) }, state: stateFor(u, st), log, openFrom: openFrom(), line: await lineStatus(env, u.id) };
   return `window.CBE_FORMS_${fy}=${JSON.stringify(data, hideRows)};\nwindow.CBE_API=${JSON.stringify(api)};`;
 }
 // FY2569 (closed year) and the indicator seed: the data.js built by tools/forms-to-json.ps1, kept as a Drive file
@@ -421,7 +424,7 @@ async function save(req, env, fy, ctx) {
 const AI_DEFAULT = '@cf/google/gemma-4-26b-a4b-it';
 // Neurons per million tokens [input, output] from the Workers AI pricing page; unknown models use a cautious rate
 const AI_RATES = { '@cf/google/gemma-4-26b-a4b-it': [9091, 27273], '@cf/qwen/qwen3-30b-a3b-fp8': [4625, 30475], '@cf/aisingapore/gemma-sea-lion-v4-27b-it': [31876, 50488], '@cf/google/gemma-3-12b-it': [31371, 50560] };
-const AI_KEY = /^[A-Z]{2,5}\|[A-Z]{2,5}\|\d{1,2}\.\d{1,2}\|[1-5]$/;
+const AI_KEY = /^[A-Z]{2,5}\|[A-Z]{2,5}\|\d{1,2}(\.\d{1,2}){1,2}\|[1-5]$/;
 const AI_TYPES = ['criteria', 'evidence', 'gap'];
 const cut = (v, n) => str(v).slice(0, n);
 // Same signature on the page and here: a level is re-checked only when what the AI reads has changed
@@ -548,6 +551,64 @@ async function guide(req, env) {
     catch (e) { if (e.google === 400) return {}; throw e; } // no tab for this part (e.g. CM)
   });
   return { fy: GUIDE_FY, part, levels };
+}
+/* ---------- writing assistant for reporters (Gemini): drafts only, the reporter reviews and saves ---------- */
+const GEM_DEFAULT = 'gemini-flash-latest', GEM_FALLBACK = 'gemini-2.5-flash', GEM_URL = 'https://generativelanguage.googleapis.com/v1beta/models/';
+const WRITE_MODES = {
+  draft: 'เรียบเรียงข้อความของผู้รายงานใหม่ให้ตอบค่าเกณฑ์ครบทุกองค์ประกอบ เรียงตามลำดับข้อของค่าเกณฑ์',
+  guide: 'ปรับผลการดำเนินงานปีก่อนให้เป็นร่างของปีบัญชีนี้ คงโครงสร้างที่ดีไว้ แต่วันที่ ครั้งที่ประชุม เลขคำสั่ง ตัวเลข และชื่อเอกสารของปีก่อนต้องเปลี่ยนเป็นช่องให้ระบุทั้งหมด',
+  gaps: 'ไม่ต้องเขียนใหม่ ให้ตรวจว่าข้อความปัจจุบันตอบองค์ประกอบใดของค่าเกณฑ์แล้ว และยังขาดอะไร'
+};
+function writePrompt(mode, x, fy) {
+  return {
+    system: `คุณเป็นผู้ช่วยเรียบเรียงรายงานผลการดำเนินงานของรัฐวิสาหกิจตามเกณฑ์ SE-AM ปีบัญชี ${fy} ` +
+      'กฎ: (1) ใช้เฉพาะข้อเท็จจริงที่ให้มา ห้ามแต่งวันที่ ตัวเลข ครั้งที่ประชุม เลขคำสั่ง หรือชื่อเอกสารขึ้นเอง ' +
+      '(2) ข้อมูลที่จำเป็นแต่ไม่มี ให้ใส่ช่องว่างในรูปแบบ 【ระบุ ...】 เช่น 【ระบุวันที่ประชุม】 ' +
+      '(3) ภาษาราชการ กระชับ เป็นข้อ ๆ ตามองค์ประกอบของค่าเกณฑ์ อ้างชื่อหลักฐานเมื่อมี (4) ตอบเป็น JSON อย่างเดียว',
+    user: `งาน: ${WRITE_MODES[mode]}\n\n[ประเด็น] ${x.label}\n\n[ค่าเกณฑ์]\n${x.crit || '(ไม่มี)'}\n\n[ข้อความปัจจุบันของผู้รายงาน]\n${x.narr || '(ว่าง)'}\n\n` +
+      (mode === 'guide' ? `[ผลการดำเนินงานปีก่อน]\n${x.prev || '(ไม่มี)'}\n\n` : '') +
+      `[ชื่อหลักฐานที่มี]\n${x.ev.length ? x.ev.map((e, i) => (i + 1) + '. ' + e).join('\n') : '(ไม่มี)'}\n\n` +
+      'ตอบรูปแบบนี้: {"draft":"ข้อความร่างทั้งหมด (โหมดตรวจให้เป็น \\"\\")","items":[{"item":"องค์ประกอบของค่าเกณฑ์ (สั้น)","status":"covered|partial|missing","note":"สั้น ๆ ว่าขาดอะไร"}],"tips":["คำแนะนำสั้น ๆ ไม่เกิน 3 ข้อ"]}'
+  };
+}
+async function gemCall(env, p) {
+  const body = JSON.stringify({ systemInstruction: { parts: [{ text: p.system }] }, contents: [{ role: 'user', parts: [{ text: p.user }] }],
+    generationConfig: { temperature: 0.3, maxOutputTokens: 8192, responseMimeType: 'application/json' } });
+  for (const model of [env.GEMINI_MODEL || GEM_DEFAULT, GEM_FALLBACK]) {
+    const r = await fetch(GEM_URL + model + ':generateContent', { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY }, body });
+    const j = await r.json().catch(() => ({}));
+    if (r.status === 404 && model !== GEM_FALLBACK) continue; // alias not available: try the fallback model
+    if (r.status === 429) fail(429, 'Gemini ถูกใช้เกินโควตาของบัญชี ลองใหม่ภายหลัง');
+    if (!r.ok) { console.error('gemini', model, r.status, JSON.stringify(j).slice(0, 400)); fail(502, 'เรียก Gemini ไม่สำเร็จ ลองใหม่อีกครั้ง'); }
+    const c = (j.candidates || [])[0] || {};
+    return { model, text: ((c.content || {}).parts || []).map(x => x.text || '').join(''), finish: c.finishReason || '', usage: j.usageMetadata || null };
+  }
+}
+function writeParse(text) {
+  const t = String(text || ''), a = t.indexOf('{'), b = t.lastIndexOf('}');
+  let o; try { o = JSON.parse(t.slice(a, b + 1)); } catch (e) { return null; }
+  return { draft: cut(o.draft, 6000), items: (Array.isArray(o.items) ? o.items : []).slice(0, 12).map(i => ({ item: cut(i && i.item, 200), status: ['covered', 'partial', 'missing'].includes(i && i.status) ? i.status : 'partial', note: cut(i && i.note, 300) })).filter(i => i.item),
+    tips: (Array.isArray(o.tips) ? o.tips : []).slice(0, 3).map(x => cut(x, 300)).filter(Boolean) };
+}
+async function aiWrite(req, env, fy) {
+  sameOrigin(req);
+  const u = await me(req, env), b = await req.json().catch(() => ({}));
+  if (!env.GEMINI_API_KEY) fail(501, 'ยังไม่ได้ตั้งค่า Gemini (GEMINI_API_KEY)');
+  const k = str(b.k), mode = str(b.mode);
+  if (!AI_KEY.test(k) || !WRITE_MODES[mode]) fail(400, 'คำขอไม่ถูกต้อง');
+  if (!own(u, k)) fail(403, 'ใช้ผู้ช่วยเขียนได้เฉพาะตัวชี้วัดของตน');
+  const x = { label: cut(b.label, 120), crit: cut(b.crit, 3000), narr: cut(b.narr, 5000), prev: cut(b.prev, 5000), ev: (Array.isArray(b.ev) ? b.ev : []).slice(0, 10).map(e => cut(e, 200)).filter(Boolean) };
+  if (mode === 'draft' && !x.narr) fail(400, 'เขียนข้อเท็จจริงสั้น ๆ ก่อน แล้วให้ผู้ช่วยเรียบเรียง');
+  if (mode === 'guide' && !x.prev) fail(400, 'ไม่มีผลปีก่อนของระดับนี้');
+  // daily caps: whole system and per person (kept in the ai store, which reporters cannot read or write)
+  const day = todayIso(), key = 'gem|' + day, cap = +env.GEMINI_DAILY_CALLS || 800, { st, at } = await loadState(env, fy), c = st.ai[key] || { n: 0, by: {} };
+  if (c.n >= cap) fail(429, 'ผู้ช่วยเขียนถูกใช้ครบโควตาของวันนี้แล้ว ใช้ได้อีกครั้งพรุ่งนี้');
+  if ((c.by[u.id] || 0) >= 40) fail(429, 'วันนี้ท่านใช้ผู้ช่วยเขียนครบ 40 ครั้งแล้ว ใช้ได้อีกครั้งพรุ่งนี้');
+  const out = await gemCall(env, writePrompt(mode, x, fy)), parsed = writeParse(out.text);
+  c.n++; c.by[u.id] = (c.by[u.id] || 0) + 1;
+  await writeState(env, fy, at, [{ s: 'ai', k: key, v: c }], u);
+  if (!parsed) { console.error('gemini parse', out.finish, out.text.slice(0, 300)); fail(502, out.finish === 'MAX_TOKENS' ? 'ข้อความยาวเกินไป ลองแบ่งให้สั้นลง' : 'Gemini ตอบในรูปแบบที่อ่านไม่ได้ ลองใหม่อีกครั้ง'); }
+  return Object.assign(parsed, { mode, model: out.model, left: 40 - c.by[u.id] });
 }
 const extOf = name => (String(name).split('.').pop() || '').toLowerCase();
 async function upload(req, env, fy) {
