@@ -575,13 +575,13 @@ function writePrompt(mode, x, fy) {
 async function gemCall(env, p) {
   const body = JSON.stringify({ systemInstruction: { parts: [{ text: p.system }] }, contents: [{ role: 'user', parts: [{ text: p.user }] }],
     generationConfig: { temperature: 0.3, maxOutputTokens: 8192, responseMimeType: 'application/json' } });
-  // Several models in turn (missing or overloaded → next); at most ~15 s on Gemini so Workers AI still has time before the platform cuts the request
-  const models = [...new Set([env.GEMINI_MODEL || GEM_DEFAULT, GEM_FALLBACK, GEM_LITE])], end = Date.now() + 15e3;
+  // Several models in turn (missing or overloaded → next); at most ~12 s on Gemini so Workers AI still has time before the platform cuts the request
+  const models = [...new Set([env.GEMINI_MODEL || GEM_DEFAULT, GEM_FALLBACK, GEM_LITE])], end = Date.now() + 12e3;
   let why = '';
   for (const model of models) {
     const left = end - Date.now(); if (left < 3e3) break;
     let r, j;
-    try { r = await fetch(GEM_URL + model + ':generateContent', { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY }, body, signal: AbortSignal.timeout(Math.min(10e3, left)) }); j = await r.json().catch(() => ({})); }
+    try { r = await fetch(GEM_URL + model + ':generateContent', { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY }, body, signal: AbortSignal.timeout(Math.min(8e3, left)) }); j = await r.json().catch(() => ({})); }
     catch (e) { why = model + ' timeout'; console.error('gemini', why); break; }
     if (r.status === 429) fail(429, 'Gemini ถูกใช้เกินโควตาของบัญชี ลองใหม่ภายหลัง', model + ' 429 ' + str((j.error || {}).message).slice(0, 120));
     why = model + ' ' + r.status + ' ' + str(((j.error || {}).status || '') + ' ' + ((j.error || {}).message || '')).slice(0, 160);
