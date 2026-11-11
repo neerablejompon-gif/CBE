@@ -1,0 +1,9 @@
+.git
+node_modules
+tests
+cloudflare
+src
+dev
+server/.env
+server/secrets
+**/*.png.tmp
