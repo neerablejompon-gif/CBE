@@ -2596,6 +2596,7 @@ function writePanel(s, L, ed) {
   }
   if (w && w.undo != null) body += '<p class="small" style="margin:8px 0 0">' + ico('check', 13) + ' ใส่ข้อความแล้ว · <button class="linkbtn" data-act="aiw-undo">ย้อนกลับเป็นข้อความเดิม</button></p>';
   return '<div class="aiw"><div class="aiw-h">' + ico('bolt', 15) + '<b>ผู้ช่วยเขียน (Gemini)</b><span class="small muted">ร่างให้ ท่านตรวจทานและตัดสินใจเอง</span></div>' +
+    (API.writeFree ? '<p class="small warn" style="margin:0 0 8px">' + ico('info', 13) + ' ใช้ Gemini แบบฟรี: ข้อความที่ส่งอาจถูก Google ใช้ปรับปรุงบริการ · ห้ามใส่ข้อมูลส่วนบุคคลหรือข้อมูลลับ</p>' : '') +
     '<div style="display:flex;gap:8px;flex-wrap:wrap">' + btn('draft', 'เรียบเรียงตามค่าเกณฑ์', 'list', !(L.narrative || '').trim(), 'พิมพ์ข้อเท็จจริงสั้น ๆ ก่อน') + btn('guide', 'ปรับจากผลปี ' + ((gg && gg.fy) || CLOSED_FY), 'history', !prev, 'ไม่มีผลปีก่อนของระดับนี้') + btn('gaps', 'ตรวจว่ายังขาดอะไร', 'eye', !(L.narrative || '').trim()) + '</div>' + body + '</div>';
 }
 function curSub(I) { return I.subs[Math.min(S.sub, I.subs.length - 1)]; }

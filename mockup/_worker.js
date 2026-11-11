@@ -17,6 +17,7 @@
 //   CRON_KEY         (secret) shared with the GitHub Actions job that calls /api/notify every morning
 //   GUIDE_SHEET_ID   last year's consolidated report (one tab per part) shown as a writing guide (default: the 2569 sheet)
 //   GEMINI_API_KEY   (secret) Google Gemini API key for the reporters' writing assistant (optional; paid tier: data not used for training)
+//   GEMINI_TIER      'paid' hides the free-tier notice (free tier: Google may use the text to improve its products)
 //   GEMINI_MODEL     Gemini model (default gemini-flash-latest) · GEMINI_DAILY_CALLS cap per day (default 800), 40 per person
 //   AI               Workers AI binding (Settings → Bindings) for the กปม. AI pre-check (optional)
 //   AI_MODEL         Workers AI text model (default @cf/google/gemma-4-26b-a4b-it)
@@ -321,7 +322,7 @@ async function boot(req, env, fy) {
     getRanges(env, env.SYSTEM_SHEET_ID, ['log!A2:D']).then(([rows]) => rows.slice(-60).reverse().map(r => ({ t: str(r[0]), who: str(r[2]), what: str(r[3]) })))]);
   const data = {};
   codes.forEach((c, i) => { if (forms[i]) data[c] = forms[i].data; });
-  const api = { write: !!env.GEMINI_API_KEY, me: { role: u.role, ind: u.ind, part: u.part, name: u.name, id: u.id, r: u.r, self: u.role === 'audit' ? u.self : [], roles: u.roles.map((x, i) => ({ r: i, label: roleLabel(x) })) }, state: stateFor(u, st), log, openFrom: openFrom(), line: await lineStatus(env, u.id) };
+  const api = { write: !!env.GEMINI_API_KEY, writeFree: env.GEMINI_TIER !== 'paid', me: { role: u.role, ind: u.ind, part: u.part, name: u.name, id: u.id, r: u.r, self: u.role === 'audit' ? u.self : [], roles: u.roles.map((x, i) => ({ r: i, label: roleLabel(x) })) }, state: stateFor(u, st), log, openFrom: openFrom(), line: await lineStatus(env, u.id) };
   return `window.CBE_FORMS_${fy}=${JSON.stringify(data, hideRows)};\nwindow.CBE_API=${JSON.stringify(api)};`;
 }
 // FY2569 (closed year) and the indicator seed: the data.js built by tools/forms-to-json.ps1, kept as a Drive file
