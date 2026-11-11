@@ -140,6 +140,28 @@ textarea:disabled, .input:disabled, select:disabled { opacity: .75; cursor: not-
 .btn.primary:hover { background: #1749D6; }
 .btn.ok { color: #fff; border-color: transparent; background: #0B8A60; }
 .btn.danger { color: var(--bad); }
+/* overview charts */
+.org-trend .chart .hz { fill: transparent; cursor: crosshair; } .org-trend .chart .hz:hover { fill: var(--primary-soft); }
+svg rect.mbar { display: inline; } /* chart bars share the class name of the mobile bottom bar */
+.vz { display: flex; flex-direction: column; gap: 2px; }
+.vz-row { display: grid; grid-template-columns: minmax(84px, 128px) minmax(0, 1fr) 54px; align-items: center; gap: 10px; min-height: 30px; padding: 3px 6px; border: 0; background: none; border-radius: 8px; text-align: left; color: inherit; font: inherit; cursor: default; }
+button.vz-row { cursor: pointer; } button.vz-row:hover, button.vz-row:focus-visible { background: var(--primary-soft); }
+.vz-l { font-size: 12.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .vz-l b { color: var(--ink); }
+.vz-t { position: relative; height: 10px; border-radius: 4px; background: var(--field); }
+.vz-f { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: var(--primary); }
+.vz-v { font-size: 12.5px; text-align: right; color: var(--ink); display: inline-flex; gap: 3px; align-items: center; justify-content: flex-end; }
+.vz-v.ok { color: var(--ok); } .vz-v.warn { color: var(--warn); } .vz-v.bad { color: var(--bad); }
+.fc-t { height: 18px; background: none; } .fc-t::before { content: ''; position: absolute; left: 0; right: 0; top: 8px; height: 2px; background: var(--hair); }
+.fc-r { position: absolute; top: 5px; height: 8px; border-radius: 4px; opacity: .35; min-width: 2px; }
+.fc-d { position: absolute; top: 1px; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%; border: 2px solid var(--glass-solid, #fff); }
+.fc-g { position: absolute; top: -1px; width: 2px; height: 20px; margin-left: -1px; background: var(--ink); border-radius: 1px; }
+.fc-r.ok, .fc-d.ok { background: var(--ok); } .fc-r.warn, .fc-d.warn { background: var(--warn); } .fc-r.bad, .fc-d.bad { background: var(--bad); } .fc-r.mute, .fc-d.mute { background: var(--mute); }
+.vz-axis { display: grid; grid-template-columns: minmax(84px, 128px) minmax(0, 1fr) 54px; gap: 10px; padding: 0 6px; }
+.vz-ticks { position: relative; height: 16px; font-size: 11px; color: var(--ink-3); } .vz-ticks span { position: absolute; transform: translateX(-50%); }
+.stk { display: flex; gap: 2px; background: none; height: 12px; }
+.stk-s { height: 100%; border-radius: 3px; min-width: 3px; } .stk-s:first-child { border-radius: 4px 3px 3px 4px; } .stk-s:last-child { border-radius: 3px 4px 4px 3px; }
+.stk-s.ok { background: var(--ok); } .stk-s.info { background: var(--info); } .stk-s.bad { background: var(--bad); } .stk-s.mute { background: color-mix(in srgb, var(--mute) 45%, transparent); }
+.stk-s:hover, .stk-s:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
 .role-pick { display: flex; flex-direction: column; gap: 8px; align-items: stretch; text-align: left; }
 .role-pick .btn { justify-content: flex-start; }
 .guide { margin-top: 12px; border: 1px dashed var(--line, rgba(0,0,0,.15)); border-radius: 12px; background: var(--primary-soft); }
@@ -723,6 +745,8 @@ input.sr:focus-visible + .attach { outline: 2px solid var(--primary); outline-of
   .gain .hb { grid-template-columns: minmax(0, 1fr) 70px 50px; }
   .dv .chart text { font-size: 19px; }
   .dv .chart .mlab:nth-of-type(odd) { display: none; }
+  .org-trend .chart text { font-size: 19px; }
+  .org-trend .chart .mlab:nth-of-type(odd) { display: none; }
   .savebar .btn { flex: 1; }
   .task .acts { justify-content: flex-start; }
   .scoreline div b { font-size: 22px; }
@@ -2092,7 +2116,44 @@ function vOrg() {
       '<div class="panel glass c4"><div class="panel-head"><div><h2>' + (isAudit() ? 'รอตรวจในพื้นที่ผู้ตรวจสอบ' : 'ต่ำกว่าเป้าหมาย') + '</h2><p class="sub">' + (isAudit() ? 'ผลตรวจเบื้องต้นจากระบบ' : 'ตัวชี้วัดที่ต้องติดตาม') + '</p></div></div><div class="alist">' +
         (isAudit() ? (queue.length ? queue.map(function (r) { var cnt = runFor(r.I).res.count; return '<button class="aitem" data-rv="' + r.I.code + '"><span class="ai chip info">' + ico('shield') + '</span><span><p>' + r.I.no + ' ' + esc(r.I.name) + '</p><span class="small"><span class="bad">ต้องแก้ไข ' + cnt.critical + '</span> · <span class="warn">ควรตรวจ ' + cnt.warning + '</span></span></span>' + ico('chev') + '</button>'; }).join('') : '<div class="empty">' + ico('check') + 'ไม่มีงานรอตรวจ</div>')
           : rows.filter(function (r) { return r.I.target != null && r.c.score < r.I.target; }).map(function (r) { return '<button class="aitem" data-ind="' + r.I.code + '"><span class="ai chip warn">' + ico('target') + '</span><span><p>' + r.I.no + ' ' + esc(r.I.name) + '</p><span class="small">' + fmt(r.c.score) + ' จากเป้า ' + fmt(r.I.target) + '</span></span>' + ico('chev') + '</button>'; }).join('') || '<div class="empty">' + ico('check') + 'ทุกตัวชี้วัดถึงเป้า</div>') + '</div></div>' +
+      orgCharts(rows, m) +
       '<div class="panel glass c12"><div class="panel-head"><div><h2>สถานะการส่งรายงานรายเดือน</h2><p class="sub">ปีบัญชี ' + FY + ' · ต.ค. ' + (FY - 1) + ' – ก.ย. ' + FY + '</p></div></div>' + mx + '</div></div></section>';
+}
+// Overview charts: one job each, single scale, status colors always with icon + label, hover tips via data-tip
+function orgCharts(rows, m) {
+  var head = function (t, sub) { return '<div class="panel-head"><div><h2>' + t + '</h2><p class="sub">' + sub + '</p></div></div>'; };
+  var lab = function (I) { return '<span class="vz-l"><b>' + I.no + '</b> ' + esc(I.label) + '</span>'; };
+  // 1) cumulative plan vs result of every indicator together (reuses the indicator chart)
+  var all = { subs: [] }; INDS.forEach(function (I) { all.subs = all.subs.concat(I.subs); });
+  var trend = '<div class="panel glass c8">' + head('ความคืบหน้าสะสมทั้งองค์กร', 'แผนสะสมเทียบผลสะสมของทุกขั้นตอนใน 8 ตัวชี้วัด · แท่ง = ผลที่เพิ่มในเดือน · เส้นประจุด = คาดการณ์ตามอัตราปัจจุบัน') + '<div class="org-trend">' + cumChart(all) + '</div></div>';
+  // 2) evidence completeness per indicator (single series, 0–100%)
+  var ev = '<div class="panel glass c4">' + head('ความครบของหลักฐาน', 'Minimum Requirement ที่มีเอกสารแล้ว') + '<div class="vz">' + rows.map(function (r) {
+    var v = r.c.need ? r.c.has / r.c.need : 0, tip = r.I.no + ' ' + r.I.label + '\nหลักฐาน ' + r.c.has + ' / ' + r.c.need + ' (' + pct(v) + ')';
+    return '<button class="vz-row" data-ind="' + r.I.code + '" data-tip="' + esc(tip) + '" aria-label="' + esc(tip) + '">' + lab(r.I) + '<span class="vz-t"><span class="vz-f" style="width:' + (v * 100).toFixed(1) + '%"></span></span><span class="vz-v num">' + pct(v) + '</span></button>';
+  }).join('') + '</div></div>';
+  // 3) year-end forecast range vs target, one 0–5 axis
+  var X = function (v) { return (Math.max(0, Math.min(5, v || 0)) / 5 * 100).toFixed(2) + '%'; };
+  var fc = '<div class="panel glass c6">' + head('คาดการณ์คะแนนสิ้นปีเทียบเป้าหมาย', 'ช่วง = ต่ำสุด (หลักฐานปัจจุบัน) ถึงสูงสุด (ทำครบตามแผน) · จุด = คาดว่าจะได้ · ขีด = เป้าหมาย') +
+    '<div class="vz">' + rows.map(function (r) {
+      var f = forecast(r.I, m), st = FSTAT[f.status] || { t: 'ไม่มีเป้าหมาย', c: 'mute', i: 'info' }, t = r.I.target;
+      var tip = r.I.no + ' ' + r.I.label + '\nคาดว่าจะได้ ' + fmt(f.likely) + ' (ช่วง ' + fmt(f.low) + '–' + fmt(f.high) + ')' + (t != null ? '\nเป้าหมาย ' + fmt(t) : '') + '\n' + st.t;
+      return '<button class="vz-row" data-ind="' + r.I.code + '" data-tip="' + esc(tip) + '" aria-label="' + esc(tip) + '">' + lab(r.I) + '<span class="vz-t fc-t">' +
+        '<span class="fc-r ' + st.c + '" style="left:' + X(f.low) + ';width:calc(' + X(f.high) + ' - ' + X(f.low) + ')"></span>' +
+        (t != null ? '<i class="fc-g" style="left:' + X(t) + '"></i>' : '') + '<span class="fc-d ' + st.c + '" style="left:' + X(f.likely) + '"></span></span>' +
+        '<span class="vz-v num ' + st.c + '">' + ico(st.i, 13) + fmt(f.likely) + '</span></button>';
+    }).join('') + '<div class="vz-axis"><span></span><span class="vz-ticks">' + [0, 1, 2, 3, 4, 5].map(function (v) { return '<span style="left:' + v * 20 + '%">' + v + '</span>'; }).join('') + '</span><span></span></div></div>' +
+    '<div class="legend">' + ['ok', 'risk', 'miss'].map(function (k) { return '<span class="' + FSTAT[k].c + '">' + ico(FSTAT[k].i, 14) + FSTAT[k].t + '</span>'; }).join('') + '</div></div>';
+  // 4) where every level stands this month (part-to-whole per indicator, status palette)
+  var ORDER = ['done', 'ontrack', 'late', 'wait'];
+  var lv = '<div class="panel glass c6">' + head('สถานะค่าเกณฑ์รายระดับ ณ ' + MONTHS[m], 'สัดส่วนระดับตามสถานะเทียบแผน · ชี้ที่แถบเพื่อดูจำนวน') + '<div class="vz">' + rows.map(function (r) {
+    var n = { done: 0, ontrack: 0, late: 0, wait: 0 }, tot = 0;
+    r.I.subs.forEach(function (sb) { sb.levels.forEach(function (L) { n[lvStatus(L, m)]++; tot++; }); });
+    return '<div class="vz-row">' + lab(r.I) + '<span class="vz-t stk">' + ORDER.map(function (k) {
+      if (!n[k]) return ''; var tip = r.I.no + ' ' + r.I.label + '\n' + STATUS[k].t + ' ' + n[k] + ' จาก ' + tot + ' ระดับ (' + pct(n[k] / tot) + ')';
+      return '<span class="stk-s ' + STATUS[k].c + '" style="flex:' + n[k] + '" tabindex="0" data-tip="' + esc(tip) + '" aria-label="' + esc(tip) + '"></span>';
+    }).join('') + '</span><span class="vz-v num' + (n.late ? ' bad' : '') + '">' + (n.late ? ico('alert', 13) + n.late : '') + '</span></div>';
+  }).join('') + '</div><div class="legend">' + ORDER.map(function (k) { return '<span class="' + STATUS[k].c + '">' + ico(STATUS[k].i, 14) + STATUS[k].t + '</span>'; }).join('') + '<span class="muted small">ตัวเลขท้ายแถว = ระดับที่ล่าช้า</span></div></div>';
+  return trend + ev + fc + lv;
 }
 function kpi(label, icon, val, unit, meta, bar, cls) {
   return '<div class="kpi glass"><div class="lbl">' + ico(icon, 16) + label + '</div><div class="val num">' + val + (unit ? '<small>' + unit + '</small>' : '') + '</div>' +
