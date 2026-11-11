@@ -47,7 +47,7 @@ export default {
       if (path === '/api/save' && req.method === 'POST') return json(await save(req, env, fy, ctx));
       if (path === '/api/guide' && req.method === 'GET') return json(await guide(req, env));
       if (path === '/api/ai/check' && req.method === 'POST') return json(await aiCheck(req, env, fy, ctx));
-      if (path === '/api/line/webhook' && req.method === 'POST') return await lineWebhook(req, env);
+      if (path === '/api/line/webhook' && req.method === 'POST') return await lineWebhook(req, env, fy);
       // config check for setup: booleans only, never values
       if (path === '/api/line/webhook' && req.method === 'GET') return json({ secret: !!env.LINE_CHANNEL_SECRET, token: !!env.LINE_CHANNEL_TOKEN, addUrl: !!env.LINE_ADD_URL, cronKey: !!env.CRON_KEY });
       if (/^\/api\/line\/(code|status|unlink|test)$/.test(path) && req.method === 'POST') return json(await lineApi(req, env, path.slice(10)));
@@ -598,35 +598,54 @@ async function lineApi(req, env, path) {
 const logLine = (env, u, what) => appendRows(env, env.SYSTEM_SHEET_ID, 'log!A:D', [[stamp(), u.id, label(u), what]]);
 
 // Webhook: signature check, then link by code / greet / help
-async function lineWebhook(req, env) {
+async function lineWebhook(req, env, fy) {
   const raw = await req.text(), sig = req.headers.get('x-line-signature') || '';
   if (!env.LINE_CHANNEL_SECRET) fail(503, 'LINE not configured');
   const key = await crypto.subtle.importKey('raw', enc.encode(env.LINE_CHANNEL_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   const want = btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.sign('HMAC', key, enc.encode(raw)))));
   if (!sig || sig !== want) fail(401, 'bad signature');
-  const events = (JSON.parse(raw || '{}').events || []);
+  const events = (JSON.parse(raw || '{}').events || []), origin = new URL(req.url).origin;
   for (const ev of events) {
     const uid = ev.source && ev.source.userId; if (!uid || !ev.replyToken) continue;
-    if (ev.type === 'follow') { await lineReply(env, ev.replyToken, [helpMsg('ยินดีต้อนรับสู่การแจ้งเตือน CBE Reporting System')]); continue; }
-    if (ev.type !== 'message' || !ev.message || ev.message.type !== 'text') continue;
-    const text = ev.message.text.replace(/\s/g, '');
-    if (!/^\d{6}$/.test(text)) { await lineReply(env, ev.replyToken, [helpMsg('พิมพ์รหัส 6 หลักเพื่อเชื่อมต่อบัญชี')]); continue; }
-    const rows = await lineRows(env), r = rows.find(x => x.code === text);
-    if (!r || r.exp < Date.now()) { await lineReply(env, ev.replyToken, [plain(r ? 'รหัสนี้หมดอายุแล้ว กรุณาขอรหัสใหม่จากเมนูบัญชีในระบบ' : 'ไม่พบรหัสนี้ ตรวจสอบตัวเลขอีกครั้ง หรือขอรหัสใหม่จากเมนูบัญชีในระบบ')]); continue; }
-    for (const o of rows) if (o.user === uid && o.id !== r.id) await lineSet(env, Object.assign(o, { user: '', at: '' })); // one LINE account ↔ one employee
-    await lineSet(env, Object.assign(r, { user: uid, at: stamp(), code: '', exp: 0 }));
-    const u = (await system(env)).users[r.id] || { id: r.id, role: '' };
-    await logLine(env, u, 'เชื่อมต่อ LINE');
-    await lineReply(env, ev.replyToken, [flex('เชื่อมต่อ LINE สำเร็จ', bubble({ tone: C.ok, eyebrow: 'เชื่อมต่อสำเร็จ', title: label(u), sub: 'รหัสพนักงาน ' + r.id,
-      body: [txt('คุณจะได้รับการแจ้งเตือนจาก CBE Reporting System ทาง LINE นี้', { wrap: true, color: C.ink }), txt('ยกเลิกได้ที่เมนูบัญชีในระบบ', { size: 'xs', color: C.mute, margin: 'md' })] }))]);
+    try { await lineEvent(env, fy, origin, ev, uid); } catch (e) {
+      console.error('line webhook', e.stack || e);
+      try { await lineReply(env, ev.replyToken, [plain('ระบบขัดข้องชั่วคราว กรุณาลองใหม่อีกครั้ง หรือติดต่อ กองประเมินผล 343')]); } catch (e2) { console.error('line reply', e2.message); }
+    }
   }
   return json({ ok: true });
 }
-const helpMsg = title => flex(title, bubble({ tone: C.blue, eyebrow: 'CBE Reporting System', title, body: [
+// Rich menu sends these words; anything else that is not a 6-digit code gets the help card
+const KEYWORDS = [[/^(สถานะ|สถานะของฉัน|status)$/i, 'status'], [/^(กำหนดส่ง|ปฏิทิน|deadline)$/i, 'deadline'], [/^(ช่วยเหลือ|help|เมนู|menu)$/i, 'help']];
+async function lineEvent(env, fy, origin, ev, uid) {
+  if (ev.type === 'follow') return lineReply(env, ev.replyToken, [helpMsg('ยินดีต้อนรับสู่การแจ้งเตือน CBE Reporting System', origin)]);
+  if (ev.type !== 'message' || !ev.message || ev.message.type !== 'text') return;
+  const text = ev.message.text.replace(/\s/g, ''), kw = (KEYWORDS.find(k => k[0].test(text)) || [])[1];
+  if (kw === 'help') return lineReply(env, ev.replyToken, [helpMsg('ช่วยเหลือ', origin)]);
+  if (kw === 'deadline') return lineReply(env, ev.replyToken, [await deadlineMsg(env, fy, origin)]);
+  if (kw === 'status') {
+    const sys = await system(env), r = (await lineRows(env)).find(x => x.user === uid && sys.users[x.id]);
+    if (!r) return lineReply(env, ev.replyToken, [helpMsg('ยังไม่ได้เชื่อมต่อบัญชี', origin)]);
+    const u = sys.users[r.id], { st } = await loadState(env, fy), m = openFrom();
+    return lineReply(env, ev.replyToken, [u.role === 'reporter' ? await reporterMsg(env, fy, st, u, m, origin, 'status') : await summaryMsg(env, fy, st, m, origin, 'status')]);
+  }
+  if (!/^\d{6}$/.test(text)) return lineReply(env, ev.replyToken, [helpMsg('พิมพ์รหัส 6 หลักเพื่อเชื่อมต่อบัญชี', origin)]);
+  const rows = await lineRows(env), r = rows.find(x => x.code === text);
+  if (!r || r.exp < Date.now()) return lineReply(env, ev.replyToken, [plain(r ? 'รหัสนี้หมดอายุแล้ว กรุณาขอรหัสใหม่จากเมนูบัญชีในระบบ' : 'ไม่พบรหัสนี้ ตรวจสอบตัวเลขอีกครั้ง หรือขอรหัสใหม่จากเมนูบัญชีในระบบ')]);
+  for (const o of rows) if (o.user === uid && o.id !== r.id) await lineSet(env, Object.assign(o, { user: '', at: '' })); // one LINE account ↔ one employee
+  await lineSet(env, Object.assign(r, { user: uid, at: stamp(), code: '', exp: 0 }));
+  const u = (await system(env)).users[r.id] || { id: r.id, role: '' };
+  await logLine(env, u, 'เชื่อมต่อ LINE');
+  return lineReply(env, ev.replyToken, [flex('เชื่อมต่อ LINE สำเร็จ', bubble({ tone: C.ok, eyebrow: 'เชื่อมต่อสำเร็จ', title: label(u), sub: 'รหัสพนักงาน ' + r.id,
+    body: [txt('คุณจะได้รับการแจ้งเตือนจาก CBE Reporting System ทาง LINE นี้', { wrap: true, color: C.ink }), txt('กดเมนูด้านล่างเพื่อดูสถานะงานหรือกำหนดส่งได้ทุกเมื่อ', { size: 'xs', color: C.mute, margin: 'md', wrap: true }), txt('ยกเลิกได้ที่เมนูบัญชีในระบบ', { size: 'xs', color: C.mute, margin: 'sm' })] }))]);
+}
+const helpMsg = (title, url) => flex(title, bubble({ tone: C.blue, eyebrow: 'CBE Reporting System', title, body: [
   txt('วิธีเชื่อมต่อ', { weight: 'bold', color: C.ink }),
   txt('1. เข้าระบบ CBE แล้วกดชื่อของคุณที่มุมขวาบน', { wrap: true, size: 'sm', color: C.ink, margin: 'sm' }),
   txt('2. เลือก "เชื่อมต่อ LINE" แล้วกด "รับรหัส"', { wrap: true, size: 'sm', color: C.ink }),
-  txt('3. ส่งรหัส 6 หลักในแชทนี้ (ใช้ได้ภายใน 10 นาที)', { wrap: true, size: 'sm', color: C.ink })] }));
+  txt('3. ส่งรหัส 6 หลักในแชทนี้ (ใช้ได้ภายใน 10 นาที)', { wrap: true, size: 'sm', color: C.ink }),
+  sep(), txt('คำสั่งในแชท', { weight: 'bold', color: C.ink, margin: 'lg' }),
+  row('สถานะ', 'สรุปงานที่ต้องรายงานและงานล่าช้า'), row('กำหนดส่ง', 'วันส่งรายงานและช่วงกรอกแผน'),
+  sep(), txt('ติดต่อสอบถาม กองประเมินผล โทร 343', { wrap: true, size: 'sm', color: C.mute, margin: 'lg' })], url }));
 const plain = text => ({ type: 'text', text });
 
 async function lineCall(env, path, body, retryKey) {
@@ -695,31 +714,13 @@ async function notify(req, env, fy) {
   const { st } = await loadState(env, fy), out = [];
   const send = async (r, msg, tag) => { out.push({ id: r.id, alt: msg.altText, contents: msg.contents }); if (!dry) await linePush(env, r.user, [msg], tag + '|' + todayIso() + '|' + r.id); };
   const want = j => jobs.includes(j) || (jobs.includes('daily') && ((j === 'monthly' && day === 1) || (j === 'summary' && day === 6) || j === 'closing'));
-  const rm = (fyMonth(bkk()) + 11) % 12, due = `5 ${THAI_MONTHS[bkk().getUTCMonth()]} ${bkk().getUTCFullYear() + 543}`;
+  const rm = (fyMonth(bkk()) + 11) % 12;
   if (want('monthly')) for (const r of links) {
     const u = sys.users[r.id]; if (u.role !== 'reporter') continue;
-    const lv = await levelsOf(env, fy, st, u.ind, u.part);
-    const now = lv.filter(L => dueIn(L.steps, rm) || dueIn(L.gsteps, rm)).map(L => [L.label, (dueIn(L.gsteps, rm) && !dueIn(L.steps, rm) ? '[GAP] ' : '') + L.name]);
-    const late = lv.filter(L => behind(L.steps, rm - 1) || behind(L.gsteps, rm - 1)).map(L => [L.label, L.name + (behind(L.gsteps, rm - 1) ? ' · แผน GAP' : '')]);
-    const wf = st.wf[u.ind];
-    await send(r, flex(`รายงานผลเดือน ${MONTHS[rm]} ครบกำหนด ${due}`, bubble({ tone: C.blue, eyebrow: 'แจ้งเตือนรายงานผลประจำเดือน', title: `รายงานผลเดือน ${MONTHS[rm]}`, sub: `${label(u)} · ครบกำหนด ${due}`,
-      stats: [stat(now.length, 'ระดับที่ต้องรายงาน', C.blue), stat(late.length, 'ล่าช้า/เลยกำหนด', late.length ? C.bad : C.ok)],
-      body: (wf === 'returned' ? [txt('กปม. ส่งกลับรายงานให้แก้ไข', { color: C.bad, weight: 'bold', margin: 'md' })] : [])
-        .concat(listBlock('ค่าเกณฑ์ที่มีแผนเดือน ' + MONTHS[rm], C.blue, now), listBlock('งานล่าช้า / เลยกำหนด', C.bad, late))
-        .concat(now.length || late.length ? [] : [txt('ไม่มีแผนที่ต้องรายงานในเดือนนี้', { color: C.ok, margin: 'md' })]), url: origin })), 'monthly');
+    await send(r, await reporterMsg(env, fy, st, u, rm, origin, 'monthly'), 'monthly');
   }
   if (want('summary')) {
-    const rowsI = [];
-    for (const ind of Object.keys(IND_PARTS)) {
-      const lv = await levelsOf(env, fy, st, ind), plan = lv.filter(L => dueIn(L.steps, rm) || dueIn(L.gsteps, rm)).length, late = lv.filter(L => behind(L.steps, rm) || behind(L.gsteps, rm)).length;
-      rowsI.push({ ind, wf: st.wf[ind] || 'draft', plan, late });
-    }
-    const WFT = { draft: ['ยังไม่ส่ง', C.mute], submitted: ['รอตรวจ', C.blue], approved: ['อนุมัติแล้ว', C.ok], returned: ['ส่งกลับ', C.bad] };
-    const sent = rowsI.filter(x => x.wf === 'submitted' || x.wf === 'approved').length, lateTotal = rowsI.reduce((a, x) => a + x.late, 0);
-    const table = rowsI.map(x => ({ type: 'box', layout: 'horizontal', margin: 'sm', contents: [txt(x.ind, { flex: 3, weight: 'bold', color: C.ink }), txt(WFT[x.wf][0], { flex: 3, color: WFT[x.wf][1], size: 'xs', gravity: 'center' }),
-      txt(x.late ? 'เลยกำหนด ' + x.late : 'ตามแผน', { flex: 4, align: 'end', size: 'xs', color: x.late ? C.bad : C.ok, gravity: 'center' })] }));
-    const msg = flex(`สรุปผลรายเดือน ${MONTHS[rm]}: ส่งแล้ว ${sent}/8 · เลยกำหนด ${lateTotal} ระดับ`, bubble({ tone: C.navy, eyebrow: 'สรุปสำหรับ กปม.', title: `ภาพรวมรายงานเดือน ${MONTHS[rm]}`, sub: 'หลังครบกำหนด ' + due,
-      stats: [stat(sent + '/8', 'ตัวชี้วัดที่ส่งแล้ว', C.blue), stat(lateTotal, 'ระดับเลยกำหนด', lateTotal ? C.bad : C.ok)], body: [sep(), txt('รายตัวชี้วัด', { weight: 'bold', color: C.ink, margin: 'lg' })].concat(table), url: origin, button: 'เปิดภาพรวม CBE' }));
+    const msg = await summaryMsg(env, fy, st, rm, origin, 'monthly');
     for (const r of links) if (sys.users[r.id].role === 'audit') await send(r, msg, 'summary');
   }
   if (want('closing')) for (const k of Object.keys(WIN_NAME)) {
@@ -727,6 +728,49 @@ async function notify(req, env, fy) {
     await broadcastWindow(env, sys, links, k, c, 'closing', origin, send);
   }
   return { ok: true, dry, sent: out.length, messages: dry ? out : undefined };
+}
+// Report for fiscal month m is due on the 5th of the following calendar month
+function dueOf(fy, m) { const d = new Date(Date.UTC(fy - 543 - (m < 3 ? 1 : 0), (m + 9) % 12 + 1, 5)); return { iso: d.toISOString().slice(0, 10), th: `5 ${THAI_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear() + 543}` }; }
+const daysTo = iso => Math.round((Date.parse(iso) - Date.parse(todayIso())) / 864e5);
+const WFT = { draft: ['ยังไม่ส่ง', C.mute], submitted: ['รอ กปม. ตรวจ', C.blue], approved: ['อนุมัติแล้ว', C.ok], returned: ['ส่งกลับให้แก้ไข', C.bad] };
+// One reporter's month: levels planned this month + late ones. mode 'monthly' (day-1 push) or 'status' (rich menu)
+async function reporterMsg(env, fy, st, u, rm, origin, mode) {
+  const lv = await levelsOf(env, fy, st, u.ind, u.part), due = dueOf(fy, rm);
+  const now = lv.filter(L => dueIn(L.steps, rm) || dueIn(L.gsteps, rm)).map(L => [L.label, (dueIn(L.gsteps, rm) && !dueIn(L.steps, rm) ? '[GAP] ' : '') + L.name]);
+  const late = lv.filter(L => behind(L.steps, rm - 1) || behind(L.gsteps, rm - 1)).map(L => [L.label, L.name + (behind(L.gsteps, rm - 1) ? ' · แผน GAP' : '')]);
+  const wf = st.wf[u.ind] || 'draft', left = daysTo(due.iso), status = mode === 'status';
+  const head = status ? [txt('สถานะรายงาน: ' + WFT[wf][0], { color: WFT[wf][1], weight: 'bold', margin: 'md' }), txt(left > 0 ? `เหลืออีก ${left} วันถึงกำหนดส่ง` : left === 0 ? 'ครบกำหนดส่งวันนี้' : `เลยกำหนดส่งมา ${-left} วัน`, { size: 'xs', color: left < 0 && wf !== 'approved' && wf !== 'submitted' ? C.bad : C.mute })]
+    : wf === 'returned' ? [txt('กปม. ส่งกลับรายงานให้แก้ไข', { color: C.bad, weight: 'bold', margin: 'md' })] : [];
+  return flex(`${status ? 'สถานะ' : ''}รายงานผลเดือน ${MONTHS[rm]} ครบกำหนด ${due.th}`, bubble({ tone: C.blue, eyebrow: status ? 'สถานะของฉัน · ' + thDay(todayIso()) : 'แจ้งเตือนรายงานผลประจำเดือน', title: `รายงานผลเดือน ${MONTHS[rm]}`, sub: `${label(u)} · ครบกำหนด ${due.th}`,
+    stats: [stat(now.length, 'ระดับที่ต้องรายงาน', C.blue), stat(late.length, 'ล่าช้า/เลยกำหนด', late.length ? C.bad : C.ok)],
+    body: head.concat(listBlock('ค่าเกณฑ์ที่มีแผนเดือน ' + MONTHS[rm], C.blue, now), listBlock('งานล่าช้า / เลยกำหนด', C.bad, late))
+      .concat(now.length || late.length ? [] : [txt('ไม่มีแผนที่ต้องรายงานในเดือนนี้', { color: C.ok, margin: 'md' })]), url: origin + '/?tab=' + (status ? 'dash' : 'report'), button: status ? 'เปิดงานของฉัน' : 'เปิดหน้ารายงานผล' }));
+}
+// All indicators for กปม./ผู้บริหาร
+async function summaryMsg(env, fy, st, rm, origin, mode) {
+  const rowsI = [];
+  for (const ind of Object.keys(IND_PARTS)) {
+    const lv = await levelsOf(env, fy, st, ind), late = lv.filter(L => behind(L.steps, rm) || behind(L.gsteps, rm)).length;
+    rowsI.push({ ind, wf: st.wf[ind] || 'draft', late });
+  }
+  const n = rowsI.length, sent = rowsI.filter(x => x.wf === 'submitted' || x.wf === 'approved').length, lateTotal = rowsI.reduce((a, x) => a + x.late, 0), status = mode === 'status';
+  const table = rowsI.map(x => ({ type: 'box', layout: 'horizontal', margin: 'sm', contents: [txt(x.ind, { flex: 3, weight: 'bold', color: C.ink }), txt(WFT[x.wf][0], { flex: 4, color: WFT[x.wf][1], size: 'xs', gravity: 'center' }),
+    txt(x.late ? 'เลยกำหนด ' + x.late : 'ตามแผน', { flex: 3, align: 'end', size: 'xs', color: x.late ? C.bad : C.ok, gravity: 'center' })] }));
+  return flex(`สรุปผลรายเดือน ${MONTHS[rm]}: ส่งแล้ว ${sent}/${n} · เลยกำหนด ${lateTotal} ระดับ`, bubble({ tone: C.navy, eyebrow: status ? 'สถานะภาพรวม · ' + thDay(todayIso()) : 'สรุปสำหรับ กปม.', title: `ภาพรวมรายงานเดือน ${MONTHS[rm]}`, sub: (status ? 'กำหนดส่ง ' : 'หลังครบกำหนด ') + dueOf(fy, rm).th,
+    stats: [stat(sent + '/' + n, 'ตัวชี้วัดที่ส่งแล้ว', C.blue), stat(lateTotal, 'ระดับเลยกำหนด', lateTotal ? C.bad : C.ok)], body: [sep(), txt('รายตัวชี้วัด', { weight: 'bold', color: C.ink, margin: 'lg' })].concat(table), url: origin + '/?tab=score', button: 'เปิดภาพรวม CBE' }));
+}
+// Rich menu "กำหนดส่ง": this month's report deadline + plan-entry windows
+async function deadlineMsg(env, fy, origin) {
+  const { st } = await loadState(env, fy), m = openFrom(), due = dueOf(fy, m), left = daysTo(due.iso), t = todayIso();
+  const winRow = k => {
+    const c = st.cfg[k] || {}, open = c.open !== false && (!c.from || t >= c.from) && (!c.to || t <= c.to);
+    const when = c.open === false ? 'ปิดรับการแก้ไข' : c.from && t < c.from ? 'เปิด ' + thDay(c.from) + (c.to ? ' – ' + thDay(c.to) : '') : c.to && t > c.to ? 'ปิดแล้วเมื่อ ' + thDay(c.to) : 'เปิดอยู่' + (c.to ? ' ถึง ' + thDay(c.to) : '');
+    return { type: 'box', layout: 'horizontal', margin: 'md', spacing: 'md', contents: [txt(WIN_NAME[k], { flex: 4, color: C.ink, weight: 'bold', wrap: true }), txt(when, { flex: 5, size: 'xs', align: 'end', wrap: true, gravity: 'center', color: open ? C.ok : C.mute })] };
+  };
+  return flex(`กำหนดส่งรายงานเดือน ${MONTHS[m]}: ${due.th}`, bubble({ tone: left <= 2 ? C.warn : C.blue, eyebrow: 'กำหนดส่ง · ' + thDay(t), title: `ส่งรายงานเดือน ${MONTHS[m]}`, sub: 'ภายใน ' + due.th,
+    stats: [stat(Math.max(0, left), left > 0 ? 'วันก่อนครบกำหนด' : 'ครบกำหนดวันนี้', left <= 2 ? C.warn : C.blue)],
+    body: [txt('รายงานผลทุกเดือน ภายในวันที่ 5 ของเดือนถัดไป', { size: 'xs', color: C.mute, wrap: true, margin: 'md' }), sep(), txt('ช่วงกรอกแผน', { weight: 'bold', color: C.ink, margin: 'lg' })].concat(Object.keys(WIN_NAME).map(winRow)),
+    url: origin + '/?tab=report', button: 'เปิดหน้ารายงานผล' }));
 }
 // Plan-entry window message to every linked reporter: kind = open | close | closing
 async function broadcastWindow(env, sys, links, k, c, kind, origin, send) {
