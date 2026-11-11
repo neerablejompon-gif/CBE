@@ -140,6 +140,11 @@ textarea:disabled, .input:disabled, select:disabled { opacity: .75; cursor: not-
 .btn.primary:hover { background: #1749D6; }
 .btn.ok { color: #fff; border-color: transparent; background: #0B8A60; }
 .btn.danger { color: var(--bad); }
+.guide { margin-top: 12px; border: 1px dashed var(--line, rgba(0,0,0,.15)); border-radius: 12px; background: var(--primary-soft); }
+.guide > summary { cursor: pointer; padding: 10px 12px; font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+.guide-b { padding: 0 12px 12px; }
+.guide-text mark { background: rgba(255, 196, 0, .35); color: inherit; border-radius: 3px; padding: 0 2px; }
+.guide-ev { margin: 4px 0 0; }
 .ai-tag { display: inline-block; font-size: 10.5px; font-weight: 700; padding: 0 5px; border-radius: 5px; background: var(--primary); color: #fff; vertical-align: 1px; }
 .btn.sm { min-height: 34px; padding: 0 11px; font-size: 13px; }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
@@ -2445,6 +2450,41 @@ function animateDv() {
   });
 }
 
+// Last year's results as a writing guide: fetched once per part from /api/guide (live system only)
+var GUIDE = {};
+function guideFor(s, L) {
+  if (!API || FY !== CUR_FY) return null;
+  var q = s.uid.split('|'), part = q[1], g = GUIDE[part];
+  if (!g) {
+    g = GUIDE[part] = { state: 'loading' };
+    fetch('/api/guide?part=' + encodeURIComponent(part), { credentials: 'same-origin' })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; return j; }); })
+      .then(function (j) { GUIDE[part] = { state: 'ok', fy: j.fy, levels: j.levels || {} }; render(); })
+      .catch(function () { GUIDE[part] = { state: 'err' }; render(); });
+  }
+  return g.state === 'ok' ? { fy: g.fy, L: g.levels[q[2] + '|' + L.level] || null } : { state: g.state };
+}
+// Years and dates are what most often needs changing when last year's text is reused
+function hlDates(t) { return esc(t).replace(/(\d{1,2}\s?(?:ม\.ค\.|ก\.พ\.|มี\.ค\.|เม\.ย\.|พ\.ค\.|มิ\.ย\.|ก\.ค\.|ส\.ค\.|ก\.ย\.|ต\.ค\.|พ\.ย\.|ธ\.ค\.|มกราคม|กุมภาพันธ์|มีนาคม|เมษายน|พฤษภาคม|มิถุนายน|กรกฎาคม|สิงหาคม|กันยายน|ตุลาคม|พฤศจิกายน|ธันวาคม)\s?(?:25)?\d{2}|\d{1,2}\/(?:25)?\d{2}|25[5-7]\d)/g, '<mark>$1</mark>'); }
+function guideMr(g, r, i) {
+  if (!g || !g.mr.length) return null;
+  if (g.mr[i] && coverage(r.req, g.mr[i][0]) >= .3) return g.mr[i];
+  var best = null, bv = .3; g.mr.forEach(function (x) { var v = coverage(r.req, x[0]); if (v > bv) { bv = v; best = x; } });
+  return best;
+}
+function guidePanel(s, L, ed) {
+  var gg = guideFor(s, L); if (!gg) return '';
+  var open = S.guideOpen !== false, g = gg.L;
+  var inner = gg.state === 'loading' ? '<p class="small muted" style="margin:0"><span class="spin" aria-hidden="true"></span> กำลังโหลดผลปีก่อน…</p>'
+    : gg.state === 'err' ? '<p class="small muted" style="margin:0">' + ico('alert', 13) + ' โหลดผลปีก่อนไม่ได้ ลองเปิดหน้านี้ใหม่</p>'
+    : !g || !g.narr ? '<p class="small muted" style="margin:0">ไม่มีผลการดำเนินงานปี ' + gg.fy + ' ของระดับนี้</p>'
+    : '<p class="small warn" style="margin:0 0 8px">' + ico('alert', 13) + ' เป็นผลปี ' + gg.fy + ' ใช้เป็นแนวทางเท่านั้น · ตรวจแก้ปี วันที่ และครั้งที่ประชุมที่ไฮไลต์ให้เป็นของปีนี้</p>' +
+      '<div class="narr-box guide-text">' + hlDates(g.narr) + '</div>' +
+      (g.remark ? '<p class="small" style="margin:8px 0 0"><b>ข้อสังเกต กปม. ปี ' + gg.fy + ':</b> ' + esc(g.remark) + '</p>' : '') +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn sm" data-act="guide-copy">' + ico('file', 14) + 'คัดลอก</button>' +
+      (ed ? '<button class="btn sm" data-act="guide-use"' + ((L.narrative || '').trim() ? ' disabled title="ช่องผลการดำเนินงานมีข้อความแล้ว ใช้คัดลอกแทน"' : '') + '>' + ico('edit', 14) + 'ใช้เป็นร่าง</button>' : '') + '</div>';
+  return '<details class="guide"' + (open ? ' open' : '') + ' data-guide><summary>' + ico('history', 15) + ' ผลปี ' + (gg.fy || CLOSED_FY) + ' ของระดับนี้ (แนวทาง)</summary><div class="guide-b">' + inner + '</div></details>';
+}
 function curSub(I) { return I.subs[Math.min(S.sub, I.subs.length - 1)]; }
 function vReport(I) {
   var m = S.month, s = curSub(I), L = s.levels[Math.min(S.level, s.levels.length - 1)], ed = canEdit(I, s), aud = isAudit();
@@ -2487,11 +2527,11 @@ function vReport(I) {
   else if (sx.g === 'a' && sx.n === 3) body = '<div class="mr">' + (L.mr.length ? L.mr.map(function (r, i) {
       return '<div class="mr-row' + (r.has ? ' has' : '') + '"' + (ed ? ' data-drop="' + i + '"' : '') + '><button class="check" role="checkbox" aria-checked="' + r.has + '" data-mr="' + i + '" aria-label="มีเอกสาร"' + dis + '>' + (r.has ? ico('check', 16) : '') + '</button><div style="min-width:0"><p>' + esc(r.req) + '</p>' +
         '<label class="sr" for="ev' + i + '">ชื่อหลักฐาน</label><textarea id="ev' + i + '" data-ev="' + i + '" rows="1" placeholder="ชื่อไฟล์หลักฐาน"' + dis + '>' + esc(r.evidence) + '</textarea>' +
-        fileChips(s, L, r, i, ed) + '</div></div>';
+        fileChips(s, L, r, i, ed) + (function () { var gg = guideFor(s, L), gm = gg && gg.L && guideMr(gg.L, r, i); return gm && gm[2] ? '<p class="small muted guide-ev">' + ico('history', 13) + ' ปี ' + gg.fy + ': ' + esc(gm[2].slice(0, 300)) + (ed && !(r.evidence || '').trim() ? ' <button class="linkbtn" data-act="guide-ev" data-i="' + i + '">ใช้ชื่อนี้</button>' : '') + '</p>' : ''; })() + '</div></div>';
     }).join('') + (ed ? '<p class="small muted" style="margin:2px 0 0">' + ico('info', 13) + ' PDF, Word, Excel, PowerPoint, JPG, PNG · ไม่เกิน 10 MB ต่อไฟล์ · ลากไฟล์มาวางบนรายการได้ · แนบแล้วระบบติ๊ก "มีเอกสาร" ให้</p>' : '')
     : '<div class="empty" style="padding:12px">ไม่มีรายการ Minimum Requirement</div>') + '</div>';
   else if (sx.g === 'a') body = '<div class="panel-head" style="margin-bottom:8px"><p class="sub" style="margin:0">เรียบเรียงตามค่าเกณฑ์ เพื่อนำไปกรอกในระบบ SEAM</p><button class="btn sm" data-act="copy">คัดลอก</button></div>' +
-      '<label class="sr" for="narr">ผลการดำเนินงาน</label><textarea id="narr" data-f="narrative" rows="9" placeholder="สิ่งที่ดำเนินการ ผลลัพธ์ และเอกสารอ้างอิง"' + dis + '>' + esc(L.narrative) + '</textarea>' +
+      '<label class="sr" for="narr">ผลการดำเนินงาน</label><textarea id="narr" data-f="narrative" rows="9" placeholder="สิ่งที่ดำเนินการ ผลลัพธ์ และเอกสารอ้างอิง"' + dis + '>' + esc(L.narrative) + '</textarea>' + guidePanel(s, L, ed) +
       (aud || L.remark ? '<label class="label" for="rmk">ข้อสังเกต กปม.</label><textarea id="rmk" data-f="remark" rows="3" placeholder="เขียนข้อสังเกตถึงผู้รายงาน"' + (aud ? '' : ' disabled') + '>' + esc(L.remark) + '</textarea>' : '');
   else if (sx.n === 1) body = gapBox(L) +
       '<label class="label">แนวทางปรับปรุง / กิจกรรม</label>' + ((L.action || '').trim() ? '<p class="act-ro">' + esc(L.action) + '</p>' : '<p class="small muted" style="margin:0">ยังไม่ระบุแนวทางปรับปรุง · กำหนดได้ที่หน้าแผนปรับปรุง GAP</p>') +
@@ -3141,6 +3181,14 @@ document.addEventListener('click', function (e) {
     WFS[S.ind] = 'returned'; WF_NOTE[S.ind] = why.trim(); store('wf' + FY, WFS); store('wfnote' + FY, WF_NOTE); S.returning = false; logIt('ส่งกลับ ' + S.ind + ': ' + why.trim()); render(); return toast('ส่งกลับ ' + S.ind + ' ให้ผู้รายงานแก้ไขแล้ว', 'undo');
   }
   if (d.wf) { WFS[S.ind] = d.wf; store('wf' + FY, WFS); logIt((d.wf === 'approved' ? 'อนุมัติผล ' : 'ปลดล็อก ') + S.ind); render(); return toast(d.wf === 'approved' ? 'อนุมัติผล ' + S.ind + ' แล้ว' : 'ปลดล็อก ' + S.ind + ' แล้ว'); }
+  if (d.act === 'guide-copy' || d.act === 'guide-use' || d.act === 'guide-ev') {
+    var cg = curLv(), gg2 = guideFor(cg.s, cg.L), gl = gg2 && gg2.L; if (!gl) return;
+    if (d.act === 'guide-copy') { (navigator.clipboard ? navigator.clipboard.writeText(gl.narr) : Promise.reject()).then(function () { toast('คัดลอกผลปี ' + gg2.fy + ' แล้ว'); }, function () { toast('คัดลอกไม่ได้ เลือกข้อความแล้วกด Ctrl+C', 'alert'); }); return; }
+    if (!canEdit(cg.I, cg.s)) return;
+    if (d.act === 'guide-use') { if ((cg.L.narrative || '').trim()) return toast('ช่องผลการดำเนินงานมีข้อความแล้ว', 'alert'); cg.L.narrative = gl.narr; savePatch(cg.s, cg.L); logIt('ใช้ผลปี ' + gg2.fy + ' เป็นร่าง ' + cg.s.label + ' ระดับ ' + cg.L.level); render(); var nb = $('#narr'); if (nb) nb.focus(); return toast('ใส่ร่างจากปี ' + gg2.fy + ' แล้ว · ตรวจแก้ปีและวันที่ที่ไฮไลต์ด้านล่าง', 'edit'); }
+    var ri = +d.i, rr = cg.L.mr[ri], gm2 = rr && guideMr(gl, rr, ri); if (!gm2 || (rr.evidence || '').trim()) return;
+    rr.evidence = gm2[2]; savePatch(cg.s, cg.L); render(); return toast('ใส่ชื่อหลักฐานจากปี ' + gg2.fy + ' แล้ว แก้ให้ตรงกับเอกสารปีนี้', 'edit');
+  }
   if (d.act === 'copy') { var txt = curLv().L.narrative || ''; (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function () { toast('คัดลอกข้อความสำหรับระบบ SEAM แล้ว'); }, function () { var n2 = $('#narr'); n2.disabled = false; n2.select(); toast('กด Ctrl+C เพื่อคัดลอกข้อความที่เลือก'); }); return; }
   if (d.act === 'demo') return toast('Mockup: การเพิ่มผู้ใช้ทำในระบบจริง', 'info');
 });
@@ -3191,6 +3239,7 @@ function spEdit(t, d) {
   savePatch(c.s, c.L);
   return d.mt ? renderKeep() : render();
 }
+document.addEventListener('toggle', function (e) { if (e.target.matches && e.target.matches('details[data-guide]')) S.guideOpen = e.target.open; }, true);
 document.addEventListener('change', function (e) {
   var t = e.target, d = t.dataset;
   if (d.nm || d.mo || d.tg || d.un || d.cu || d.pl) return spEdit(t, d);
