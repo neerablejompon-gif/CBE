@@ -1,0 +1,12 @@
+# docker compose -f server/docker-compose.yml up -d --build   (run from the repository root)
+services:
+  cbe:
+    build: { context: .., dockerfile: server/Dockerfile }
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      GOOGLE_SA_FILE: /run/secrets/google_sa.json
+    volumes:
+      - ./secrets/google_sa.json:/run/secrets/google_sa.json:ro
+    ports:
+      - "127.0.0.1:8080:8080"   # only nginx on this host talks to it

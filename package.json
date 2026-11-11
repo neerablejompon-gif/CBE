@@ -9,7 +9,9 @@
     "harness": "node dev/build-harness.js",
     "test:e2e": "node dev/build-harness.js && node tests/e2e.js",
     "push": "clasp push",
-    "test:mockup": "node tests/mockup/run-unit.js"
+    "test:mockup": "node tests/mockup/run-unit.js",
+    "test:server": "node tests/server/adapter_test.mjs",
+    "start:server": "node --env-file=server/.env server/index.mjs"
   },
   "devDependencies": {
     "playwright": "^1.47.0"
