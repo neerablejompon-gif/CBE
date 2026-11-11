@@ -1,0 +1,1 @@
+module.exports = (page, sel) => page.$$eval(sel, a => a.map(x => x.tagName + ' ' + (x.type||'') + ' id=' + x.id + ' data=' + JSON.stringify(x.dataset) + ' aria=' + (x.getAttribute('aria-label')||'') + (x.disabled ? ' DISABLED' : '') + ' val=' + (x.value||x.innerText||'').replace(/\s+/g,' ').slice(0,50)).join('\n'));

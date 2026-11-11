@@ -1,0 +1,35 @@
+const fs = require('fs'), vm = require('vm'), assert = require('assert');
+const ctx = vm.createContext({ console, Response, Request, URL, URLSearchParams, crypto, TextEncoder, TextDecoder, atob, btoa });
+vm.runInContext(fs.readFileSync(require('path').join(__dirname, '..', '..', 'mockup', '_worker.js'), 'utf8').replace('export default {', 'var __default = {'), ctx);
+ctx.USERS = [['5199', 'reporter', 'RM', '', 'จอมพล'], ['5199', 'audit', '', '', ''], ['1001', 'reporter', 'DT', '', 'TEST'], ['2001', 'exec', '', '', 'ผบ'], ['3001', 'reporter', 'RM', 'SM', 'ผิด'], ['3002', 'reporter', 'SCM', 'sm', 'ตัวเล็ก'], ['4001', 'reporter', 'RM', 'SM', 'x'], ['4001', 'audit', '', '', 'x']];
+ctx.LOG = [];
+vm.runInContext(`getRanges = async (env, id, r) => r[0].startsWith('users') ? [USERS, []] : [[]]; appendRows = async (e, i, r, v) => { LOG.push(v[0][2] + ' | ' + v[0][3]); };`, ctx);
+const env = { SESSION_SECRET: 'x'.repeat(40), SYSTEM_SHEET_ID: 'S' };
+const O = 'https://cbe.dev', post = (path, body, cookie) => new Request(O + path, { method: 'POST', headers: { origin: O, 'content-type': 'application/json', ...(cookie ? { cookie } : {}) }, body: JSON.stringify(body) });
+const ck = r => r.headers.get('set-cookie').split(';')[0];
+(async () => {
+  const sys = await vm.runInContext('system', ctx)(env), u = sys.users['5199'];
+  assert.strictEqual(u.roles.length, 2); assert.strictEqual(u.role, 'reporter'); assert.strictEqual(u.name, 'จอมพล');
+  assert.strictEqual(sys.users['3002'].part, 'SM'); console.log('✓ two rows → two roles; first row is default; name from first row; part/ind case-insensitive');
+  let r = await vm.runInContext('login', ctx)(post('/api/login', { id: '5199', password: 'cbe@5199' }), env); let j = await r.json();
+  assert.ok(!r.headers.get('set-cookie') && j.choose.length === 2); console.log('✓ multi-role login asks to choose, no cookie yet:', JSON.stringify(j.choose));
+  r = await vm.runInContext('login', ctx)(post('/api/login', { id: '5199', password: 'wrong', r: 1 }), env).catch(e => e); assert.strictEqual(r.status, 401); console.log('✓ wrong password still refused when a role is given');
+  r = await vm.runInContext('login', ctx)(post('/api/login', { id: '5199', password: 'cbe@5199', r: 1 }), env);
+  const c1 = ck(r); let me = await vm.runInContext('me', ctx)(new Request(O, { headers: { cookie: c1 } }), env);
+  assert.strictEqual(me.role, 'audit'); assert.deepStrictEqual(JSON.parse(JSON.stringify(me.self)), ['RM']); console.log('✓ chosen role kept in session: audit, self = [RM] · log:', ctx.LOG.at(-1));
+  const check = (op) => vm.runInContext('check', ctx)(env, 2570, me, { patch: {}, wf: {}, wfnote: {}, tri: {}, trinote: {}, unlock: {}, cfg: {}, ai: {} }, op);
+  for (const op of [{ s: 'wf', k: 'RM', v: 'approved' }, { s: 'wfnote', k: 'RM', v: 'x' }, { s: 'tri', k: 'R1|RM|RM|1.1|1', v: 'confirm' }, { s: 'trinote', k: 'R1|RM|RM|1.1|1', v: 'x' }, { s: 'unlock', k: 'RM|RM|1.1|1', v: true }, { s: 'patch', k: 'RM|RM|1.1|1', v: { remark: 'x' } }])
+    await assert.rejects(check(op), e => e.status === 403 && /กปม. ท่านอื่น/.test(e.message));
+  await check({ s: 'wf', k: 'DT', v: 'approved' }); await check({ s: 'tri', k: 'R1|DT|DT|1.1|1', v: 'confirm' });
+  console.log('✓ as กปม.: own indicator RM blocked for wf/wfnote/tri/trinote/unlock/remark; other indicators allowed');
+  r = await vm.runInContext('switchRole', ctx)(post('/api/role', { r: 0 }, c1), env);
+  me = await vm.runInContext('me', ctx)(new Request(O, { headers: { cookie: ck(r) } }), env);
+  assert.strictEqual(me.role, 'reporter'); assert.strictEqual(me.ind, 'RM'); console.log('✓ switch to reporter RM · log:', ctx.LOG.at(-1));
+  await check({ s: 'patch', k: 'RM|RM|1.1|1', v: { narrative: 'x' } });
+  await assert.rejects(check({ s: 'wf', k: 'RM', v: 'approved' }), e => e.status === 403); console.log('✓ as reporter: edits RM, cannot approve');
+  await assert.rejects(vm.runInContext('switchRole', ctx)(post('/api/role', { r: 5 }, c1), env), e => e.status === 400); console.log('✓ invalid role index refused');
+  r = await vm.runInContext('login', ctx)(post('/api/login', { id: '1001', password: 'cbe@1001' }), env); assert.ok(r.headers.get('set-cookie')); console.log('✓ single-role user logs in directly as before');
+  await assert.rejects(vm.runInContext('login', ctx)(post('/api/login', { id: '3001', password: 'cbe@3001' }), env), e => e.status === 403); console.log('✓ invalid only row (RM/SM) still refused');
+  const s4 = (await vm.runInContext('system', ctx)(env)).users['4001']; assert.strictEqual(s4.roles.length, 1); assert.strictEqual(s4.role, 'audit'); console.log('✓ invalid row dropped when a valid one exists');
+  console.log('ALL PASS');
+})().catch(e => { console.error('FAIL', e); process.exit(1); });
