@@ -335,7 +335,8 @@ async function archive(req, env, code = 'ARCHIVE') {
   if (!f) return js('');
   const meta = await cached('meta:' + f.id, 10 * 60e3, async () => (await g(env, `${DRIVE}${f.id}?fields=md5Checksum,modifiedTime&supportsAllDrives=true`)).json());
   const etag = '"' + (meta.md5Checksum || meta.modifiedTime || f.id) + '"', head = { 'cache-control': 'private, no-cache', etag, vary: 'Cookie' };
-  if ((req.headers.get('if-none-match') || '') === etag) return new Response(null, { status: 304, headers: head });
+  // Cloudflare weakens the ETag when it compresses (W/"…"), so compare without the W/ prefix
+  if ((req.headers.get('if-none-match') || '').split(',').some(t => t.trim().replace(/^W\//, '') === etag)) return new Response(null, { status: 304, headers: head });
   const text = await cached(code + ':' + f.id + ':' + etag, 3600e3, async () => (await g(env, `${DRIVE}${f.id}?alt=media&supportsAllDrives=true`)).text());
   return new Response(text, { headers: { 'content-type': 'text/javascript; charset=utf-8', ...head } });
 }
