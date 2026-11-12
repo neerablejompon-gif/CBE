@@ -3198,8 +3198,8 @@ function afterLogin(j) {
   };
   var est = 5.3e6; try { est = +localStorage.getItem('cbe:archiveBytes') || est; } catch (e) {}
   set('ok', 'done'); set('ind', 'run'); prog(10);
-  pull('data-' + CUR_FY + '.js', 10, 25, 2e5).then(function () { set('ind', 'done'); set('old', 'run'); })
-    .then(function () { return Promise.all([pull('data.js', 25, 90, est), pull('history.js', 25, 30, 5e5), pull('history-axes.js', 25, 30, 5e5)]); })
+  set('old', 'run');
+  Promise.all([pull('data-' + CUR_FY + '.js', 10, 20, 2e5).then(function () { set('ind', 'done'); }), pull('data.js', 20, 90, est), pull('history.js', 20, 25, 5e5), pull('history-axes.js', 20, 25, 5e5)])
     .then(function () { set('old', 'done'); set('ui', 'run'); prog(96); })
     .catch(function () { /* the app loads the files itself; continue */ })
     .then(function () { location.reload(); });
