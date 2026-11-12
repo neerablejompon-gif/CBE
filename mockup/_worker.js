@@ -239,8 +239,8 @@ async function me(req, env) {
 }
 const label = u => (u.name || roleLabel(u)) + (u.roles && u.roles.length > 1 ? ' (' + roleLabel(u) + ')' : '');
 // One row per (fy, store, key): A fy | B store | C key | D JSON value | E by | F at
-async function loadState(env, fy) {
-  const [rows] = await getRanges(env, env.SYSTEM_SHEET_ID, ['state!A2:D']), st = {}, at = {};
+async function loadState(env, fy, pre) {
+  const rows = pre || (await getRanges(env, env.SYSTEM_SHEET_ID, ['state!A2:D']))[0], st = {}, at = {};
   STORES.forEach(s => { st[s] = {}; });
   rows.forEach((r, i) => {
     const s = str(r[1]), k = str(r[2]);
@@ -327,11 +327,16 @@ async function levelFolder(env, fy, key) {
 // The app loads this as a plain script: current-year forms + who is signed in + saved state
 async function boot(req, env, fy) {
   const u = await me(req, env), codes = u.role === 'reporter' ? IND_PARTS[u.ind] : Object.values(IND_PARTS).flat();
-  const [forms, { st }, log] = await Promise.all([Promise.all(codes.map(c => form(env, fy, c))), loadState(env, fy),
-    getRanges(env, env.SYSTEM_SHEET_ID, ['log!A2:D']).then(([rows]) => rows.slice(-60).reverse().map(r => ({ t: str(r[0]), who: str(r[2]), what: str(r[3]) })))]);
+  // state, log and LINE links in ONE Sheets request: all users share the service account's per-minute read quota
+  const line = !!env.LINE_CHANNEL_TOKEN, ranges = ['state!A2:D', 'log!A2:D'].concat(line ? ['line!A2:E'] : []);
+  const [forms, rows] = await Promise.all([Promise.all(codes.map(c => form(env, fy, c))), getRanges(env, env.SYSTEM_SHEET_ID, ranges)]);
+  const { st } = await loadState(env, fy, rows[0]);
+  const log = rows[1].slice(-60).reverse().map(r => ({ t: str(r[0]), who: str(r[2]), what: str(r[3]) }));
+  const lr = line ? (rows[2] || []).find(r => str(r[0]) === u.id) : null;
+  const lineInfo = !line ? { enabled: false } : { enabled: true, linked: !!(lr && str(lr[1])), at: lr && str(lr[1]) ? str(lr[2]) : '', addUrl: env.LINE_ADD_URL || '' };
   const data = {};
   codes.forEach((c, i) => { if (forms[i]) data[c] = forms[i].data; });
-  const api = { write: !!(env.GEMINI_API_KEY || env.AI), writeGemini: !!env.GEMINI_API_KEY, writeFree: env.GEMINI_TIER !== 'paid', me: { role: u.role, ind: u.ind, part: u.part, name: u.name, id: u.id, r: u.r, self: u.role === 'audit' ? u.self : [], roles: u.roles.map((x, i) => ({ r: i, label: roleLabel(x) })) }, state: stateFor(u, st), log, openFrom: openFrom(), line: await lineStatus(env, u.id) };
+  const api = { write: !!(env.GEMINI_API_KEY || env.AI), writeGemini: !!env.GEMINI_API_KEY, writeFree: env.GEMINI_TIER !== 'paid', me: { role: u.role, ind: u.ind, part: u.part, name: u.name, id: u.id, r: u.r, self: u.role === 'audit' ? u.self : [], roles: u.roles.map((x, i) => ({ r: i, label: roleLabel(x) })) }, state: stateFor(u, st), log, openFrom: openFrom(), line: lineInfo };
   return `window.CBE_FORMS_${fy}=${JSON.stringify(data, hideRows)};\nwindow.CBE_API=${JSON.stringify(api)};`;
 }
 // FY2569 (closed year) and the indicator seed: the data.js built by tools/forms-to-json.ps1, kept as a Drive file
