@@ -44,7 +44,7 @@ export default {
       if (path === `/data-${fy}.js`) {
         try { return js(await boot(req, env, fy)); } catch (e) { if (!e.status) throw e; return js('window.CBE_API=' + JSON.stringify(e.status === 401 ? { login: true, error: '' } : { error: e.message }) + ';'); }
       }
-      if (path === '/data.js' || path === '/history.js' || path === '/history-axes.js') { try { return js(await archive(req, env, { '/data.js': 'ARCHIVE', '/history.js': 'HISTORY', '/history-axes.js': 'HISTORY_AXES' }[path])); } catch (e) { if (e.status !== 401) throw e; return js(''); } }
+      if (path === '/data.js' || path === '/history.js' || path === '/history-axes.js') { try { return await archive(req, env, { '/data.js': 'ARCHIVE', '/history.js': 'HISTORY', '/history-axes.js': 'HISTORY_AXES' }[path]); } catch (e) { if (e.status !== 401) throw e; return js(''); } }
       if (path === '/api/login' && req.method === 'POST') return await login(req, env);
       if (path === '/api/logout' && req.method === 'POST') return json({ ok: true }, 200, { 'set-cookie': SESSION + '=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0' });
       if (path === '/api/role' && req.method === 'POST') return await switchRole(req, env);
@@ -129,7 +129,7 @@ async function login(req, env) {
   if (u.roles.length > 1 && !Number.isInteger(b.r)) return json({ choose: u.roles.map((x, i) => ({ r: i, label: roleLabel(x) })), name: u.name });
   const cu = asRole(u, b.r);
   await appendRows(env, env.SYSTEM_SHEET_ID, 'log!A:D', [[stamp(), id, label(cu), 'เข้าสู่ระบบ']]);
-  return json({ ok: true }, 200, { 'set-cookie': await sessionCookie(env, id, cu.r) });
+  return json({ ok: true, name: cu.name, role: roleLabel(cu) }, 200, { 'set-cookie': await sessionCookie(env, id, cu.r) });
 }
 async function sessionCookie(env, id, r) {
   const p = b64url(enc.encode(JSON.stringify({ id, r, exp: Date.now() + SESSION_HOURS * 3600e3 })));
@@ -327,10 +327,17 @@ async function boot(req, env, fy) {
 }
 // FY2569 (closed year) and the indicator seed: the data.js built by tools/forms-to-json.ps1, kept as a Drive file
 // history.js (past TRIS assessment results, row code HISTORY in the forms tab) is served the same way
+// Closed-year files rarely change: the browser keeps them and revalidates with an ETag from Drive's checksum,
+// so a repeat sign-in gets "304 Not Modified" instead of re-downloading ~5 MB (and the worker skips Drive too)
 async function archive(req, env, code = 'ARCHIVE') {
   await me(req, env);
   const f = (await system(env)).forms.find(x => x.code === code);
-  return f ? cached(code + ':' + f.id, 3600e3, async () => (await g(env, `${DRIVE}${f.id}?alt=media&supportsAllDrives=true`)).text()) : '';
+  if (!f) return js('');
+  const meta = await cached('meta:' + f.id, 10 * 60e3, async () => (await g(env, `${DRIVE}${f.id}?fields=md5Checksum,modifiedTime&supportsAllDrives=true`)).json());
+  const etag = '"' + (meta.md5Checksum || meta.modifiedTime || f.id) + '"', head = { 'cache-control': 'private, no-cache', etag, vary: 'Cookie' };
+  if ((req.headers.get('if-none-match') || '') === etag) return new Response(null, { status: 304, headers: head });
+  const text = await cached(code + ':' + f.id + ':' + etag, 3600e3, async () => (await g(env, `${DRIVE}${f.id}?alt=media&supportsAllDrives=true`)).text());
+  return new Response(text, { headers: { 'content-type': 'text/javascript; charset=utf-8', ...head } });
 }
 
 const own = (u, key) => { const [ind, part] = key.split('|'); return u.role === 'reporter' && ind === u.ind && (!u.part || part === u.part); };
