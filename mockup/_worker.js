@@ -337,7 +337,14 @@ async function archive(req, env, code = 'ARCHIVE') {
   const etag = '"' + (meta.md5Checksum || meta.modifiedTime || f.id) + '"', head = { 'cache-control': 'private, no-cache', etag, vary: 'Cookie' };
   // Cloudflare weakens the ETag when it compresses (W/"…"), so compare without the W/ prefix
   if ((req.headers.get('if-none-match') || '').split(',').some(t => t.trim().replace(/^W\//, '') === etag)) return new Response(null, { status: 304, headers: head });
-  const text = await cached(code + ':' + f.id + ':' + etag, 3600e3, async () => (await g(env, `${DRIVE}${f.id}?alt=media&supportsAllDrives=true`)).text());
+  // edge cache shared by every isolate in the data centre (keyed by checksum, so a new upload is a new entry); the Node server has no `caches` and uses memory only
+  const text = await cached(code + ':' + f.id + ':' + etag, 3600e3, async () => {
+    const edge = typeof caches !== 'undefined' && caches.default, key = new Request('https://cbe-archive.internal/' + f.id + '/' + encodeURIComponent(etag));
+    const hit = edge && await edge.match(key).catch(() => null); if (hit) return hit.text();
+    const t = await (await g(env, `${DRIVE}${f.id}?alt=media&supportsAllDrives=true`)).text();
+    if (edge) await edge.put(key, new Response(t, { headers: { 'cache-control': 'public, max-age=604800', 'content-type': 'text/javascript' } })).catch(e => console.error('edge cache', e));
+    return t;
+  });
   return new Response(text, { headers: { 'content-type': 'text/javascript; charset=utf-8', ...head } });
 }
 
