@@ -42,7 +42,10 @@ export default {
     try {
       if (path.startsWith('/tools/') || path.startsWith('/.test/')) return new Response('Not found', { status: 404 });
       if (path === `/data-${fy}.js`) {
-        try { return js(await boot(req, env, fy)); } catch (e) { if (!e.status) throw e; return js('window.CBE_API=' + JSON.stringify(e.status === 401 ? { login: true, error: '' } : { error: e.message }) + ';'); }
+        try { return js(await boot(req, env, fy)); } catch (e) {
+          if (!e.status) { console.error('boot', e.stack || e); return js('window.CBE_API=' + JSON.stringify({ error: 'ระบบโหลดข้อมูลไม่สำเร็จชั่วคราว กรุณาลองใหม่', retry: true }) + ';'); } // never a silent drop back to the sign-in page
+          return js('window.CBE_API=' + JSON.stringify(e.status === 401 ? { login: true, error: '' } : { error: e.message }) + ';');
+        }
       }
       if (path === '/data.js' || path === '/history.js' || path === '/history-axes.js') { try { return await archive(req, env, { '/data.js': 'ARCHIVE', '/history.js': 'HISTORY', '/history-axes.js': 'HISTORY_AXES' }[path]); } catch (e) { if (e.status !== 401) throw e; return js(''); } }
       if (path === '/api/login' && req.method === 'POST') return await login(req, env);
@@ -173,9 +176,15 @@ function driveToken(env) {
     return (await r.json()).access_token;
   });
 }
+// Google caps requests per minute for the one service account every user shares: rate-limit and transient errors are retried twice
 async function g(env, url, { json: body, headers, drive, ...init } = {}) {
-  const r = await fetch(url, { ...init, body: body ? JSON.stringify(body) : init.body,
-    headers: { authorization: 'Bearer ' + await (drive ? driveToken(env) : gToken(env)), ...(body ? { 'content-type': 'application/json' } : {}), ...headers } });
+  let r;
+  for (let n = 0; ; n++) {
+    r = await fetch(url, { ...init, body: body ? JSON.stringify(body) : init.body,
+      headers: { authorization: 'Bearer ' + await (drive ? driveToken(env) : gToken(env)), ...(body ? { 'content-type': 'application/json' } : {}), ...headers } });
+    if (r.ok || n >= 2 || ![429, 500, 502, 503].includes(r.status)) break;
+    await new Promise(z => setTimeout(z, 500 * (n + 1) + Math.random() * 400));
+  }
   if (!r.ok) throw Object.assign(new Error('Google ' + r.status + ' ' + url.split('?')[0] + ': ' + (await r.text()).slice(0, 300)), { google: r.status });
   return r;
 }
