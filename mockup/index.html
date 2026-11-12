@@ -1959,6 +1959,13 @@ function render() {
   var dark = applyTheme();
   if (API && API.login) { $('#root').innerHTML = vLogin(); return; }
   var denied = API && (API.error || (!U && 'บัญชีนี้ยังไม่ได้กำหนดตัวชี้วัด ติดต่อ กปม.'));
+  if (API && API.retry) { // temporary server/Google problem: say so, retry once by itself, never fall back to the sign-in page silently
+    var tried = false; try { tried = sessionStorage.getItem('cbe:retried') === '1'; sessionStorage.setItem('cbe:retried', '1'); } catch (e) {}
+    $('#root').innerHTML = '<main class="boot" role="alert"><img src="assets/cbe-logo.png" width="220" height="83" alt="CBE"><p>' + esc(API.error) + '</p>' + (tried ? '' : '<span class="boot-spin" aria-hidden="true"></span><p class="small muted">กำลังลองใหม่อัตโนมัติ…</p>') + '<button class="btn primary" data-act="reload">' + ico('undo', 16) + 'ลองใหม่</button></main>';
+    if (!tried) setTimeout(function () { location.reload(); }, 2000);
+    return;
+  }
+  try { sessionStorage.removeItem('cbe:retried'); } catch (e) {}
   if (denied) { $('#root').innerHTML = '<main class="login"><div class="login-form glass" style="max-width:560px"><h2>' + ico('lock') + ' เข้าใช้งานไม่ได้</h2><p class="lead">' + esc(denied) + '</p><button class="btn" data-act="logout">เปลี่ยนบัญชี</button></div></main>'; return; }
   if (!window.CBE_FORMS) { $('#root').innerHTML = '<main class="login"><div class="login-form glass" style="max-width:560px"><h2>' + ico('info') + ' ยังไม่มีไฟล์ข้อมูล data.js</h2><p class="lead">data.js สร้างจากแบบฟอร์มรายงานผล Excel และไม่ได้เก็บใน repo สร้างด้วยคำสั่งใน mockup/README.md แล้วเปิดหน้านี้อีกครั้ง</p></div></main>'; return; }
   if (!U) { $('#root').innerHTML = vLogin(); return; }
@@ -3180,7 +3187,7 @@ var LOGIN = null;
 // Signed in: keep the sign-in card, show each loading step, warm the browser cache, then open the app (the reload then reads from cache)
 function afterLogin(j) {
   var f = $('#loginForm'); if (!f) return location.reload();
-  var STEPS = [['ok', 'ตรวจสอบรหัสผ่าน'], ['ind', 'โหลดข้อมูลตัวชี้วัดปี ' + CUR_FY], ['old', 'โหลดข้อมูลย้อนหลังปี ' + CLOSED_FY], ['ui', 'เตรียมหน้าจอ']];
+  var STEPS = [['ok', 'ตรวจสอบรหัสผ่าน'], ['old', 'โหลดข้อมูลย้อนหลังปี ' + CLOSED_FY], ['ui', 'โหลดข้อมูลปี ' + CUR_FY + ' และเตรียมหน้าจอ']];
   f.querySelectorAll(':scope > :not(.lg-card-logo):not(.lg-brand)').forEach(function (el) { el.remove(); });
   f.insertAdjacentHTML('beforeend', '<div class="lg-load" role="status" aria-live="polite"><p class="lg-hi">' + ico('check', 18) + 'สวัสดี <b>' + esc(j.name || '') + '</b>' + (j.role ? ' · ' + esc(j.role) : '') + '</p>' +
     '<ol class="lg-steps">' + STEPS.map(function (x) { return '<li data-s="' + x[0] + '"><span class="ic"></span>' + x[1] + '</li>'; }).join('') + '</ol>' +
@@ -3199,7 +3206,8 @@ function afterLogin(j) {
   var est = 5.3e6; try { est = +localStorage.getItem('cbe:archiveBytes') || est; } catch (e) {}
   set('ok', 'done'); set('ind', 'run'); prog(10);
   set('old', 'run');
-  Promise.all([pull('data-' + CUR_FY + '.js', 10, 20, 2e5).then(function () { set('ind', 'done'); }), pull('data.js', 20, 90, est), pull('history.js', 20, 25, 5e5), pull('history-axes.js', 20, 25, 5e5)])
+  // data-YYYY.js is per-user and never cached, so it is not fetched here (the app loads it once); only the cacheable closed-year files are warmed
+  Promise.all([pull('data.js', 15, 90, est), pull('history.js', 15, 20, 5e5), pull('history-axes.js', 15, 20, 5e5)])
     .then(function () { set('old', 'done'); set('ui', 'run'); prog(96); })
     .catch(function () { /* the app loads the files itself; continue */ })
     .then(function () { location.reload(); });
@@ -3376,6 +3384,7 @@ document.addEventListener('click', function (e) {
     var ri = +d.i, rr = cg.L.mr[ri], gm2 = rr && guideMr(gl, rr, ri); if (!gm2 || (rr.evidence || '').trim()) return;
     rr.evidence = gm2[2]; savePatch(cg.s, cg.L); render(); return toast('ใส่ชื่อหลักฐานจากปี ' + gg2.fy + ' แล้ว แก้ให้ตรงกับเอกสารปีนี้', 'edit');
   }
+  if (d.act === 'reload') return location.reload();
   if (d.act === 'copy') { var txt = curLv().L.narrative || ''; (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function () { toast('คัดลอกข้อความสำหรับระบบ SEAM แล้ว'); }, function () { var n2 = $('#narr'); n2.disabled = false; n2.select(); toast('กด Ctrl+C เพื่อคัดลอกข้อความที่เลือก'); }); return; }
   if (d.act === 'demo') return toast('Mockup: การเพิ่มผู้ใช้ทำในระบบจริง', 'info');
 });
