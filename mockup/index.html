@@ -1353,7 +1353,7 @@ var MONTHS = ['ต.ค.', 'พ.ย.', 'ธ.ค.', 'ม.ค.', 'ก.พ.', 'ม�
 var CUR_FY = 2570, FY = CUR_FY, CLOSED_FY = 2569;
 var STATUS = {
   done: { t: 'เสร็จแล้ว', c: 'ok', i: 'check' }, ontrack: { t: 'ตามแผน', c: 'info', i: 'trend' },
-  late: { t: 'ล่าช้า', c: 'bad', i: 'alert' }, wait: { t: 'ยังไม่ถึงกำหนด', c: 'mute', i: 'clock' }
+  late: { t: 'ล่าช้า', c: 'bad', i: 'alert' }, due: { t: 'รอลงผล', c: 'warn', i: 'clock' }, wait: { t: 'ยังไม่ถึงกำหนด', c: 'mute', i: 'clock' }
 };
 var WF = {
   draft: { t: 'ฉบับร่าง', c: 'mute', i: 'edit' }, submitted: { t: 'รอ กปม. ตรวจ', c: 'info', i: 'send' },
@@ -1369,6 +1369,8 @@ var IND_DEF = [
   { no: '8', code: 'IA', parts: ['IA'] }
 ];
 var PART_NAME = { CM: ['การมุ่งเน้นลูกค้า', 'Customer Management'] };
+// Indicator/part targets approved per fiscal year (2570: วาระ 4.1 แผน CBE ปีบัญชี 2570 · SCM = .5 SM + .5 CM, KM&IM = .4 KM + .6 IM, average of 8 = 2.5050)
+var TARGETS = { 2570: { CG: 2.7695, SP: 2.4962, RM: 2.4950, SM: 2.8025, CM: 1.7101, DT: 2.2500, HCM: 3.0227, KM: 2.3800, IM: 1.5800, IA: 2.8500 } };
 // Past SE-AM results: only RM is known (from the reference mock-up); others are imported by admin
 var HISTORY = { RM: { 2565: 1.94, 2566: 1.98, 2567: 2.115, 2568: 2.29 } };
 var ICONS = {
@@ -1478,7 +1480,7 @@ var SEED = {}; (window.CBE_SEED || []).forEach(function (e) { SEED[e.code] = e; 
 var FORMS_BY = { 2569: window.CBE_FORMS || {}, 2570: window.CBE_FORMS_2570 || {} };
 function arr12(a) { var o = []; for (var i = 0; i < 12; i++) o.push(+((a || [])[i]) || 0); return o; }
 function asArr(x) { return x == null ? [] : Array.isArray(x) ? x : [x]; }
-function buildPart(key, forms) {
+function buildPart(key, forms, fy) {
   // old forms split DT into an IT plan + DT report; the new forms already hold both in one DT form
   var f = forms[key === 'DT' && forms.IT ? 'IT' : key] || { subs: [] }, seed = SEED[key] || {}, extra = key === 'DT' && forms.IT ? forms.DT : null;
   if (!asArr(f.topics).length) f.topics = (FORMS_BY[CLOSED_FY][key] || {}).topics; // new forms carry no topic names (CM has no seed)
@@ -1508,10 +1510,10 @@ function buildPart(key, forms) {
       self: s.score, levels: Object.keys(byLv).sort().map(function (k) { return byLv[k]; }).slice(0, 5) };
   });
   return { key: key, name: (PART_NAME[key] || [seed.name])[0] || f.title, en: (PART_NAME[key] || [0, seed.en])[1] || '', owner: seed.owner || f.owner || 'ผู้รับผิดชอบตัวชี้วัด',
-    target: seed.target != null ? seed.target : f.target, topics: topics, subs: out, assumedWeights: assumed };
+    target: (TARGETS[fy] || {})[key] != null ? TARGETS[fy][key] : seed.target != null ? seed.target : f.target, topics: topics, subs: out, assumedWeights: assumed };
 }
 function buildInds(fy) { return IND_DEF.map(function (d) {
-  var parts = d.parts.map(function (k) { return buildPart(k, FORMS_BY[fy]); }), subs = [], topics = [];
+  var parts = d.parts.map(function (k) { return buildPart(k, FORMS_BY[fy], fy); }), subs = [], topics = [];
   parts.forEach(function (p) {
     Object.keys(p.topics).sort(function (a, b) { return a - b; }).forEach(function (no) {
       var ts = p.subs.filter(function (s) { return s.topic === no; });
@@ -1525,7 +1527,7 @@ function buildInds(fy) { return IND_DEF.map(function (d) {
   parts.forEach(function (p) { var w = sum(p.subs.map(function (s) { return s.weight; })); if (p.target != null) { W += w; WT += w * p.target; } });
   return { fy: fy, no: d.no, code: d.code, label: d.label || d.code, share: d.share || null, name: d.name || parts[0].name, en: d.en || parts[0].en, parts: parts, subs: subs, topics: topics,
     owner: parts.map(function (p) { return p.owner; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).join(' · '),
-    target: d.share && parts.every(function (p) { return p.target != null; }) ? sum(parts.map(function (p) { return d.share[p.key] * p.target; })) : W ? WT / W : null, targetNote: parts.some(function (p) { return p.target == null; }) ? 'เป้าหมายคิดเฉพาะส่วนที่มีค่า' : '',
+    target: d.share && parts.every(function (p) { return p.target != null; }) ? sum(parts.map(function (p) { return d.share[p.key] * p.target; })) : parts.length === 1 ? parts[0].target : W ? WT / W : null, targetNote: parts.some(function (p) { return p.target == null; }) ? 'เป้าหมายคิดเฉพาะส่วนที่มีค่า' : '',
     assumed: parts.some(function (p) { return p.assumedWeights; }) };
 }); }
 var YEARS = {};
@@ -1583,13 +1585,15 @@ function gapArr(L, k) { if (!Array.isArray(L[k]) || L[k].length !== 12) L[k] = [
 /* ---- sub-plans: every step (form, split from the criterion, or added) has a monthly plan; levels and GAP plans weigh steps equally ---- */
 function subStep(c) { return { custom: true, src: c.src || 'own', name: c.n || '', unit: c.u || (c.mo === 'pct' ? '%' : 'ครั้ง'), mode: c.mo === 'pct' ? 'pct' : 'count', target: +c.t || 0, plan: arr12(c.p), result: arr12(c.r) }; }
 function hasPlan(st) { return !!(sum(st.plan) || (!st.custom && st.target)); }
-function stepStat(st, m) { var tg = stTarget(st), cp = cum(st.plan, m), cr = cum(st.result, m); return hasPlan(st) && cr >= tg ? 'done' : cp === 0 ? 'wait' : cr >= cp ? 'ontrack' : 'late'; }
+// Month index of the last report whose deadline (5th of the next month) has passed; a shortfall after it is 'due', not yet 'late'
+function dueTo(m) { return Math.min(m, FY !== CUR_FY ? 11 : openM() - 1); }
+function stepStat(st, m) { var tg = stTarget(st), cp = cum(st.plan, m), cr = cum(st.result, m); return hasPlan(st) && cr >= tg ? 'done' : cp === 0 ? 'wait' : cr >= cp ? 'ontrack' : cr >= cum(st.plan, dueTo(m)) ? 'due' : 'late'; }
 function stepsStat(list, m) {
   var planned = list.filter(hasPlan);
   if (!planned.length) return null;
   if (planned.every(function (st) { return cum(st.result, m) >= stTarget(st); })) return 'done';
-  var p = 0, r = 0; planned.forEach(function (st) { var tg = stTarget(st); p += Math.min(1, cum(st.plan, m) / tg); r += Math.min(1, cum(st.result, m) / tg); });
-  return p === 0 ? 'wait' : r + 1e-9 >= p ? 'ontrack' : 'late';
+  var p = 0, pd = 0, r = 0, d = dueTo(m); planned.forEach(function (st) { var tg = stTarget(st); p += Math.min(1, cum(st.plan, m) / tg); pd += Math.min(1, cum(st.plan, d) / tg); r += Math.min(1, cum(st.result, m) / tg); });
+  return p === 0 ? 'wait' : r + 1e-9 >= p ? 'ontrack' : r + 1e-9 >= pd ? 'due' : 'late';
 }
 function stepsPct(list) { var pl = list.filter(hasPlan); return pl.length ? Math.round(sum(pl.map(function (st) { return Math.min(1, sum(st.result) / stTarget(st)); })) / pl.length * 100) : null; }
 function gapPctOf(L) { var v = stepsPct(L.gsteps || []); return v != null ? v : typeof L.gapPct === 'number' ? L.gapPct : null; }
@@ -1610,7 +1614,7 @@ function reqDocs(L) { return L.mr.filter(function (r) { return !/^เอกส�
 // monthly = the monthly report check (on plan so far is enough); otherwise the level must be finished to count toward the score
 function lvIssues(L, m, monthly) {
   var out = [], ls = lvStatus(L, m);
-  if (monthly ? ls === 'late' : ls !== 'done') out.push('ผลยังไม่ครบตามแผน');
+  if (monthly ? ls === 'late' || ls === 'due' : ls !== 'done') out.push('ผลยังไม่ครบตามแผน');
   if (!L.narrative) out.push('ยังไม่มีผลการดำเนินงาน');
   else if (L.narrative.indexOf('【') >= 0) out.push('ยังมีช่อง 【ระบุ】');
   if (reqDocs(L).some(function (r) { return !r.has; })) out.push('หลักฐานยังไม่ครบ');
@@ -1732,7 +1736,7 @@ function precheck(I, m) {
       var miss = reqDocs(L).filter(function (r) { return !r.has; });
       if (isCl && miss.length) add('R3', s, L, 'ขาด ' + miss.length + ' รายการ เช่น ' + miss[0].req.slice(0, 90));
       if (isCl && L.mr.length && !L.mr.some(function (r) { return r.evidence; })) add('R7', s, L, 'ติ๊กว่ามีเอกสารแต่ไม่มีชื่อไฟล์');
-      if (lvStatus(L, m) === 'late') add('R4', s, L, L.steps.map(function (st) { return cum(st.result, m) + '/' + cum(st.plan, m); }).join(' · ') + ' (ผล/แผนสะสม)');
+      if (/^(late|due)$/.test(lvStatus(L, m))) add('R4', s, L, L.steps.map(function (st) { return cum(st.result, m) + '/' + cum(st.plan, m); }).join(' · ') + ' (ผล/แผนสะสม)');
       if (L.steps.some(function (st) { return st.result.some(function (v, i) { return v && i > m; }); })) add('R10', s, L, 'มีผลหลังเดือน ' + MONTHS[m]);
       if (isCl && L.narrative && L.narrative.length < 120) add('R5', s, L, 'ยาว ' + L.narrative.length + ' ตัวอักษร');
       if (isCl && L.narrative && L.criteria) { var cv = coverage(L.criteria, L.narrative); if (cv < .2) add('R6', s, L, 'ครอบคลุมคำสำคัญของค่าเกณฑ์ ' + pct(cv)); }
@@ -2174,9 +2178,9 @@ function orgCharts(rows, m) {
     }).join('') + '<div class="vz-axis"><span></span><span class="vz-ticks">' + [0, 1, 2, 3, 4, 5].map(function (v) { return '<span style="left:' + v * 20 + '%">' + v + '</span>'; }).join('') + '</span><span></span></div></div>' +
     '<div class="legend">' + ['ok', 'risk', 'miss'].map(function (k) { return '<span class="' + FSTAT[k].c + '">' + ico(FSTAT[k].i, 14) + FSTAT[k].t + '</span>'; }).join('') + '</div></div>';
   // 4) where every level stands this month (part-to-whole per indicator, status palette)
-  var ORDER = ['done', 'ontrack', 'late', 'wait'];
+  var ORDER = ['done', 'ontrack', 'due', 'late', 'wait'];
   var lv = '<div class="panel glass c6">' + head('สถานะค่าเกณฑ์รายระดับ ณ ' + MONTHS[m], 'สัดส่วนระดับตามสถานะเทียบแผน · ชี้ที่แถบเพื่อดูจำนวน') + '<div class="vz">' + rows.map(function (r) {
-    var n = { done: 0, ontrack: 0, late: 0, wait: 0 }, tot = 0;
+    var n = { done: 0, ontrack: 0, due: 0, late: 0, wait: 0 }, tot = 0;
     r.I.subs.forEach(function (sb) { sb.levels.forEach(function (L) { n[lvStatus(L, m)]++; tot++; }); });
     return '<div class="vz-row">' + lab(r.I) + '<span class="vz-t stk">' + ORDER.map(function (k) {
       if (!n[k]) return ''; var tip = r.I.no + ' ' + r.I.label + '\n' + STATUS[k].t + ' ' + n[k] + ' จาก ' + tot + ' ระดับ (' + pct(n[k] / tot) + ')';
@@ -2319,7 +2323,7 @@ function myWork(I, m) {
     var cl = Math.ceil(subScore(s, m)), ok = true;
     s.levels.forEach(function (L) {
       // claimed levels must be complete; unclaimed levels only matter once their plan falls behind (e.g. start of a new year)
-      (L.level <= cl ? lvIssues(L, m, true) : lvStatus(L, m) === 'late' ? ['ผลยังไม่ครบตามแผน'] : []).concat(gapIssues(L, m)).forEach(function (t) {
+      (L.level <= cl ? lvIssues(L, m, true) : /^(late|due)$/.test(lvStatus(L, m)) ? ['ผลยังไม่ครบตามแผน'] : []).concat(gapIssues(L, m)).forEach(function (t) {
         ok = false; (groups[t] = groups[t] || []).push({ s: s, L: L });
         if (!next) next = { s: s, L: L };
       });
@@ -2400,7 +2404,7 @@ function gapPanel(I, m) {
     var pp = gs.length ? Math.round(sum(gs.map(function (st) { return Math.min(1, cum(st.plan, m) / stTarget(st)); })) / gs.length * 100) : 0;
     rows.push({ s: s, L: L, k: k, r: gs.length ? gapPctOf(L) || 0 : 0, p: pp });
   }); });
-  var ord = { late: 0, none: 1, ontrack: 2, wait: 3, done: 4 }, late = rows.filter(function (r) { return r.k === 'late'; }).length, planned = rows.filter(function (r) { return r.k !== 'none'; }).length;
+  var ord = { late: 0, due: 1, none: 2, ontrack: 3, wait: 4, done: 5 }, late = rows.filter(function (r) { return r.k === 'late'; }).length, planned = rows.filter(function (r) { return r.k !== 'none'; }).length;
   rows.sort(function (a, b) { return ord[a.k] - ord[b.k] || b.p - b.r - (a.p - a.r); });
   var NONE = { t: 'ไม่มีแผน', c: 'warn', i: 'clock' };
   var body = rows.slice(0, 6).map(function (r) {
@@ -2935,12 +2939,12 @@ var STEP_GROUPS = { a: 'รายงานผลตามค่าเกณฑ�
 function gapApplies(L) { return !!(L.gap || (L.action || '').trim() || (L.gsteps || []).length); }
 function stepState(L, m) {
   var st = [
-    { g: 'a', n: 1, ic: 'calendar', t: 'ความคืบหน้า', done: !L.steps.length || lvStatus(L, m) !== 'late' },
+    { g: 'a', n: 1, ic: 'calendar', t: 'ความคืบหน้า', done: !L.steps.length || !/^(late|due)$/.test(lvStatus(L, m)) },
     { g: 'a', n: 2, ic: 'report', t: 'ผลการดำเนินงาน', done: !!(L.narrative || '').trim() },
     { g: 'a', n: 3, ic: 'folder', t: 'หลักฐาน', done: reqDocs(L).every(function (r) { return r.has; }) && (!L.mr.length || L.mr.some(function (r) { return r.evidence; })) }
   ];
   if (gapApplies(L)) st.push(
-    { g: 'b', n: 1, ic: 'trend', t: 'ความคืบหน้า', done: (L.gsteps || []).length > 0 && gapStat(L, m) !== 'late' },
+    { g: 'b', n: 1, ic: 'trend', t: 'ความคืบหน้า', done: (L.gsteps || []).length > 0 && !/^(late|due)$/.test(gapStat(L, m)) },
     { g: 'b', n: 2, ic: 'report', t: 'ผลการดำเนินงาน', done: !!(L.gapNote || '').trim() });
   return st;
 }
@@ -2949,7 +2953,7 @@ function gapIssues(L, m) {
   if (!gapApplies(L)) return [];
   var gs = L.gsteps || [], out = [];
   if (!gs.length) return ['ยังไม่มีแผนปรับปรุง GAP'];
-  if (gapStat(L, m) === 'late') out.push('ผลตามแผนปรับปรุง GAP ล่าช้า');
+  if (gapStat(L, m) === 'late') out.push('ผลตามแผนปรับปรุง GAP ล่าช้า'); else if (gapStat(L, m) === 'due') out.push('ยังไม่ลงผลตามแผนปรับปรุง GAP เดือนนี้');
   if (!(L.gapNote || '').trim() && gs.some(function (st) { return cum(st.plan, m) > 0; })) out.push('ยังไม่รายงานผลตามแผนปรับปรุง GAP');
   return out;
 }
