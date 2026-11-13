@@ -365,7 +365,11 @@ async function archive(req, env, code = 'ARCHIVE') {
 }
 
 const own = (u, key) => { const [ind, part] = key.split('|'); return u.role === 'reporter' && ind === u.ind && (!u.part || part === u.part); };
-const editable = (st, ind) => ['draft', 'returned'].includes(st.wf[ind] || 'draft');
+// SCM (SM/CM) and KMIM (KM/IM) are sent and reviewed per part: wf key "IND|PART"; single-part indicators keep "IND"
+const wfKeyOf = (ind, part) => (IND_PARTS[ind] || []).length > 1 && part ? ind + '|' + part : ind;
+const wfOf = (st, ind, part) => st.wf[wfKeyOf(ind, part)] || st.wf[ind] || 'draft';
+const wfInd = (st, ind) => { const a = (IND_PARTS[ind] || [ind]).map(p => wfOf(st, ind, p)); return a.every(x => x === 'approved') ? 'approved' : a.includes('submitted') ? 'submitted' : a.includes('returned') ? 'returned' : 'draft'; };
+const editable = (st, u) => ['draft', 'returned'].includes(wfOf(st, u.ind, u.part));
 // Plan-entry windows (store cfg, set by กปม.): missing = open; dates are Bangkok calendar days YYYY-MM-DD
 const planClosed = (st, k) => { const c = st.cfg[k] || {}, d = new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10); return c.open === false || (c.from && d < c.from) || (c.to && d > c.to); };
 const same12 = (a, b) => { for (let i = 0; i < 12; i++) if ((+(a || [])[i] || 0) !== (+(b || [])[i] || 0)) return false; return true; };
@@ -378,7 +382,7 @@ async function check(env, fy, u, st, op) {
     if (audit && isSelf(u, op.k.split('|')[0])) fail(403, SELF_MSG);
     if (audit && !op.k.endsWith('|self')) { op.v = Object.assign({}, st.patch[op.k] || {}, { remark: String((op.v || {}).remark || '').slice(0, 5000) }); return; }
     if (!own(u, op.k)) fail(403, 'แก้ไขได้เฉพาะส่วนที่รับผิดชอบ');
-    if (!editable(st, u.ind)) fail(409, 'รายงานนี้ส่งตรวจแล้ว แก้ไขได้เมื่อ กปม. ส่งกลับ');
+    if (!editable(st, u)) fail(409, 'รายงานนี้ส่งตรวจแล้ว แก้ไขได้เมื่อ กปม. ส่งกลับ');
     if (op.v && Array.isArray(op.v.res) && !op.k.endsWith('|self') && !st.unlock[op.k]) {
       const old = st.patch[op.k] && st.patch[op.k].res || ((await findLevel(env, fy, op.k)).L || { steps: [] }).steps.map(x => x.result), from = openFrom();
       op.v.res.forEach((r, si) => { for (let i = 0; i < from; i++) if ((+(r || [])[i] || 0) !== (+((old[si] || [])[i]) || 0)) fail(409, `ผลเดือน ${MONTHS[i]} ปิดรอบแล้ว ขอให้ กปม. ปลดล็อกเพื่อแก้ย้อนหลัง`); });
@@ -400,12 +404,12 @@ async function check(env, fy, u, st, op) {
     if (op.v && Array.isArray(op.v.gs) && planClosed(st, 'gap') && plans(op.v.gs) !== plans(prev.gs || (Array.isArray(prev.gapPlan) && prev.gapPlan.some(Number) ? [{ p: prev.gapPlan }] : []))) fail(409, 'ปิดรับการแก้ไขแผนปรับปรุง GAP แล้ว');
   } else if (op.s === 'ai') {
     fail(403, 'ผล AI บันทึกโดยระบบเท่านั้น');
-  } else if (audit && (op.s === 'wf' ? isSelf(u, op.k) : op.s === 'wfnote' ? isSelf(u, op.k.split(':')[0]) : op.s === 'tri' || op.s === 'trinote' ? isSelf(u, op.k.split('|')[1]) : op.s === 'unlock' ? isSelf(u, op.k.split('|')[0]) : false)) {
+  } else if (audit && (op.s === 'wf' ? isSelf(u, op.k.split('|')[0]) : op.s === 'wfnote' ? isSelf(u, op.k.split(':')[0].split('|')[0]) : op.s === 'tri' || op.s === 'trinote' ? isSelf(u, op.k.split('|')[1]) : op.s === 'unlock' ? isSelf(u, op.k.split('|')[0]) : false)) {
     fail(403, SELF_MSG);
   } else if (op.s === 'wf') {
-    if (audit ? !WF.includes(op.v) : !(reporter && op.k === u.ind && op.v === 'submitted' && editable(st, u.ind))) fail(403, 'ไม่มีสิทธิ์เปลี่ยนสถานะรายงานนี้');
+    if (audit ? !WF.includes(op.v) : !(reporter && op.k === wfKeyOf(u.ind, u.part) && op.v === 'submitted' && editable(st, u))) fail(403, 'ไม่มีสิทธิ์เปลี่ยนสถานะรายงานนี้');
   } else if (op.s === 'wfnote') {
-    if (!audit && !(reporter && op.k === u.ind + ':sent')) fail(403, 'ไม่มีสิทธิ์แก้หมายเหตุนี้');
+    if (!audit && !(reporter && op.k === wfKeyOf(u.ind, u.part) + ':sent')) fail(403, 'ไม่มีสิทธิ์แก้หมายเหตุนี้');
   } else if (op.s === 'unlock') {
     if (!audit && !(reporter && op.v == null && op.k.startsWith(u.ind + '|'))) fail(403, 'เฉพาะ กปม. ปลดล็อกได้');
   } else if (!audit) fail(403, 'เฉพาะ กปม.');
@@ -680,7 +684,7 @@ async function upload(req, env, fy) {
   if (!env.FILES_FOLDER_ID) fail(501, 'ยังไม่ได้ตั้งค่าโฟลเดอร์เก็บไฟล์หลักฐาน');
   if (!own(u, key)) fail(403, 'แนบไฟล์ได้เฉพาะส่วนที่รับผิดชอบ');
   if (!FILE_TYPES[ext]) fail(415, 'ไม่รองรับไฟล์ .' + ext);
-  if (!editable((await loadState(env, fy)).st, u.ind)) fail(409, 'รายงานนี้ส่งตรวจแล้ว แก้ไขได้เมื่อ กปม. ส่งกลับ');
+  if (!editable((await loadState(env, fy)).st, u)) fail(409, 'รายงานนี้ส่งตรวจแล้ว แก้ไขได้เมื่อ กปม. ส่งกลับ');
   const data = await req.arrayBuffer();
   if (data.byteLength > MAX_FILE) fail(413, 'ไฟล์ใหญ่กว่า 10 MB');
   const b = 'cbe' + crypto.randomUUID(), meta = { name, parents: [await levelFolder(env, fy, key)], mimeType: FILE_TYPES[ext], description: key + ' · ' + u.id };
@@ -930,7 +934,7 @@ async function reporterMsg(env, fy, st, u, rm, origin, mode) {
   const late = lv.filter(L => behind(L.steps, rm - 1) || behind(L.gsteps, rm - 1)).map(L => [L.label, L.name + (behind(L.gsteps, rm - 1) ? ' · แผน GAP' : '')]);
   const planned = lv.filter(L => allPlanned(L).length), done = planned.filter(levelDone).length;
   const perMonth = MONTHS.map((_, m) => lv.filter(L => dueIn(L.steps, m) || dueIn(L.gsteps, m)).length);
-  const wf = st.wf[u.ind] || 'draft', left = daysTo(due.iso), overdue = left < 0 && wf !== 'approved' && wf !== 'submitted';
+  const wf = wfOf(st, u.ind, u.part), left = daysTo(due.iso), overdue = left < 0 && wf !== 'approved' && wf !== 'submitted';
   const progress = [box('horizontal', [txt('ความคืบหน้าทั้งปี', { weight: 'bold', color: C.ink, flex: 1 }), txt(`${done} / ${planned.length} ระดับ`, { weight: 'bold', color: C.blue, flex: 0, size: 'sm' })]),
     box('vertical', [bar(planned.length ? done / planned.length * 100 : 0)], { margin: 'md' })].concat(columns(perMonth, rm), [txt('จำนวนระดับที่มีแผนแต่ละเดือน', { size: 'xxs', color: C.mute, margin: 'sm' })]);
   const lists = listBlock('มีแผนเดือน ' + MONTHS[rm], C.ink, now, 8, true).concat(listBlock('ล่าช้า / เลยกำหนด', C.bad, late, 8, !now.length));
@@ -946,7 +950,7 @@ async function summaryMsg(env, fy, st, rm, origin, mode) {
   const rowsI = [];
   for (const ind of Object.keys(IND_PARTS)) {
     const lv = await levelsOf(env, fy, st, ind), due = lv.filter(L => allPlanned(L).some(x => cum(x.plan, rm) > 0)), late = due.filter(L => behind(L.steps, rm) || behind(L.gsteps, rm)).length;
-    rowsI.push({ ind, wf: st.wf[ind] || 'draft', late, p: due.length ? (due.length - late) / due.length * 100 : null });
+    rowsI.push({ ind, wf: wfInd(st, ind), late, p: due.length ? (due.length - late) / due.length * 100 : null });
   }
   const n = rowsI.length, sent = rowsI.filter(x => x.wf === 'submitted' || x.wf === 'approved').length, lateTotal = rowsI.reduce((a, x) => a + x.late, 0), status = mode === 'status';
   const CHIP = { draft: ['ยังไม่ส่ง', C.mute], submitted: ['รอตรวจ', C.blue], approved: ['อนุมัติ', C.ok], returned: ['ส่งกลับ', C.bad] };

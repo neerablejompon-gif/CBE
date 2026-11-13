@@ -1598,7 +1598,28 @@ function stepsStat(list, m) {
 function stepsPct(list) { var pl = list.filter(hasPlan); return pl.length ? Math.round(sum(pl.map(function (st) { return Math.min(1, sum(st.result) / stTarget(st)); })) / pl.length * 100) : null; }
 function gapPctOf(L) { var v = stepsPct(L.gsteps || []); return v != null ? v : typeof L.gapPct === 'number' ? L.gapPct : null; }
 function gapStat(L, m) { return stepsStat(L.gsteps || [], m); }
-function wfOf(I) { return I.fy !== CUR_FY ? 'approved' : WFS[I.code] || 'draft'; }
+// SCM (SM/CM) and KM&IM (KM/IM) are sent and reviewed per part (wf key "IND|PART"); a reporter sees their own part,
+// everyone else the indicator as a whole: any part waiting → submitted, all approved → approved
+function wfKey(I, p) { return I.parts.length > 1 && p ? I.code + '|' + p : I.code; }
+function partWf(I, p) { return I.fy !== CUR_FY ? 'approved' : WFS[wfKey(I, p)] || WFS[I.code] || 'draft'; }
+function wfOf(I) {
+  if (I.fy !== CUR_FY) return 'approved';
+  if (I.parts.length < 2) return WFS[I.code] || 'draft';
+  if (U && U.role === 'reporter' && U.ind === I.code && U.part) return partWf(I, U.part);
+  var a = I.parts.map(function (p) { return partWf(I, p.key); });
+  return a.every(function (x) { return x === 'approved'; }) ? 'approved' : a.indexOf('submitted') > -1 ? 'submitted' : a.indexOf('returned') > -1 ? 'returned' : 'draft';
+}
+// wf keys a กปม. action applies to: the parts in state `from` (every part when none is)
+function actKeys(I, from) {
+  if (I.parts.length < 2) return [I.code];
+  var ks = I.parts.filter(function (p) { return partWf(I, p.key) === from; }).map(function (p) { return wfKey(I, p.key); });
+  return ks.length ? ks : I.parts.map(function (p) { return wfKey(I, p.key); });
+}
+function setWf(I, from, v, note) { var ks = actKeys(I, from); ks.forEach(function (k) { WFS[k] = v; if (note != null) WF_NOTE[k] = note; }); store('wf' + FY, WFS); if (note != null) store('wfnote' + FY, WF_NOTE); return ks.map(function (k) { return k.split('|')[1] || k; }).join(', '); }
+function partsWf(I) { return I.parts.length < 2 ? '' : I.parts.map(function (p) { return p.key + ' ' + WF[partWf(I, p.key)].t; }).join(' · '); }
+function retNote(I) { var ks = U.role === 'reporter' ? [wfKey(I, U.part)] : I.parts.length < 2 ? [I.code] : I.parts.filter(function (p) { return partWf(I, p.key) === 'returned'; }).map(function (p) { return wfKey(I, p.key); });
+  return ks.map(function (k) { return WF_NOTE[k] ? (I.parts.length > 1 && U.role !== 'reporter' ? k.split('|')[1] + ': ' : '') + WF_NOTE[k] : ''; }).filter(Boolean).join('\n'); }
+function sentOf(I) { return I.parts.length < 2 ? WF_NOTE[I.code + ':sent'] : I.parts.map(function (p) { return WF_NOTE[wfKey(I, p.key) + ':sent'] || ''; }).sort().pop(); }
 function logIt(what) { LOG.unshift({ t: thDate(new Date()) + ' ' + new Date().toTimeString().slice(0, 5), who: userLabel(), what: what }); LOG = LOG.slice(0, 60); store('log', LOG); if (API) { OUTBOX.log.push(what); schedule(); } }
 applyPatches();
 
@@ -2204,8 +2225,8 @@ function vReview() {
   var tot = { critical: 0, warning: 0 }; rows.forEach(function (r) { if (r.w === 'submitted') { var k = runFor(r.I).res.count; tot.critical += k.critical; tot.warning += k.warning; } });
   // Pane 1: queue
   var queue = rows.map(function (r) {
-    var k = runFor(r.I).res.count, sd = WF_NOTE[r.I.code + ':sent'];
-    return '<button class="q2" data-rv="' + r.I.code + '"' + (r.I === I ? ' aria-current="true"' : '') + '><b>' + r.I.no + ' · ' + esc(r.I.label) + '</b><span class="qm">' + esc(WF[r.w].t) + (sd && r.w !== 'draft' ? ' · ส่ง ' + esc(sd.split(' ').slice(0, 2).join(' ')) : '') + '</span>' +
+    var k = runFor(r.I).res.count, sd = sentOf(r.I), pw = partsWf(r.I);
+    return '<button class="q2" data-rv="' + r.I.code + '"' + (r.I === I ? ' aria-current="true"' : '') + '><b>' + r.I.no + ' · ' + esc(r.I.label) + '</b><span class="qm">' + esc(pw || WF[r.w].t) + (sd && r.w !== 'draft' ? ' · ส่ง ' + esc(sd.split(' ').slice(0, 2).join(' ')) : '') + '</span>' +
       '<span class="qm"><span class="bad">ต้องแก้ ' + k.critical + '</span> · <span class="warn">ควรตรวจ ' + k.warning + '</span></span></button>';
   }).join('');
   // Pane 2: findings
@@ -2293,7 +2314,7 @@ function vInd(I) {
     : w === 'approved' ? '<button class="btn" data-wf="draft">' + ico('undo', 16) + 'ปลดล็อก</button>' : '<span class="chip mute">' + ico('clock') + 'รอผู้รายงานส่งตรวจ</span>';
   var rep = U.role === 'reporter', ov = rep ? 'score' : 'dash';
   var tabs = [['dash', 'ภาพรวมตัวชี้วัด', 'grid'], ['plan', 'แผนการดำเนินงาน', 'calendar'], ['gap', 'แผนปรับปรุง GAP', 'trend'], ['report', 'รายงานผลตามเกณฑ์', 'report'], ['evidence', 'ทะเบียนหลักฐาน', 'folder']];
-  var returned = w === 'returned' && WF_NOTE[I.code] ? '<div class="return-box"><b class="bad" style="display:flex;gap:6px;align-items:center">' + ico('undo', 16) + 'กปม. ส่งกลับให้แก้ไข</b><span style="white-space:pre-line">' + esc(WF_NOTE[I.code]) + '</span></div>' : '';
+  var rn = retNote(I), returned = (w === 'returned' || (I.parts.length > 1 && U.role !== 'reporter')) && rn ? '<div class="return-box"><b class="bad" style="display:flex;gap:6px;align-items:center">' + ico('undo', 16) + 'กปม. ส่งกลับให้แก้ไข</b><span style="white-space:pre-line">' + esc(rn) + '</span></div>' : '';
   // Reporter home carries its own task header; other pages get a two-line header
   if (rep && S.tab === 'dash') return '<section class="view">' + returned + vMyWork(I, c) + '</section>';
   var head = '<div class="ihead glass"' + (rep ? ' style="padding-bottom:20px"' : '') + '><div class="ihead-top"><div style="min-width:0"><h1>' + esc(I.name) + '</h1>' +
@@ -3262,13 +3283,14 @@ document.addEventListener('click', function (e) {
   }
   if (d.act === 'return-findings') {
     var I3 = indBy(S.rv), cf = confirmed(I3);
-    WF_NOTE[I3.code] = 'ข้อค้นพบที่ กปม. ยืนยัน ' + cf.length + ' รายการ:\n' + cf.map(function (f) { return '• ' + f.s.label + (f.L ? ' ระดับ ' + f.L.level : '') + ' – ' + RULES[f.r].t + ' (' + f.detail + ')' + (TRI_NOTE[f.id] ? '\n   กปม.: ' + TRI_NOTE[f.id] : ''); }).join('\n');
-    WFS[I3.code] = 'returned'; store('wf' + FY, WFS); store('wfnote' + FY, WF_NOTE); logIt('ส่งกลับ ' + I3.label + ' พร้อมข้อค้นพบ ' + cf.length + ' รายการ'); render(); return toast('ส่งกลับ ' + I3.label + ' พร้อมข้อค้นพบแล้ว', 'undo');
+    var on3 = actKeys(I3, 'submitted').map(function (k) { return k.split('|')[1]; }), cf3 = cf.filter(function (f) { return I3.parts.length < 2 || on3.indexOf(f.s.part) > -1; });
+    var pt3 = setWf(I3, 'submitted', 'returned', 'ข้อค้นพบที่ กปม. ยืนยัน ' + cf3.length + ' รายการ:\n' + cf3.map(function (f) { return '• ' + f.s.label + (f.L ? ' ระดับ ' + f.L.level : '') + ' – ' + RULES[f.r].t + ' (' + f.detail + ')' + (TRI_NOTE[f.id] ? '\n   กปม.: ' + TRI_NOTE[f.id] : ''); }).join('\n'));
+    logIt('ส่งกลับ ' + I3.label + (I3.parts.length > 1 ? ' (' + pt3 + ')' : '') + ' พร้อมข้อค้นพบ ' + cf3.length + ' รายการ'); render(); return toast('ส่งกลับ ' + I3.label + ' พร้อมข้อค้นพบแล้ว', 'undo');
   }
   if (d.act === 'approve-rv' || d.act === 'force-approve') {
     var I4 = indBy(S.rv);
     if (d.act === 'approve-rv' && confirmed(I4).some(function (f) { return f.sev === 'critical'; })) { S.approveWarn = true; return render(); }
-    S.approveWarn = false; WFS[I4.code] = 'approved'; store('wf' + FY, WFS); logIt('อนุมัติผล ' + I4.label); render(); return toast('อนุมัติผล ' + I4.label + ' แล้ว');
+    S.approveWarn = false; var pt4 = setWf(I4, 'submitted', 'approved'); logIt('อนุมัติผล ' + I4.label + (I4.parts.length > 1 ? ' (' + pt4 + ')' : '')); render(); return toast('อนุมัติผล ' + I4.label + ' แล้ว');
   }
   if (d.act === 'cancel-approve') { S.approveWarn = false; return render(); }
   if (d.ind) return openInd(d.ind);
@@ -3329,8 +3351,9 @@ document.addEventListener('click', function (e) {
     if (!d.confirm) { S.confirmSubmit = true; return render(); }
     S.confirmSubmit = false;
     var I2 = indBy(S.ind), n = myWork(I2, S.month).todo;
-    Object.keys(UNLOCK).forEach(function (k) { if (k.indexOf(I2.code + '|') === 0) delete UNLOCK[k]; }); store('unlock' + FY, UNLOCK);
-    WFS[I2.code] = 'submitted'; WF_NOTE[I2.code + ':sent'] = thDate(new Date()) + ' ' + new Date().toTimeString().slice(0, 5); store('wfnote' + FY, WF_NOTE); delete RUNS[I2.code]; store('wf' + FY, WFS); logIt('ส่งรายงาน ' + I2.code + ' ให้ กปม. ตรวจ' + (n ? ' (ยังไม่พร้อม ' + n + ' ประเด็น)' : '')); render();
+    var k2 = wfKey(I2, U.part);
+    Object.keys(UNLOCK).forEach(function (k) { if (k.indexOf(k2 + '|') === 0) delete UNLOCK[k]; }); store('unlock' + FY, UNLOCK);
+    WFS[k2] = 'submitted'; WF_NOTE[k2 + ':sent'] = thDate(new Date()) + ' ' + new Date().toTimeString().slice(0, 5); store('wfnote' + FY, WF_NOTE); delete RUNS[I2.code]; store('wf' + FY, WFS); logIt('ส่งรายงาน ' + (k2 === I2.code ? I2.code : U.part) + ' ให้ กปม. ตรวจ' + (n ? ' (ยังไม่พร้อม ' + n + ' ประเด็น)' : '')); render();
     return toast(n ? 'ส่งตรวจแล้ว · ยังไม่พร้อม ' + n + ' ประเด็น' : 'ส่งตรวจแล้ว · ล็อกการแก้ไขระหว่างตรวจ', n ? 'alert' : 'send');
   }
   if (d.act === 'ask-return') { S.returning = true; render(); var r = $('#retReason'); if (r) r.focus(); return; }
@@ -3338,9 +3361,9 @@ document.addEventListener('click', function (e) {
   if (d.act === 'confirm-return') {
     var why = ($('#retReason') || {}).value || '';
     if (!why.trim()) { $('#retReason').focus(); return toast('กรุณาระบุเหตุผลการส่งกลับ', 'alert'); }
-    WFS[S.ind] = 'returned'; WF_NOTE[S.ind] = why.trim(); store('wf' + FY, WFS); store('wfnote' + FY, WF_NOTE); S.returning = false; logIt('ส่งกลับ ' + S.ind + ': ' + why.trim()); render(); return toast('ส่งกลับ ' + S.ind + ' ให้ผู้รายงานแก้ไขแล้ว', 'undo');
+    var I5 = indBy(S.ind), pt5 = setWf(I5, 'submitted', 'returned', why.trim()); S.returning = false; logIt('ส่งกลับ ' + S.ind + (I5.parts.length > 1 ? ' (' + pt5 + ')' : '') + ': ' + why.trim()); render(); return toast('ส่งกลับ ' + S.ind + ' ให้ผู้รายงานแก้ไขแล้ว', 'undo');
   }
-  if (d.wf) { WFS[S.ind] = d.wf; store('wf' + FY, WFS); logIt((d.wf === 'approved' ? 'อนุมัติผล ' : 'ปลดล็อก ') + S.ind); render(); return toast(d.wf === 'approved' ? 'อนุมัติผล ' + S.ind + ' แล้ว' : 'ปลดล็อก ' + S.ind + ' แล้ว'); }
+  if (d.wf) { var I6 = indBy(S.ind), pt6 = setWf(I6, d.wf === 'approved' ? 'submitted' : 'approved', d.wf); logIt((d.wf === 'approved' ? 'อนุมัติผล ' : 'ปลดล็อก ') + S.ind + (I6.parts.length > 1 ? ' (' + pt6 + ')' : '')); render(); return toast(d.wf === 'approved' ? 'อนุมัติผล ' + S.ind + ' แล้ว' : 'ปลดล็อก ' + S.ind + ' แล้ว'); }
   if (d.act && d.act.indexOf('aiw-') === 0) {
     var cw = curLv(), kw = lvKey(cw.s, cw.L), w0 = S.aiw && S.aiw.k === kw ? S.aiw : null;
     if (d.act === 'aiw-close') { S.aiw = null; return render(); }
