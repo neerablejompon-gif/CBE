@@ -383,6 +383,11 @@ async function check(env, fy, u, st, op) {
       const old = st.patch[op.k] && st.patch[op.k].res || ((await findLevel(env, fy, op.k)).L || { steps: [] }).steps.map(x => x.result), from = openFrom();
       op.v.res.forEach((r, si) => { for (let i = 0; i < from; i++) if ((+(r || [])[i] || 0) !== (+((old[si] || [])[i]) || 0)) fail(409, `ผลเดือน ${MONTHS[i]} ปิดรอบแล้ว ขอให้ กปม. ปลดล็อกเพื่อแก้ย้อนหลัง`); });
     }
+    // steps the unit added (cs) and GAP steps (gs): booked months stay closed too, compared as monthly totals so adding or removing an empty step is fine
+    if (op.v && !op.k.endsWith('|self') && !st.unlock[op.k]) {
+      const was = st.patch[op.k] || {}, from = openFrom(), tot = (a, i) => (Array.isArray(a) ? a : []).reduce((n, x) => n + (+((x && x.r) || [])[i] || 0), 0);
+      ['cs', 'gs'].forEach(f => { if (Array.isArray(op.v[f])) for (let i = 0; i < from; i++) if (tot(op.v[f], i) !== tot(was[f], i)) fail(409, `ผลเดือน ${MONTHS[i]} ปิดรอบแล้ว ขอให้ กปม. ปลดล็อกเพื่อแก้ย้อนหลัง`); });
+    }
     const prev = st.patch[op.k] || {};
     if (op.v && Array.isArray(op.v.plan) && planClosed(st, 'plan')) {
       const old = prev.plan || ((await findLevel(env, fy, op.k)).L || { steps: [] }).steps.map(x => x.plan);
