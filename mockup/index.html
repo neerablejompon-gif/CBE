@@ -1416,7 +1416,8 @@ var ICONS = {
 function ico(n, s) { s = s || 18; return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + ICONS[n] + '"/></svg>'; }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 function pct(x, d) { return x == null || isNaN(x) ? '–' : (x * 100).toFixed(d || 0) + '%'; }
-function fmt(n, d) { return n == null || isNaN(n) ? '–' : Number(n).toFixed(d == null ? 2 : d); }
+// Scores and targets show 4 decimals like the SE-AM source documents; pass d for counts, % and weights
+function fmt(n, d) { return n == null || isNaN(n) ? '–' : Number(n).toFixed(d == null ? 4 : d); }
 function $(s) { return document.querySelector(s); }
 function sum(a) { return a.reduce(function (x, y) { return x + (+y || 0); }, 0); }
 function cum(a, m) { var s = 0; for (var i = 0; i <= m; i++) s += +a[i] || 0; return s; }
@@ -1750,7 +1751,7 @@ function precheck(I, m) {
   function add(r, s, L, detail) { out.push({ id: r + '|' + s.uid + '|' + (L ? L.level : 0), r: r, sev: RULES[r].sev, s: s, L: L, detail: detail }); if (RULES[r].sev === 'critical' && L) bad[s.uid + L.level] = 1; }
   I.subs.forEach(function (s) {
     var sc = subScore(s, m), sys = subSys(s, m), cl = Math.ceil(sc);
-    if (sc > sys) add('R1', s, s.levels[Math.min(sys, s.levels.length - 1)], 'รายงาน ' + fmt(sc, sc % 1 ? 2 : 0) + ' แต่หลักฐานรองรับถึงระดับ ' + sys);
+    if (sc > sys) add('R1', s, s.levels[Math.min(sys, s.levels.length - 1)], 'รายงาน ' + fmt(sc) + ' แต่หลักฐานรองรับถึงระดับ ' + sys);
     s.levels.forEach(function (L) {
       var isCl = L.level <= cl; if (isCl) claimed++;
       if (isCl && !L.narrative) add('R2', s, L, 'ระดับ ' + L.level + ' ยังว่าง');
@@ -2161,7 +2162,7 @@ function vOrg() {
     '<div class="legend">' + Object.keys(WF).map(function (k) { return '<span class="' + WF[k].c + '">' + ico(WF[k].i, 14) + WF[k].t + '</span>'; }).join('') + '<span>' + (FY === CUR_FY ? ico(NOT_YET.i, 14) + NOT_YET.t : 'ปีบัญชี ' + FY + ' ปิดรอบแล้ว') + '</span></div>';
   var od = Math.floor((new Date() - deadline()) / 864e5);
   return '<section class="view"><div><div class="eyebrow">Core Business Enablers · ปีบัญชี ' + FY + '</div><h1>ภาพรวมผลการประเมิน 8 ตัวชี้วัด</h1><p class="lead">คะแนนเป้าหมายสิ้นปีถ่วงน้ำหนักตาม SE-AM ' + FY + ' เทียบเป้าหมาย สถานะการส่งรายงาน และความพร้อมของหลักฐาน ข้อมูลจากแบบฟอร์มรายงานผล ณ เดือน ' + MONTHS[m] + ' ' + (m < 3 ? FY - 1 : FY) + '</p></div>' +
-    '<div class="bento"><div class="hero"><div style="position:relative;z-index:1"><div class="lbl">คะแนนเฉลี่ย 8 ตัวชี้วัด (คะแนนเป้าหมายสิ้นปี)</div><div class="big num">' + fmt(avg) + '<small>/ 5.00</small></div><div class="meta">เป้าหมายเฉลี่ย ' + fmt(avgT) + ' · ' + (avg >= avgT ? 'สูงกว่าเป้า ' : 'ต่ำกว่าเป้า ') + fmt(Math.abs(avg - avgT)) + ' คะแนน</div>' +
+    '<div class="bento"><div class="hero"><div style="position:relative;z-index:1"><div class="lbl">คะแนนเฉลี่ย 8 ตัวชี้วัด (คะแนนเป้าหมายสิ้นปี)</div><div class="big num">' + fmt(avg) + '<small>/ 5.0000</small></div><div class="meta">เป้าหมายเฉลี่ย ' + fmt(avgT) + ' · ' + (avg >= avgT ? 'สูงกว่าเป้า ' : 'ต่ำกว่าเป้า ') + fmt(Math.abs(avg - avgT)) + ' คะแนน</div>' +
       '<div class="hbar"><span style="width:' + avg / 5 * 100 + '%"></span><i style="left:' + avgT / 5 * 100 + '%"></i></div></div>' +
       '<div class="hero-side"><div><span>ตัวชี้วัดที่ถึงเป้าหมาย</span><b class="num">' + met + '<small> / 8</small></b></div><div><span>คาดว่าถึงเป้า ณ สิ้นปี</span><b class="num">' + INDS.filter(function (I) { return forecast(I, m).status === 'ok'; }).length + '<small> / 8 · เสี่ยง ' + INDS.filter(function (I) { return forecast(I, m).status === 'risk'; }).length + '</small></b></div><div><span>รอบรายงาน ' + MONTHS[m] + ' ครบกำหนด</span><b style="font-size:16px">' + thDate(deadline()) + (od > 0 ? ' · เลย ' + od + ' วัน' : '') + '</b></div></div></div>' +
     '<div class="kpis">' + kpi('รอ กปม. ตรวจ', 'inbox', queue.length, 'ตัวชี้วัด', 'ส่งแล้ว ' + rows.filter(function (r) { return ['submitted', 'approved'].indexOf(wfOf(r.I)) > -1; }).length + '/8 ในรอบนี้') +
@@ -2258,7 +2259,7 @@ function vReview() {
         '<button class="btn sm"' + (isSelfRv(s.uid.split('|')[0]) ? ' disabled' : '') + ' data-tri="dismiss" data-fid="' + esc(f.id) + '" aria-pressed="' + (tri === 'dismiss') + '">' + ico('undo', 15) + 'ไม่เป็นประเด็น <kbd>D</kbd></button>' +
         '<button class="btn sm" data-open="' + s.uid + '|' + (L ? L.level : 1) + '">' + ico('report', 15) + 'เปิดหน้ารายงาน <kbd>O</kbd></button></div>' +
         '<label class="label" for="tnote">หมายเหตุถึงผู้รายงาน (แนบไปกับการส่งกลับ)</label><textarea id="tnote" data-tnote="' + esc(f.id) + '"' + (isSelfRv(s.uid.split('|')[0]) ? ' disabled' : '') + ' rows="2" placeholder="เช่น แนบรายงานการประชุมครั้งที่ 3/2569 เพิ่ม">' + esc(TRI_NOTE[f.id]) + '</textarea></div>' +
-      '<div class="dsec"><h4>คะแนนประเด็นนี้</h4><div class="scoreline"><div><span>เป้าหมายสิ้นปี</span><b class="num">' + fmt(subScore(s, S.month), 2) + '</b></div><div><span>หลักฐานรองรับ</span><b class="num">' + subSys(s, S.month) + '</b></div><div><span>น้ำหนัก</span><b class="num">' + fmt(s.weight, s.weight % 1 ? 2 : 0) + '</b></div></div></div>' +
+      '<div class="dsec"><h4>คะแนนประเด็นนี้</h4><div class="scoreline"><div><span>เป้าหมายสิ้นปี</span><b class="num">' + fmt(subScore(s, S.month)) + '</b></div><div><span>หลักฐานรองรับ</span><b class="num">' + subSys(s, S.month) + '</b></div><div><span>น้ำหนัก</span><b class="num">' + fmt(s.weight, s.weight % 1 ? 2 : 0) + '</b></div></div></div>' +
       (L ? '<div class="dsec"><h4>ค่าเกณฑ์ระดับ ' + L.level + '</h4><p class="criteria clamp" style="font-size:13.5px">' + esc(L.criteria) + '</p></div>' +
         '<div class="dsec"><h4>ผลการดำเนินงานที่ส่งมา</h4>' + (L.narrative ? '<div class="narr-box">' + esc(L.narrative) + '</div>' : '<p class="bad" style="margin:0">ยังไม่มีผลการดำเนินงาน</p>') + '</div>' +
         '<div class="dsec"><h4>หลักฐาน ' + reqDocs(L).filter(function (r) { return r.has; }).length + '/' + reqDocs(L).length + '</h4>' + (L.mr.length ? L.mr.map(function (r) { return '<div class="small" style="display:flex;gap:8px;padding:4px 0"><span class="' + (r.has ? 'ok' : 'bad') + '">' + ico(r.has ? 'check' : 'alert', 15) + '</span><span style="min-width:0">' + esc(r.req.slice(0, 160)) + (r.evidence ? '<br><span class="muted">' + esc(r.evidence.slice(0, 160)) + '</span>' : '') + ((r.files || []).length ? '<br><span class="info">' + ico('clip', 13) + ' ' + r.files.map(function (f) { return esc(f.name); }).join(', ') + '</span>' : '') + '</span></div>'; }).join('') : '<p class="muted small" style="margin:0">ไม่มีรายการ</p>') + '</div>' +
@@ -2391,7 +2392,7 @@ function scoreRing(I, c) {
       '<circle cx="84" cy="84" r="' + R + '" fill="none" stroke="var(--mute-bg)" stroke-width="13"/><circle cx="84" cy="84" r="' + r2 + '" fill="none" stroke="var(--mute-bg)" stroke-width="8"/>' +
       '<circle class="arc" data-kind="ring" data-k="ring:main" data-v="' + (c.score / 5 * 100).toFixed(2) + '" cx="84" cy="84" r="' + R + '" fill="none" stroke="var(--primary)" stroke-width="13" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>' +
       '<circle class="arc" data-kind="ring" data-k="ring:sys" data-v="' + (c.sys / 5 * 100).toFixed(2) + '" cx="84" cy="84" r="' + r2 + '" fill="none" stroke="color-mix(in srgb, var(--primary) 35%, transparent)" stroke-width="8" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>' + tick +
-    '</svg><div class="mid"><div><b>' + countUp('score', c.score, 2) + '</b><span>จาก 5.00</span></div></div></div>' +
+    '</svg><div class="mid"><div><b>' + countUp('score', c.score, 4) + '</b><span>จาก 5.0000</span></div></div></div>' +
     '<div style="display:flex;flex-direction:column;gap:10px;min-width:0"><h2>คะแนนเป้าหมาย ณ สิ้นปีบัญชี</h2><p class="small muted" style="margin:-6px 0 0">คำนวณอัตโนมัติจากคะแนนที่กรอกรายประเด็น' + (I.share ? ' · ' + I.parts.map(function (p) { return p.key + ' ' + Math.round(I.share[p.key] * 100) + '%'; }).join(' + ') : '') + (c.missing ? ' · <span class="warn">ยังไม่กรอก ' + c.missing + ' ประเด็น</span>' : '') + '</p>' + gap +
       '<div class="lg"><span><i class="sw"></i>เป้าหมายสิ้นปี <b class="num">' + fmt(c.score) + '</b></span><span><i class="sw ghost"></i>หลักฐานรองรับ <b class="num">' + fmt(c.sys) + '</b></span><span><i class="sw tg"></i>เป้าหมาย <b class="num">' + fmt(t) + '</b></span></div>' +
       (I.targetNote ? '<p class="small muted" style="margin:0">' + I.targetNote + '</p>' : '') + '</div></div></div>';
@@ -2411,7 +2412,7 @@ function fcRow(k, label, code, f, tg, i) {
 function fcPanel(I) {
   var m = S.month, f = forecast(I, m), st = f.status ? FSTAT[f.status] : null;
   return '<div class="panel glass rise" style="--i:2"><div class="panel-head"><div><h2>คะแนนคาดการณ์ ณ สิ้นปี (ก.ย.)</h2><p class="sub">คาดการณ์จากแผนและผลการดำเนินงาน ณ ' + MONTHS[m] + ' · ไม่ใช่ผลประเมินของผู้ประเมิน</p></div>' + (st ? chip(st) : '') + '</div>' +
-    '<div class="scoreline" style="margin-bottom:12px"><div><span>ต่ำสุด · หลักฐานวันนี้</span><b class="num">' + fmt(f.low) + '</b></div><div><span>คาดการณ์ · ตามความเร็วปัจจุบัน</span><b class="num" style="color:var(--primary)">' + countUp('fc', f.likely, 2) + '</b></div><div><span>สูงสุด · ทำครบตามแผน</span><b class="num">' + fmt(f.high) + '</b></div></div>' +
+    '<div class="scoreline" style="margin-bottom:12px"><div><span>ต่ำสุด · หลักฐานวันนี้</span><b class="num">' + fmt(f.low) + '</b></div><div><span>คาดการณ์ · ตามความเร็วปัจจุบัน</span><b class="num" style="color:var(--primary)">' + countUp('fc', f.likely, 4) + '</b></div><div><span>สูงสุด · ทำครบตามแผน</span><b class="num">' + fmt(f.high) + '</b></div></div>' +
     '<div class="lg" style="margin-bottom:4px"><span><i class="sw ghost"></i>ช่วงต่ำสุด–สูงสุด</span><span><i class="sw" style="width:10px;height:10px;border-radius:50%"></i>คาดการณ์</span>' + (I.target != null ? '<span><i class="sw tg"></i>เป้าหมาย ' + fmt(I.target) + '</span>' : '') + '</div>' +
     '<div class="hbars">' + fcRow('fc:all', I.name, I.label, f, I.target, 0) + (f.parts.length > 1 ? f.parts.map(function (p, i) { return fcRow('fc:' + p.p.key, p.p.name, p.p.key, p, p.p.target, i + 1); }).join('') : '') + '</div>' + ticks5() +
     (f.status === 'miss' ? '<p class="small bad" style="margin:10px 0 0">' + ico('alert', 13) + ' แม้ทำครบทุกขั้นตามแผนก็ยังไม่ถึงเป้า ควรเพิ่มกิจกรรมในแผน</p>' : '') + '</div>';
@@ -2490,7 +2491,7 @@ function vDash(I, c) {
     tops.map(function (o, i) { var x = o.x; return hbRow('topic:' + x.t.id, x.t.name, (multi ? x.t.part + ' ' : '') + x.t.no, x.score, o.sys, t, (multi ? x.t.part + ' ' : '') + x.t.no + ' · ' + x.t.name + '\nเป้าหมายสิ้นปี ' + fmt(x.score) + ' · หลักฐานรองรับ ' + fmt(o.sys) + '\nน้ำหนัก ' + fmt(x.w, 1) + ' · ' + x.t.subs.length + ' ประเด็นย่อย', 'data-topic="' + x.t.id + '"', i); }).join('') + '</div>' + ticks5() + '</div>';
   // 3 · contribution to the total
   var segs = tops.map(function (o, i) { var pts = o.x.w * o.x.score / c.W; return { o: o, pts: pts, i: i }; });
-  var contrib = '<div class="panel glass c5 rise" style="--i:4"><div class="panel-head"><div><h2>ที่มาของคะแนนรวม</h2><p class="sub">แต่ละหัวข้อส่งคะแนนเข้าผลรวม ' + fmt(c.score) + ' / 5.00 เท่าไร</p></div></div>' +
+  var contrib = '<div class="panel glass c5 rise" style="--i:4"><div class="panel-head"><div><h2>ที่มาของคะแนนรวม</h2><p class="sub">แต่ละหัวข้อส่งคะแนนเข้าผลรวม ' + fmt(c.score) + ' / 5.0000 เท่าไร</p></div></div>' +
     '<div class="stack-wrap"><div class="stack" role="img" aria-label="สัดส่วนคะแนนรายหัวข้อ">' + segs.map(function (g) {
       return '<span class="seg" data-k="seg:' + g.o.x.t.id + '" data-v="' + (g.pts / 5 * 100).toFixed(2) + '" style="--d:' + g.i * 80 + 'ms" data-tip="' + esc((multi ? g.o.x.t.part + ' ' : '') + g.o.x.t.no + ' · ' + g.o.x.t.name + '\n' + fmt(g.pts) + ' คะแนน (' + pct(c.score ? g.pts / c.score : 0) + ' ของคะแนนรวม)') + '"></span>';
     }).join('') + '</div>' + (t != null ? '<i class="tgt" style="left:' + t / 5 * 100 + '%"></i>' : '') + '</div>' +
@@ -2503,7 +2504,7 @@ function vDash(I, c) {
   var gmax = gains.length ? gains[0].g : 1;
   var gain = '<div class="panel glass c5 rise gain" style="--i:5"><div class="panel-head"><div><h2>ขยับ 1 ระดับ ได้เพิ่มมากสุด</h2><p class="sub">คะแนนรวมที่เพิ่มถ้าประเด็นนั้นขึ้นอีก 1 ระดับ</p></div></div><div class="hbars">' +
     (gains.length ? gains.map(function (o, i) {
-      var tip = o.s.label + ' · ' + o.s.name + '\nตอนนี้ ' + fmt(subScore(o.s, m), 2) + ' → ระดับ ' + o.lv + '\nคะแนนรวมเพิ่ม +' + fmt(o.g, 2) + ' (น้ำหนัก ' + fmt(o.s.weight, o.s.weight % 1 ? 2 : 0) + ')';
+      var tip = o.s.label + ' · ' + o.s.name + '\nตอนนี้ ' + fmt(subScore(o.s, m)) + ' → ระดับ ' + o.lv + '\nคะแนนรวมเพิ่ม +' + fmt(o.g) + ' (น้ำหนัก ' + fmt(o.s.weight, o.s.weight % 1 ? 2 : 0) + ')';
       return '<button class="hb" data-open="' + o.s.uid + '|' + o.lv + '" data-tip="' + esc(tip) + '" aria-label="' + esc(tip) + '"><span class="lbl"><b>' + esc(o.s.label) + '</b>' + esc(o.s.name) + '</span><span class="track">' + fillBar('gain:' + o.s.uid, o.g / gmax * 100, '', i * 70) + '</span><span class="val">+' + fmt(o.g) + '</span></button>';
     }).join('') : '<div class="empty">' + ico('check') + 'ทุกประเด็นได้ระดับ 5 แล้ว</div>') + '</div></div>';
   // 6 · sub-issue × level map, split into two balanced columns
@@ -2827,8 +2828,8 @@ function planEditor(I, kind) {
   var ed = canEdit(c.I, c.s), ae = ed && winOpen('gap'), sys = subSys(c.s, S.month);
   var first = c.L === c.s.levels[0];
   var tgt = kind === 'gs' ? '' : !first ? '<div class="tg-ro"><span>คะแนนเป้าหมาย ณ สิ้นปีบัญชี · ประเด็น ' + esc(c.s.label) + '</span><b class="num">' + (c.s.self != null ? fmt(+c.s.self) : '–') + '</b>' +
-      '<button class="linkbtn" data-pick="' + esc(c.s.uid) + '|' + c.s.levels[0].level + '">' + ico('edit', 12) + (c.s.self == null ? 'กรอกที่ระดับ ' : 'แก้ที่ระดับ ') + c.s.levels[0].level + '</button></div>' : '<div class="tg-box"><div><label class="label" for="self" style="margin:0">คะแนนเป้าหมาย ณ สิ้นปีบัญชี · ประเด็น ' + esc(c.s.label) + '</label><small class="muted">กรอกครั้งเดียวต่อประเด็น (0.00–5.00) · หลักฐานรองรับตอนนี้ <b class="num">' + sys + '</b>' + (c.I.target != null ? ' · เป้าหมายตัวชี้วัด <b class="num">' + fmt(c.I.target) + '</b>' : '') + '</small></div>' +
-    '<input class="input num" id="self" type="number" min="0" max="5" step="0.01" inputmode="decimal" placeholder="0.00–5.00" value="' + (c.s.self != null ? +c.s.self : '') + '"' + (ed ? '' : ' disabled') + '></div>';
+      '<button class="linkbtn" data-pick="' + esc(c.s.uid) + '|' + c.s.levels[0].level + '">' + ico('edit', 12) + (c.s.self == null ? 'กรอกที่ระดับ ' : 'แก้ที่ระดับ ') + c.s.levels[0].level + '</button></div>' : '<div class="tg-box"><div><label class="label" for="self" style="margin:0">คะแนนเป้าหมาย ณ สิ้นปีบัญชี · ประเด็น ' + esc(c.s.label) + '</label><small class="muted">กรอกครั้งเดียวต่อประเด็น (0.0000–5.0000) · หลักฐานรองรับตอนนี้ <b class="num">' + sys + '</b>' + (c.I.target != null ? ' · เป้าหมายตัวชี้วัด <b class="num">' + fmt(c.I.target) + '</b>' : '') + '</small></div>' +
+    '<input class="input num" id="self" type="number" min="0" max="5" step="0.0001" inputmode="decimal" placeholder="0.0000–5.0000" value="' + (c.s.self != null ? +c.s.self : '') + '"' + (ed ? '' : ' disabled') + '></div>';
   return '<div class="panel glass pe-panel" id="pe-panel"><div class="panel-head"><div style="min-width:0"><div class="pe-eye"><span class="code">' + esc(c.s.label) + '</span><b>ระดับ ' + c.L.level + '</b>' + (kind === 'gs' ? '<span class="sp-tag own">แผนปรับปรุง GAP</span>' : '<span class="sp-tag form">แผนการดำเนินงาน</span>') + '</div><h3 style="margin:4px 0 0">' + esc(c.s.name) + '</h3></div>' +
       '<div class="toolbar"><button class="btn sm" data-open="' + c.s.uid + '|' + c.L.level + '">' + ico('report', 15) + 'ไปหน้ารายงานผล</button><button class="icon-btn" data-pick="" aria-label="ปิดตัวแก้ไขแผน">' + ico('x') + '</button></div></div>' +
     tgt + (kind === 'gs' ? gapBox(c.L) + '<label class="label" for="ac">แนวทางปรับปรุง / กิจกรรม</label><textarea id="ac" class="act-box" data-f="action" rows="3" placeholder="แนวทางปรับปรุงตามข้อเสนอแนะข้างต้น หรือที่ส่วนงานกำหนดเอง"' + (ae ? '' : ' disabled') + '>' + esc(c.L.action) + '</textarea>'
@@ -3142,7 +3143,7 @@ function vHistory(I, c) {
     var tip = a.n + '. ' + a.name + '\n' + years.map(function (yy, k) { return 'ปี ' + yy + ' ' + (vs[k] == null ? '–' : fmt(vs[k], 4)); }).join('\n');
     return '<div class="ax-row" data-tip="' + esc(tip) + '" tabindex="0" aria-label="' + esc(tip) + '"><span class="ax-l"><b class="num">' + a.n + '</b><span>' + esc(a.name) + '</span></span>' +
       '<span class="ax-track"><span class="ax-span" style="left:' + X5(lo) + '%;width:' + (X5(hi) - X5(lo)) + '%"></span>' + vs.map(function (v, k) { return v == null ? '' : '<i class="ax-dot y' + k + '" style="left:' + X5(v) + '%"></i>'; }).join('') + '</span>' +
-      '<span class="ax-v"><b class="num">' + fmt(last, 2) + '</b>' + (d != null && Math.abs(d) >= .005 ? '<small class="' + (d > 0 ? 'ok' : 'bad') + '">' + (d > 0 ? '+' : '') + fmt(d, 2) + '</small>' : '<small class="muted">±0</small>') + '</span></div>';
+      '<span class="ax-v"><b class="num">' + fmt(last) + '</b>' + (d != null && Math.abs(d) >= .005 ? '<small class="' + (d > 0 ? 'ok' : 'bad') + '">' + (d > 0 ? '+' : '') + fmt(d) + '</small>' : '<small class="muted">±0</small>') + '</span></div>';
   }).join('') : '';
   var cmp = '<div class="panel glass c7"><div class="eyebrow">Criteria score</div><div class="panel-head" style="margin-bottom:6px"><div><h2>เปรียบเทียบคะแนนรายประเด็น</h2><p class="sub">ประเด็นประเมินตามรายงาน TRIS · ตัวเลขขวา = ปี ' + (years[years.length - 1] || '') + ' และส่วนต่างจากปี ' + (years[0] || '') + '</p></div>' + pseg + '</div>' +
     (base ? '<div class="lg" style="margin-bottom:4px">' + years.map(function (yy, k) { return '<span><i class="ax-key y' + k + '"></i>ปี ' + yy + '</span>'; }).join('') + '</div>' + dots +
@@ -3475,7 +3476,7 @@ document.addEventListener('change', function (e) {
   if (t.id === 'ruleSel') { S.rule = t.value; S.fid = null; return render(); }
   if (t.id === 'partSel') { S.rpart = t.value; S.fid = null; return render(); }
   if (t.id === 'self') {
-    var c = lvCtx(), raw = t.value.trim(), v = raw === '' ? null : Math.round(Math.min(5, Math.max(0, +raw)) * 100) / 100;
+    var c = lvCtx(), raw = t.value.trim(), v = raw === '' ? null : Math.round(Math.min(5, Math.max(0, +raw)) * 1e4) / 1e4;
     if (!c || !canEdit(c.I, c.s) || (raw !== '' && isNaN(+raw))) return render();
     c.s.self = v; delete RUNS[c.I.code];
     if (v == null) delete P[c.s.uid + '|self']; else P[c.s.uid + '|self'] = v;
