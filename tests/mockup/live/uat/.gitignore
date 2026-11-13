@@ -1,0 +1,8 @@
+*.png
+*.json
+*.jsonl
+*.txt
+*.pdf
+*.exe
+boot_*.js
+j1*
