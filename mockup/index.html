@@ -1433,7 +1433,7 @@ function store(k, v) {
 
 /* ================= live system: _worker.js serves data-2570.js with CBE_API, edits sync to Google Sheets ================= */
 var API = window.CBE_API || null, API_STORES = { patch: 1, wf: 1, wfnote: 1, tri: 1, trinote: 1, unlock: 1, cfg: 1 };
-var OUTBOX = { ops: {}, log: [] }, SENDING = Promise.resolve(), flushT;
+var OUTBOX = { ops: {}, log: [] }, SENDING = Promise.resolve(), flushT, SAVE_FAILS = 0;
 // Send only the keys that changed since the last save; the server checks each one against the user's rights
 function queueDiff(name, obj) {
   var old = API.state[name] || {}, cur = JSON.parse(JSON.stringify(obj || {}));
@@ -1451,11 +1451,13 @@ function flush(leaving) {
   SENDING = SENDING.then(function () {
     return fetch('/api/save', { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin', keepalive: !!leaving,
       body: JSON.stringify({ fy: CUR_FY, ops: ops, log: box.log }) })
-      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; }); })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw { error: j.error, status: r.status }; SAVE_FAILS = 0; }); })
       .catch(function (e) {
-        if (e && e.error) { toast(e.error, 'alert'); return setTimeout(function () { location.reload(); }, 3000); } // refused: reload the saved state
-        Object.keys(box.ops).forEach(function (k) { if (!OUTBOX.ops[k]) OUTBOX.ops[k] = box.ops[k]; }); // offline: keep for the next try
-        OUTBOX.log = box.log.concat(OUTBOX.log); toast('ยังบันทึกไม่ได้ จะลองใหม่อัตโนมัติ', 'alert'); flushT = setTimeout(flush, 5000);
+        // refused by the rules (4xx): reload the saved state · busy/offline (429, 5xx, no answer): keep the edits and try again
+        if (e && e.error && e.status < 500 && e.status !== 429) { toast(e.error, 'alert'); return setTimeout(function () { location.reload(); }, 3000); }
+        Object.keys(box.ops).forEach(function (k) { if (!OUTBOX.ops[k]) OUTBOX.ops[k] = box.ops[k]; });
+        OUTBOX.log = box.log.concat(OUTBOX.log); SAVE_FAILS++;
+        toast('ยังบันทึกไม่ได้ จะลองใหม่อัตโนมัติ', 'alert'); flushT = setTimeout(flush, Math.min(30000, 3000 * SAVE_FAILS) + Math.random() * 2000);
       });
   });
 }

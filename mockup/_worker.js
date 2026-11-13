@@ -66,6 +66,7 @@ export default {
       return env.ASSETS.fetch(req);
     } catch (e) {
       if (!e.status) console.error(e.stack || e);
+      if (!e.status && e.google) return json({ error: 'ระบบไม่ว่างชั่วคราว ลองใหม่อีกครั้ง' }, 503, { 'retry-after': '5' }); // Google busy: the page keeps the edits and retries
       return json({ error: e.status ? e.message : 'ระบบขัดข้อง ลองใหม่อีกครั้ง' }, e.status || 500);
     }
   }
@@ -182,8 +183,9 @@ async function g(env, url, { json: body, headers, drive, ...init } = {}) {
   for (let n = 0; ; n++) {
     r = await fetch(url, { ...init, body: body ? JSON.stringify(body) : init.body,
       headers: { authorization: 'Bearer ' + await (drive ? driveToken(env) : gToken(env)), ...(body ? { 'content-type': 'application/json' } : {}), ...headers } });
-    if (r.ok || n >= 2 || ![429, 500, 502, 503].includes(r.status)) break;
-    await new Promise(z => setTimeout(z, 500 * (n + 1) + Math.random() * 400));
+    // 429 = the service account's per-minute Sheets quota (shared by every user): wait longer than for a 5xx blip
+    if (r.ok || n >= (r.status === 429 ? 4 : 2) || ![429, 500, 502, 503].includes(r.status)) break;
+    await new Promise(z => setTimeout(z, (r.status === 429 ? 1500 * 2 ** n : 500 * (n + 1)) + Math.random() * 600));
   }
   if (!r.ok) throw Object.assign(new Error('Google ' + r.status + ' ' + url.split('?')[0] + ': ' + (await r.text()).slice(0, 300)), { google: r.status });
   return r;
