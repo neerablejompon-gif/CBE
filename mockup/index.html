@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="cbe-build" content="2026-11-11.2">
+<meta name="cbe-build" content="2026-11-17.1">
 <title>CBE Report Platform</title>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png">
@@ -1333,6 +1333,24 @@ td, th, .trow, .pl td, .doc, .lib-head { border-color: var(--hair-in) !important
 .ld-done b { font-size: 16px; color: var(--ink); } .ld-done span { font-size: 12.5px; color: var(--ink-3); }
 .ld-list { margin: 0; padding-left: 20px; font-size: 13.5px; color: var(--ink-2); display: flex; flex-direction: column; gap: 4px; }
 .ld-acts { display: flex; gap: 8px; flex-wrap: wrap; justify-content: space-between; }
+/* ===== password ===== */
+.lg-shell.pw-shell { display: flex !important; justify-content: center; } .pw-shell .lg-card { width: min(440px, 100%); }
+.pwdlg .ld-head > svg { color: var(--primary); }
+.pw-lead { margin: -6px 0 0; font-size: 13.5px; color: rgba(255,255,255,.78); text-align: center; }
+.pw-show { display: flex; gap: 8px; align-items: center; font-size: 13px; cursor: pointer; }
+.signin .pw-show { color: rgba(255,255,255,.82); }
+.pw-rules { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 12.5px; }
+.pw-rules li { display: flex; gap: 6px; align-items: center; color: var(--ink-3); } .pw-rules li.ok { color: var(--ok); }
+.signin .pw-rules li { color: rgba(255,255,255,.6); } .signin .pw-rules li.ok { color: #6EE7B7; }
+.pw-out { background: none; border: 0; color: rgba(255,255,255,.7); font: inherit; font-size: 13px; cursor: pointer; text-decoration: underline; align-self: center; }
+.pwdlg form { display: flex; flex-direction: column; gap: 12px; }
+.pwdlg .lg-label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: var(--ink-2); }
+.pwdlg .lg-input { display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid var(--hair); border-radius: 12px; background: var(--field); color: var(--ink-3); }
+.pwdlg .lg-input input { flex: 1; border: 0; background: none; padding: 11px 0; font: inherit; color: var(--ink); outline: none; min-width: 0; }
+.pwdlg .lg-input:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.pwdlg .lg-msg { margin: 0; color: var(--bad); font-size: 13px; } .pwdlg .lg-msg:empty { display: none; }
+.pwr-card .pwr-row { max-width: 560px; }
+.pwr-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; } .pwr-row label { flex: 1; min-width: 160px; display: flex; flex-direction: column; gap: 4px; }
 </style>
 </head>
 <body>
@@ -1890,7 +1908,7 @@ function userMenu() {
   var av = isAudit() ? 'กป' : isExec() ? 'ผบ' : (U.part || indBy(U.ind).label).slice(0, 3);
   return '<div class="umenu glass"><button class="ubtn" data-act="umenu" aria-haspopup="menu" aria-expanded="false" aria-controls="udrop"><span class="av">' + esc(av) + '</span><span class="u-txt"><b>' + esc(userLabel()) + '</b><small>' + esc(userName()) + '</small></span>' + ico('chev', 16) + '</button>' +
     '<div class="udrop glass" id="udrop" role="menu" aria-label="บัญชีผู้ใช้">' + whoCard('u-head') +
-      roleItems('u-item') + lineItem('u-item') + '<button class="u-item danger" role="menuitem" data-act="logout">' + ico('logout', 17) + 'ออกจากระบบ</button></div></div>';
+      roleItems('u-item') + lineItem('u-item') + pwItem('u-item') + '<button class="u-item danger" role="menuitem" data-act="logout">' + ico('logout', 17) + 'ออกจากระบบ</button></div></div>';
 }
 // Mobile bottom bar (≤760px): 4 main items + "more" sheet; glass pill slides to the tapped item
 function mbItems() {
@@ -1919,7 +1937,7 @@ function mobileSheet() {
   else {
     if (U.role === 'reporter') b += '<h3>เมนูอื่น</h3>' + row('data-tab="gap"', ico('trend', 19), 'แผนปรับปรุง GAP') + row('data-tab="evidence"', ico('folder', 19), 'ทะเบียนหลักฐาน') + row('data-tab="history"', ico('history', 19), 'ผลการดำเนินงานที่ผ่านมา');
     else if (isAudit()) b += '<h3>ระบบ</h3>' + row('data-go="config"', ico('sliders', 19), 'Config การกรอกแผน') + row('data-go="users"', ico('users', 19), 'ผู้ใช้และสิทธิ์') + row('data-go="log"', ico('log', 19), 'Audit trail');
-    b += '<h3>บัญชี</h3>' + whoCard('ms-who') + roleItems('ms-row') + lineItem('ms-row') + row('data-act="logout"', ico('logout', 19), 'ออกจากระบบ').replace('class="ms-row"', 'class="ms-row danger"');
+    b += '<h3>บัญชี</h3>' + whoCard('ms-who') + roleItems('ms-row') + lineItem('ms-row') + pwItem('ms-row') + row('data-act="logout"', ico('logout', 19), 'ออกจากระบบ').replace('class="ms-row"', 'class="ms-row danger"');
   }
   if (S.sheet === 'more') b += '<p class="ms-help">' + ico('info', 15) + 'หากมีข้อสงสัยให้ติดต่อ กองประเมินผล 343</p>';
   return '<div class="ms-scrim" data-act="mb-close"></div><div class="msheet" role="dialog" aria-modal="true" aria-label="' + (S.sheet === 'inds' ? 'ตัวชี้วัด' : 'เมนูเพิ่มเติม') + '"><div class="ms-grab"></div>' + b + '</div>';
@@ -1929,6 +1947,58 @@ function lineSt() { return API ? API.line || { enabled: false } : (S.lineMock ||
 function lineItem(cls) {
   var l = lineSt(); if (!l.enabled) return '';
   return '<button class="' + cls + ' line-item" role="menuitem" data-act="line-open">' + ico('line', cls === 'ms-row' ? 19 : 17) + '<span>' + (l.linked ? 'LINE เชื่อมต่อแล้ว' : 'เชื่อมต่อ LINE') + '</span>' + (l.linked ? '<span class="ln-ok">' + ico('check', 14) + '</span>' : '<span class="ln-new">ใหม่</span>') + '</button>';
+}
+/* ---------- password: forced at first sign-in, or from the account menu; กปม. resets in Config ---------- */
+function pwItem(cls) { return '<button class="' + cls + '" role="menuitem" data-act="pw-open">' + ico('lock', cls === 'ms-row' ? 19 : 17) + '<span>เปลี่ยนรหัสผ่าน</span></button>'; }
+function pwRules(id) {
+  var n1 = ($('#pn1') || {}).value || '', n2 = ($('#pn2') || {}).value || '';
+  return [[n1.length >= 8, 'อย่างน้อย 8 ตัวอักษร'], [/[A-Za-z]/.test(n1) && /\d/.test(n1), 'มีทั้งตัวอักษรภาษาอังกฤษและตัวเลข'],
+    [n1 && (!id || n1.indexOf(id) < 0), 'ไม่มีรหัสพนักงานอยู่ในรหัสผ่าน'], [n1 && n1 === n2, 'ยืนยันรหัสผ่านตรงกัน']];
+}
+function pwRuleList() { var id = U && U.id || (API && API.me && API.me.id) || ''; return pwRules(id).map(function (r) { return '<li class="' + (r[0] ? 'ok' : '') + '">' + ico(r[0] ? 'check' : 'x', 13) + r[1] + '</li>'; }).join(''); }
+function pwFields(force) {
+  var f = function (id, lb, ac, ph) { return '<div><label class="lg-label" for="' + id + '">' + lb + '</label><div class="lg-input">' + ico('lock', 19) + '<input id="' + id + '" type="password" autocomplete="' + ac + '" maxlength="64" placeholder="' + ph + '"></div></div>'; };
+  return f('pcur', force ? 'รหัสผ่านที่ใช้เข้าระบบเมื่อสักครู่' : 'รหัสผ่านปัจจุบัน', 'current-password', '••••••••') + f('pn1', 'รหัสผ่านใหม่', 'new-password', 'อย่างน้อย 8 ตัว') + f('pn2', 'ยืนยันรหัสผ่านใหม่', 'new-password', 'พิมพ์อีกครั้ง') +
+    '<label class="pw-show"><input type="checkbox" data-act="pw-show"> แสดงรหัสผ่าน</label><ul class="pw-rules" id="pwRules" aria-live="polite">' + pwRuleList() + '</ul>';
+}
+function vPwForce() {
+  return '<main class="signin"><div class="lg-bg" aria-hidden="true"><i class="o1"></i><i class="o2"></i><i class="o3"></i><b></b></div><div class="lg-shell pw-shell">' +
+    '<form class="lg-card" id="pwForm" novalidate><img class="lg-card-logo" src="assets/cbe-logo.png" width="880" height="332" alt="CBE Core Business Enablers">' +
+    '<div class="lg-head"><h2>ตั้งรหัสผ่านใหม่</h2></div><p class="pw-lead">เพื่อความปลอดภัยของบัญชี ' + esc((API.me && (API.me.name || 'รหัส ' + API.me.id)) || '') + ' กรุณาตั้งรหัสผ่านของคุณเองก่อนเริ่มใช้งาน</p>' + pwFields(true) +
+    '<button class="lg-btn" type="submit"><span class="spin" aria-hidden="true"></span><span>บันทึกและเริ่มใช้งาน</span><span class="arr">' + ico('chev', 18) + '</span></button>' +
+    '<p class="lg-msg" id="pwMsg" role="alert"></p><button type="button" class="pw-out" data-act="logout">ออกจากระบบ</button></form></div></main>';
+}
+function pwDialog() {
+  if (!S.pwDlg) return '';
+  return '<div class="ld-scrim" data-act="pw-close"></div><div class="ldlg glass pwdlg" role="dialog" aria-modal="true" aria-labelledby="pwT"><div class="ld-head">' + ico('lock', 24) +
+    '<div><h2 id="pwT">เปลี่ยนรหัสผ่าน</h2><p>' + esc(userLabel()) + ' · ' + esc(userName()) + '</p></div><button class="icon-btn" data-act="pw-close" aria-label="ปิด">' + ico('x') + '</button></div>' +
+    '<form id="pwForm" novalidate>' + pwFields(false) + '<p class="small muted" style="margin:0">อุปกรณ์อื่นที่เข้าระบบค้างไว้จะถูกออกจากระบบ</p><p class="lg-msg" id="pwMsg" role="alert"></p>' +
+    '<div class="ld-acts"><button type="button" class="btn sm" data-act="pw-close">ยกเลิก</button><button type="submit" class="btn sm primary">' + ico('check', 15) + 'บันทึกรหัสผ่านใหม่</button></div></form></div>';
+}
+function pwSubmit(form) {
+  var m = $('#pwMsg'), btn = form.querySelector('button[type=submit]'), cur = $('#pcur').value, n1 = $('#pn1').value;
+  var bad = pwRules(U && U.id || (API && API.me && API.me.id) || '').filter(function (r) { return !r[0]; })[0];
+  if (!cur) bad = [0, 'กรอกรหัสผ่านปัจจุบัน'];
+  if (bad) { m.innerHTML = ico('alert', 14) + esc(bad[1]); return; }
+  if (!API) { S.pwDlg = false; render(); return toast('Mockup: ระบบจริงจะบันทึกรหัสผ่านใหม่', 'lock'); }
+  btn.disabled = true; btn.classList.add('busy'); m.textContent = '';
+  fetch('/api/password', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ current: cur, next: n1 }) })
+    .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; return j; }); })
+    .then(function () {
+      if (API.pw && API.pw.must) { try { sessionStorage.setItem('cbe:hi', 'ตั้งรหัสผ่านใหม่แล้ว'); } catch (e) {} return location.reload(); }
+      S.pwDlg = false; logIt('เปลี่ยนรหัสผ่าน'); render(); toast('เปลี่ยนรหัสผ่านแล้ว', 'check');
+    })
+    .catch(function (j) { btn.disabled = false; btn.classList.remove('busy'); m.innerHTML = ico('alert', 14) + esc((j && j.error) || 'เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง'); });
+}
+function pwReset() {
+  var inp = $('#pwrId'), id = inp && inp.value.trim();
+  if (!/^\d{4}$/.test(id || '')) return toast('กรอกรหัสพนักงาน 4 หลัก', 'alert');
+  if (!confirm('รีเซ็ตรหัสผ่านของรหัสพนักงาน ' + id + ' ?\nผู้ใช้จะถูกออกจากระบบ และต้องตั้งรหัสผ่านใหม่เมื่อเข้าระบบครั้งถัดไป')) return;
+  if (!API) return toast('Mockup: ระบบจริงจะรีเซ็ตรหัสผ่านของ ' + id, 'undo');
+  fetch('/api/password/reset', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: id }) })
+    .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; return j; }); })
+    .then(function (j) { inp.value = ''; logIt('รีเซ็ตรหัสผ่านของ ' + id); toast('รีเซ็ตรหัสผ่านของ ' + id + (j.name ? ' ' + j.name : '') + ' แล้ว', 'check'); })
+    .catch(function (j) { toast((j && j.error) || 'รีเซ็ตไม่สำเร็จ', 'alert'); });
 }
 function lineDialog() {
   if (!S.lineDlg) return '';
@@ -1985,6 +2055,7 @@ function render() {
   CACHE = {}; FCACHE = {};
   var dark = applyTheme();
   if (API && API.login) { $('#root').innerHTML = vLogin(); return; }
+  if (API && API.pw && API.pw.must && !API.error) { $('#root').innerHTML = vPwForce(); return; }
   var denied = API && (API.error || (!U && 'บัญชีนี้ยังไม่ได้กำหนดตัวชี้วัด ติดต่อ กปม.'));
   if (API && API.retry) { // temporary server/Google problem: say so, retry once by itself, never fall back to the sign-in page silently
     var tried = false; try { tried = sessionStorage.getItem('cbe:retried') === '1'; sessionStorage.setItem('cbe:retried', '1'); } catch (e) {}
@@ -2014,7 +2085,7 @@ function render() {
         : MONTHS.map(function (mm, i) { return '<option value="' + i + '"' + (i === S.month ? ' selected' : '') + '>' + mm + '</option>'; }).join('')) + '</select></label>' +
     '<i class="tb-sep"></i><button class="icon-btn" data-act="theme" aria-label="สลับเป็นธีม' + (dark ? 'สว่าง' : 'มืด') + '">' + ico(dark ? 'sun' : 'moon') + '</button></div>' + userMenu() + '</header>' +
     (FY !== CUR_FY ? '<div class="yearbar" role="status">' + ico('lock', 16) + '<span><b>ปีบัญชี ' + FY + ' · ปิดรอบแล้ว</b> ดูได้อย่างเดียว ข้อมูลผลการดำเนินงานตามแบบฟอร์มเดิม</span><button class="btn sm" data-act="back-current">กลับไปปีบัญชี ' + CUR_FY + '</button></div>' : '') +
-    '<main id="view">' + body + '</main></div></div>' + mobileBar() + planDrawer() + evDrawer() + lineDialog();
+    '<main id="view">' + body + '</main></div></div>' + mobileBar() + planDrawer() + evDrawer() + lineDialog() + pwDialog();
   var pill = document.querySelector('.mb-pill'); if (pill && pill.dataset.to !== String(pill.style.getPropertyValue('--x'))) requestAnimationFrame(function () { requestAnimationFrame(function () { pill.style.setProperty('--x', pill.dataset.to); }); });
   S.mbPrev = null;
   animateDv();
@@ -2292,7 +2363,9 @@ function vUsers() {
   var caps = [['ดูภาพรวมทุกตัวชี้วัด', 1, 1, 0], ['ดู/แก้ไขรายงานตัวชี้วัดของตน', 0, 0, 1], ['ส่งตรวจ', 0, 0, 1], ['อนุมัติ / ส่งกลับ / ปลดล็อก', 1, 0, 0], ['เขียนข้อสังเกต กปม.', 1, 0, 0], ['จัดการผู้ใช้ รอบรายงาน เป้าหมาย', 1, 0, 0], ['ดู Audit trail', 1, 0, 0]];
   var yes = '<span class="chip ok">' + ico('check') + 'ได้</span>', no = '<span class="muted">–</span>';
   return '<section class="view"><div><div class="eyebrow">ระบบ</div><h1>ผู้ใช้และสิทธิ์</h1><p class="lead">สิทธิ์ผูกกับตัวชี้วัด ผู้รายงานเห็นและแก้ได้เฉพาะตัวชี้วัดที่ได้รับมอบหมาย ระบบจริงต้องตรวจสิทธิ์ฝั่งเซิร์ฟเวอร์ทุกคำสั่ง</p></div>' +
-    '<div class="grid"><div class="panel glass c7"><div class="panel-head"><h2>บัญชีผู้ใช้ (ตัวอย่าง)</h2><button class="btn sm primary" data-act="demo">' + ico('users', 16) + 'เพิ่มผู้ใช้</button></div><div class="scroll-x"><table style="min-width:520px"><thead><tr><th>บัญชี</th><th>บทบาท</th><th>ตัวชี้วัดที่เข้าถึง</th><th>สถานะ</th></tr></thead><tbody>' +
+    '<div class="grid">' + (isAudit() ? '<div class="panel glass c12 pwr-card"><div class="panel-head"><div><h2>' + ico('lock', 18) + ' รีเซ็ตรหัสผ่านผู้ใช้</h2><p class="sub">ใช้เมื่อผู้ใช้ลืมรหัสผ่าน</p></div></div>' +
+      '<div class="pwr-row"><label><span class="label">รหัสพนักงาน</span><input class="input" id="pwrId" inputmode="numeric" maxlength="4" placeholder="รหัส 4 หลัก"></label><button class="btn" data-act="pw-reset">' + ico('undo', 16) + 'รีเซ็ตรหัสผ่าน</button></div>' +
+      '<p class="small muted" style="margin:0">' + ico('info', 13) + ' ผู้ใช้จะถูกออกจากระบบทุกอุปกรณ์ เข้าระบบด้วยรหัสผ่านเริ่มต้น แล้วระบบจะให้ตั้งรหัสใหม่ทันที · บันทึกในประวัติการใช้งาน</p></div>' : '') + '<div class="panel glass c7"><div class="panel-head"><h2>บัญชีผู้ใช้ (ตัวอย่าง)</h2><button class="btn sm primary" data-act="demo">' + ico('users', 16) + 'เพิ่มผู้ใช้</button></div><div class="scroll-x"><table style="min-width:520px"><thead><tr><th>บัญชี</th><th>บทบาท</th><th>ตัวชี้วัดที่เข้าถึง</th><th>สถานะ</th></tr></thead><tbody>' +
       '<tr><td>กปม. (ผู้ดูแลระบบ)</td><td>' + chip({ t: 'Audit/Admin', c: 'info', i: 'shield' }) + '</td><td>ทุกตัวชี้วัด</td><td><span class="chip ok">ใช้งาน</span></td></tr>' +
       '<tr><td>ผู้บริหาร</td><td>' + chip({ t: 'ผู้บริหาร', c: 'mute', i: 'eye' }) + '</td><td>ทุกตัวชี้วัด (ดูอย่างเดียว)</td><td><span class="chip ok">ใช้งาน</span></td></tr>' +
       INDS.map(function (I) { return I.parts.map(function (p) { return '<tr><td>ผู้รายงาน ' + p.key + '<div class="small muted">' + esc(p.owner) + '</div></td><td>' + chip({ t: 'ผู้รายงาน', c: 'mute', i: 'edit' }) + '</td><td><span class="code">' + I.no + ' ' + esc(I.label) + '</span>' + (I.parts.length > 1 ? '<div class="small muted">แก้ไขได้เฉพาะส่วน ' + p.key + '</div>' : '') + '</td><td><span class="chip ok">ใช้งาน</span></td></tr>'; }).join(''); }).join('') +
@@ -3200,7 +3273,8 @@ document.addEventListener('pointermove', function (e) {
   var r = c.getBoundingClientRect(); c.style.setProperty('--mx', (e.clientX - r.left) + 'px'); c.style.setProperty('--my', (e.clientY - r.top) + 'px');
 });
 document.addEventListener('submit', function (e) {
-  e.preventDefault(); var m = $('#loginMsg');
+  e.preventDefault(); if (e.target.id === 'pwForm') return pwSubmit(e.target);
+  var m = $('#loginMsg');
   if (API) {
     var btn = e.target.querySelector('button[type=submit]'); btn.disabled = true; btn.classList.add('busy'); m.textContent = '';
     LOGIN = { id: $('#em').value.trim(), password: $('#pw').value };
@@ -3240,6 +3314,9 @@ document.addEventListener('click', function (e) {
   if (d.ev != null) { var wasEv = S.ev; S.ev = d.ev || null; S.evf = 0; S.evEnter = !!S.ev && !wasEv; render(); var ep = document.querySelector('.ev-drawer .pe-panel'); if (ep) ep.focus({ preventScroll: true }); return; }
   if (d.evf != null) { S.evf = +d.evf; return render(); }
   if (d.act === 'ev-close') { var back = S.ev; S.ev = null; render(); var rb = back && document.querySelector('[data-ev="' + back + '"]'); if (rb) rb.focus(); return; }
+  if (d.act === 'pw-open') { S.pwDlg = true; closeUmenu(); S.sheet = null; render(); var f = $('#pcur'); if (f) f.focus(); return; }
+  if (d.act === 'pw-close') { S.pwDlg = false; return render(); }
+  if (d.act === 'pw-reset') return pwReset();
   if (d.act && /^line-/.test(d.act)) return lineAct(d.act);
   if (d.act === 'mb-sheet') { S.sheet = S.sheet === d.sheet ? null : d.sheet; return render(); }
   if (d.act === 'mb-close') { S.sheet = null; return render(); }
@@ -3397,6 +3474,7 @@ document.addEventListener('click', function (e) {
 });
 document.addEventListener('input', function (e) {
   var t = e.target, d = t.dataset;
+  if (t.id === 'pn1' || t.id === 'pn2') { var pr = $('#pwRules'); if (pr) pr.innerHTML = pwRuleList(); return; }
   if (d.f) {
     var c = lvCtx(); if (d.f === 'action' && !winOpen('gap')) return; c.L[d.f] = t.value; savePatch(c.s, c.L);
     if (d.f === 'narrative') document.querySelectorAll('[data-act="aiw-run"][data-mode="draft"], [data-act="aiw-run"][data-mode="gaps"]').forEach(function (b) { b.disabled = !t.value.trim() || !!(S.aiw && S.aiw.busy); });
@@ -3445,6 +3523,7 @@ function spEdit(t, d) {
 }
 document.addEventListener('toggle', function (e) { if (e.target.matches && e.target.matches('details[data-guide]')) S.guideOpen = e.target.open; }, true);
 document.addEventListener('change', function (e) {
+  if (e.target.dataset && e.target.dataset.act === 'pw-show') { ['pcur', 'pn1', 'pn2'].forEach(function (id) { var x = $('#' + id); if (x) x.type = e.target.checked ? 'text' : 'password'; }); return; }
   var t = e.target, d = t.dataset;
   if (d.nm || d.mo || d.tg || d.un || d.cu || d.pl) return spEdit(t, d);
   if (d.cim || d.cid || d.cin) {
@@ -3485,6 +3564,7 @@ document.addEventListener('change', function (e) {
   if (d.f || d.ev != null) logIt('แก้ไข ' + curLv().s.label + ' ระดับ ' + curLv().L.level);
 });
 document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && S.pwDlg) { S.pwDlg = false; render(); return; }
   if (e.key === 'Escape' && S.lineDlg) { lineAct('line-close'); return; }
   if (e.key === 'Escape' && S.ev && document.querySelector('.ev-drawer')) { S.ev = null; render(); return; }
   if (e.key === 'Escape' && S.sheet) { S.sheet = null; render(); return; }

@@ -51,6 +51,8 @@ export default {
       if (path === '/api/login' && req.method === 'POST') return await login(req, env);
       if (path === '/api/logout' && req.method === 'POST') return json({ ok: true }, 200, { 'set-cookie': SESSION + '=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0' });
       if (path === '/api/role' && req.method === 'POST') return await switchRole(req, env);
+      if (path === '/api/password' && req.method === 'POST') return await changePassword(req, env, ctx);
+      if (path === '/api/password/reset' && req.method === 'POST') return json(await resetPassword(req, env, ctx));
       if (path === '/api/save' && req.method === 'POST') return json(await save(req, env, fy, ctx));
       if (path === '/api/guide' && req.method === 'GET') return json(await guide(req, env));
       if (path === '/api/ai/write' && req.method === 'POST') return json(await aiWrite(req, env, fy));
@@ -121,8 +123,8 @@ async function login(req, env) {
   let f = FAILS[slot];
   if (f && f.until > now) fail(429, 'ใส่รหัสผ่านผิดหลายครั้ง ลองใหม่อีกครั้งใน 15 นาที');
   if (f && f.until) f = null; // lock expired
-  const u = (await system(env)).users[id];
-  if (!/^\d{4}$/.test(id) || !u || String(b.password || '') !== 'cbe@' + id) {
+  const u = (await system(env)).users[id], a = u ? await authRow(env, id, true) : null;
+  if (!/^\d{4}$/.test(id) || !u || !(await pwMatches(id, a, String(b.password || '')))) {
     const n = (f ? f.n : 0) + 1;
     FAILS[slot] = { n, until: n >= MAX_FAILS ? now + LOCK_MS : 0 };
     fail(401, 'รหัสพนักงานหรือรหัสผ่านไม่ถูกต้อง');
@@ -133,10 +135,11 @@ async function login(req, env) {
   if (u.roles.length > 1 && !Number.isInteger(b.r)) return json({ choose: u.roles.map((x, i) => ({ r: i, label: roleLabel(x) })), name: u.name });
   const cu = asRole(u, b.r);
   await appendRows(env, env.SYSTEM_SHEET_ID, 'log!A:D', [[stamp(), id, label(cu), 'เข้าสู่ระบบ']]);
-  return json({ ok: true, name: cu.name, role: roleLabel(cu) }, 200, { 'set-cookie': await sessionCookie(env, id, cu.r) });
+  return json({ ok: true, name: cu.name, role: roleLabel(cu), mustChange: !(a && a.hash) }, 200, { 'set-cookie': await sessionCookie(env, id, cu.r, a && a.pv) });
 }
-async function sessionCookie(env, id, r) {
-  const p = b64url(enc.encode(JSON.stringify({ id, r, exp: Date.now() + SESSION_HOURS * 3600e3 })));
+// pv = password version: changing or resetting a password ends every session issued before it
+async function sessionCookie(env, id, r, pv) {
+  const p = b64url(enc.encode(JSON.stringify({ id, r, pv: pv || '', exp: Date.now() + SESSION_HOURS * 3600e3 })));
   const token = p + '.' + b64url(await crypto.subtle.sign('HMAC', await hmacKey(env), enc.encode(p)));
   return `${SESSION}=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_HOURS * 3600}`;
 }
@@ -147,7 +150,7 @@ async function switchRole(req, env) {
   if (!Number.isInteger(b.r) || b.r < 0 || b.r >= u.roles.length) fail(400, 'ไม่มีบทบาทนี้');
   const cu = asRole(u, b.r); checkUser(cu);
   await appendRows(env, env.SYSTEM_SHEET_ID, 'log!A:D', [[stamp(), u.id, label(cu), 'สลับบทบาทเป็น ' + roleLabel(cu)]]);
-  return json({ ok: true }, 200, { 'set-cookie': await sessionCookie(env, u.id, cu.r) });
+  return json({ ok: true }, 200, { 'set-cookie': await sessionCookie(env, u.id, cu.r, s.pv) });
 }
 
 /* ---------- Google APIs (service account) ---------- */
@@ -200,6 +203,82 @@ async function appendRows(env, id, range, values) {
   if (values.length) await g(env, `${SHEETS}${id}/values/${encodeURIComponent(range)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, { method: 'POST', json: { values } });
 }
 
+/* ---------- passwords: tab auth = A id | B hash | C salt | D iterations | E changed at | F version ----------
+   No row (or an empty hash) = the default password, which must be replaced at first sign-in.
+   PBKDF2-SHA256 with a random salt; iterations kept per row so PBKDF2_ITER can be raised later. */
+const PW_ITER = env => Math.min(100000, Math.max(10000, +env.PBKDF2_ITER || 20000));
+function authRows(env, fresh) {
+  if (fresh) delete memo.auth;
+  return cached('auth', TTL, async () => {
+    let rows;
+    try { [rows] = await getRanges(env, env.SYSTEM_SHEET_ID, ['auth!A2:F']); }
+    catch (e) { // first use: create the tab
+      await g(env, `${SHEETS}${env.SYSTEM_SHEET_ID}:batchUpdate`, { method: 'POST', json: { requests: [{ addSheet: { properties: { title: 'auth' } } }] } });
+      await putRanges(env, env.SYSTEM_SHEET_ID, [{ range: 'auth!A1:F1', values: [['id', 'hash', 'salt', 'iterations', 'changed_at', 'version']] }]);
+      rows = [];
+    }
+    return rows.map((r, i) => ({ row: i + 2, id: str(r[0]), hash: str(r[1]), salt: str(r[2]), iter: +r[3] || 0, at: str(r[4]), pv: str(r[5]) })).filter(r => r.id);
+  });
+}
+const authRow = async (env, id, fresh) => (await authRows(env, fresh)).find(r => r.id === id) || null;
+const b64 = u8 => btoa(String.fromCharCode(...u8)), unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function pbkdf2(pw, salt, iter) {
+  const k = await crypto.subtle.importKey('raw', enc.encode(pw), 'PBKDF2', false, ['deriveBits']);
+  return b64(new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: iter }, k, 256)));
+}
+function sameStr(a, b) { if (a.length !== b.length) return false; let d = 0; for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i); return d === 0; }
+async function pwMatches(id, a, pw) {
+  if (!a || !a.hash) return pw === 'cbe@' + id;
+  return sameStr(await pbkdf2(pw, unb64(a.salt), a.iter), a.hash);
+}
+function pwProblem(id, pw) {
+  if (pw.length < 8) return 'รหัสผ่านต้องยาวอย่างน้อย 8 ตัวอักษร';
+  if (pw.length > 64) return 'รหัสผ่านยาวเกิน 64 ตัวอักษร';
+  if (!/[A-Za-z]/.test(pw) || !/\d/.test(pw)) return 'รหัสผ่านต้องมีทั้งตัวอักษรภาษาอังกฤษและตัวเลข';
+  if (pw === 'cbe@' + id || pw.includes(id)) return 'รหัสผ่านต้องไม่ใช่รหัสเริ่มต้นและไม่มีรหัสพนักงานอยู่ในนั้น';
+  return '';
+}
+async function authWrite(env, id, patch) {
+  const a = await authRow(env, id, true), r = Object.assign({ id, hash: '', salt: '', iter: '', at: '', pv: '' }, a || {}, patch);
+  const v = [[r.id, r.hash, r.salt, r.iter ? String(r.iter) : '', r.at, r.pv]];
+  if (a) await putRanges(env, env.SYSTEM_SHEET_ID, [{ range: `auth!A${a.row}:F${a.row}`, values: v }]);
+  else await appendRows(env, env.SYSTEM_SHEET_ID, 'auth!A:F', v);
+  delete memo.auth;
+}
+async function changePassword(req, env, ctx) {
+  sameOrigin(req);
+  const s = await sessionId(req, env), u = await me(req, env, true), b = await req.json().catch(() => ({}));
+  const cur = String(b.current || ''), next = String(b.next || ''), a = await authRow(env, u.id, true);
+  if (!(await pwMatches(u.id, a, cur))) fail(400, 'รหัสผ่านปัจจุบันไม่ถูกต้อง');
+  const bad = pwProblem(u.id, next); if (bad) fail(400, bad);
+  if (next === cur) fail(400, 'รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสเดิม');
+  const salt = crypto.getRandomValues(new Uint8Array(16)), iter = PW_ITER(env), pv = String(Date.now());
+  await authWrite(env, u.id, { hash: await pbkdf2(next, salt, iter), salt: b64(salt), iter, at: stamp(), pv });
+  await appendRows(env, env.SYSTEM_SHEET_ID, 'log!A:D', [[stamp(), u.id, label(u), 'เปลี่ยนรหัสผ่าน']]);
+  ctx.waitUntil(pwNotice(env, u.id, new URL(req.url).origin, 'changed').catch(e => console.error('pw line', e.message)));
+  return json({ ok: true }, 200, { 'set-cookie': await sessionCookie(env, u.id, s.r, pv) });
+}
+// กปม. puts a user back on the default password (forgotten password); their open sessions end
+async function resetPassword(req, env, ctx) {
+  sameOrigin(req);
+  const u = await me(req, env), b = await req.json().catch(() => ({})), id = str(b.id);
+  if (u.role !== 'audit') fail(403, 'เฉพาะ กปม.');
+  const t = (await system(env)).users[id]; if (!t) fail(404, 'ไม่พบรหัสพนักงานนี้ในระบบ');
+  await authWrite(env, id, { hash: '', salt: '', iter: '', at: stamp(), pv: String(Date.now()) });
+  await appendRows(env, env.SYSTEM_SHEET_ID, 'log!A:D', [[stamp(), u.id, label(u), 'รีเซ็ตรหัสผ่านของ ' + id + (t.name ? ' ' + t.name : '')]]);
+  ctx.waitUntil(pwNotice(env, id, new URL(req.url).origin, 'reset').catch(e => console.error('pw line', e.message)));
+  return { ok: true, name: t.name || '' };
+}
+async function pwNotice(env, id, origin, kind) {
+  if (!env.LINE_CHANNEL_TOKEN) return;
+  const r = (await lineRows(env)).find(x => x.id === id && x.user); if (!r) return;
+  const reset = kind === 'reset';
+  await linePush(env, r.user, [flex(reset ? 'กปม. รีเซ็ตรหัสผ่านของคุณ' : 'รหัสผ่านถูกเปลี่ยนแล้ว', bubble({ tone: reset ? C.warn : C.blue, tag: 'ความปลอดภัย', eyebrow: thDay(todayIso()) + ' · ' + stamp().slice(-5) + ' น.',
+    title: reset ? 'รีเซ็ตรหัสผ่านแล้ว' : 'เปลี่ยนรหัสผ่านแล้ว', sub: 'รหัสพนักงาน ' + id,
+    body: [txt(reset ? 'กปม. รีเซ็ตรหัสผ่านตามคำขอ เข้าระบบด้วยรหัสเริ่มต้น แล้วตั้งรหัสผ่านใหม่ทันที' : 'รหัสผ่านบัญชี CBE ของคุณถูกเปลี่ยน อุปกรณ์อื่นที่เข้าระบบค้างไว้ถูกออกจากระบบแล้ว', { wrap: true, color: C.ink }),
+      txt('ถ้าไม่ใช่คุณ ติดต่อ กองประเมินผล 343 ทันที', { wrap: true, size: 'xs', color: C.bad, margin: 'md', weight: 'bold' })], url: origin }))], 'pw|' + id + '|' + Date.now());
+}
+
 /* ---------- system spreadsheet: users, form ids, workflow state, audit log ---------- */
 const str = v => v == null ? '' : String(v).trim();
 function system(env) {
@@ -232,11 +311,17 @@ function asRole(u, r) {
 const SELF_MSG = 'ตัวชี้วัดที่ท่านรายงานเอง ต้องให้ กปม. ท่านอื่นตรวจ';
 const isSelf = (u, ind) => u.role === 'audit' && (u.self || []).includes(ind);
 // A user removed from the "users" tab loses access within a minute (system() cache), even with a valid cookie
-async function me(req, env) {
+// allowMust: the few calls a user may make before replacing the default password (boot, archive files, change itself)
+async function me(req, env, allowMust) {
   const s = await sessionId(req, env), base = (await system(env)).users[s.id];
   if (!base) fail(401, 'บัญชีนี้ถูกยกเลิกแล้ว');
+  let a = await authRow(env, s.id);
+  if ((s.pv || '') !== (a && a.pv || '')) a = await authRow(env, s.id, true); // this isolate's copy may be older than the cookie
+  if ((s.pv || '') !== (a && a.pv || '')) fail(401, 'รหัสผ่านถูกเปลี่ยนแล้ว กรุณาเข้าสู่ระบบใหม่');
+  if (!(a && a.hash) && !allowMust) fail(403, 'กรุณาตั้งรหัสผ่านใหม่ก่อนใช้งาน');
   const u = asRole(base, s.r);
   checkUser(u);
+  u.mustChange = !(a && a.hash);
   return u;
 }
 const label = u => (u.name || roleLabel(u)) + (u.roles && u.roles.length > 1 ? ' (' + roleLabel(u) + ')' : '');
@@ -328,7 +413,7 @@ async function levelFolder(env, fy, key) {
 /* ---------- routes ---------- */
 // The app loads this as a plain script: current-year forms + who is signed in + saved state
 async function boot(req, env, fy) {
-  const u = await me(req, env), codes = u.role === 'reporter' ? IND_PARTS[u.ind] : Object.values(IND_PARTS).flat();
+  const u = await me(req, env, true), codes = u.role === 'reporter' ? IND_PARTS[u.ind] : Object.values(IND_PARTS).flat();
   // state, log and LINE links in ONE Sheets request: all users share the service account's per-minute read quota
   const line = !!env.LINE_CHANNEL_TOKEN, ranges = ['state!A2:D', 'log!A2:D'].concat(line ? ['line!A2:E'] : []);
   const [forms, rows] = await Promise.all([Promise.all(codes.map(c => form(env, fy, c))), getRanges(env, env.SYSTEM_SHEET_ID, ranges)]);
@@ -338,7 +423,7 @@ async function boot(req, env, fy) {
   const lineInfo = !line ? { enabled: false } : { enabled: true, linked: !!(lr && str(lr[1])), at: lr && str(lr[1]) ? str(lr[2]) : '', addUrl: env.LINE_ADD_URL || '' };
   const data = {};
   codes.forEach((c, i) => { if (forms[i]) data[c] = forms[i].data; });
-  const api = { write: !!(env.GEMINI_API_KEY || env.AI), writeGemini: !!env.GEMINI_API_KEY, writeFree: env.GEMINI_TIER !== 'paid', me: { role: u.role, ind: u.ind, part: u.part, name: u.name, id: u.id, r: u.r, self: u.role === 'audit' ? u.self : [], roles: u.roles.map((x, i) => ({ r: i, label: roleLabel(x) })) }, state: stateFor(u, st), log, openFrom: openFrom(), line: lineInfo };
+  const api = { write: !!(env.GEMINI_API_KEY || env.AI), writeGemini: !!env.GEMINI_API_KEY, writeFree: env.GEMINI_TIER !== 'paid', me: { role: u.role, ind: u.ind, part: u.part, name: u.name, id: u.id, r: u.r, self: u.role === 'audit' ? u.self : [], roles: u.roles.map((x, i) => ({ r: i, label: roleLabel(x) })) }, state: stateFor(u, st), log, openFrom: openFrom(), line: lineInfo, pw: { must: u.mustChange } };
   return `window.CBE_FORMS_${fy}=${JSON.stringify(data, hideRows)};\nwindow.CBE_API=${JSON.stringify(api)};`;
 }
 // FY2569 (closed year) and the indicator seed: the data.js built by tools/forms-to-json.ps1, kept as a Drive file
@@ -346,7 +431,7 @@ async function boot(req, env, fy) {
 // Closed-year files rarely change: the browser keeps them and revalidates with an ETag from Drive's checksum,
 // so a repeat sign-in gets "304 Not Modified" instead of re-downloading ~5 MB (and the worker skips Drive too)
 async function archive(req, env, code = 'ARCHIVE') {
-  await me(req, env);
+  await me(req, env, true);
   const f = (await system(env)).forms.find(x => x.code === code);
   if (!f) return js('');
   const meta = await cached('meta:' + f.id, 10 * 60e3, async () => (await g(env, `${DRIVE}${f.id}?fields=md5Checksum,modifiedTime&supportsAllDrives=true`)).json());
