@@ -22,6 +22,9 @@ async function fakeFetch(input, init = {}) {
   const url = new URL(input), method = init.method || 'GET', ok = b => new Response(JSON.stringify(b), { status: 200, headers: { 'content-type': 'application/json' } });
   if (url.host === 'oauth2.googleapis.com') return ok({ access_token: 'tok' });
   if (url.host === 'api.line.me') { lineCalls.push({ path: url.pathname, body: JSON.parse(init.body), retry: init.headers['x-line-retry-key'] }); return ok({}); }
+  if (url.host === 'sheets.googleapis.com' && /^\/v4\/spreadsheets\/[^/]+:batchUpdate$/.test(url.pathname)) { // addSheet
+    const id = url.pathname.split('/')[3].split(':')[0]; for (const q of JSON.parse(init.body).requests) books[id][q.addSheet.properties.title] = [[]]; return ok({});
+  }
   if (url.host === 'sheets.googleapis.com') {
     const [, id, rest] = /^\/v4\/spreadsheets\/([^/]+)\/values(.*)$/.exec(url.pathname), b = books[id];
     if (rest.startsWith(':batchGet')) return ok({ valueRanges: url.searchParams.getAll('ranges').map(r => {
@@ -51,14 +54,15 @@ const env = { GOOGLE_SA: JSON.stringify({ client_email: 'sa@test', private_key: 
 function reset(cfg) {
   books.sys = { users: [['id', 'role', 'ind', 'part', 'name'], ['3002', 'reporter', 'RM', '', 'สมชาย RM'], ['1000', 'audit', '', '', 'กปม. ทดสอบ']],
     forms: [['fy', 'code', 'id'], ['2570', 'RM', 'formRM']], state: [['fy', 'store', 'key', 'value', 'by', 'at']].concat(cfg ? [['2570', 'cfg', 'plan', JSON.stringify(cfg), '1000', 'x']] : []),
-    log: [['at', 'id', 'who', 'what']], line: [['id', 'line_user', 'linked_at', 'code', 'code_exp']] };
+    log: [['at', 'id', 'who', 'what']], line: [['id', 'line_user', 'linked_at', 'code', 'code_exp']], ...(books.sys && books.sys.auth ? { auth: books.sys.auth } : {}) };
   books.formRM = { "1.สรุปรายงานผู้บริหาร": [], '2.ผลตามเกณฑ์และ GAP': formRows.map(r => r.slice()) };
   lineCalls.length = 0;
 }
 const pending = [];
 const call = async (path, init = {}) => { const r = await worker.fetch(new Request('https://cbe.example' + path, init), env, { waitUntil: p => pending.push(p) }); await Promise.all(pending.splice(0)); return r; };
-async function signIn(id) {
-  const r = await call('/api/login', { method: 'POST', headers: { origin: 'https://cbe.example' }, body: JSON.stringify({ id, password: 'cbe@' + id }) });
+const PW = {};
+async function signIn(id, password = PW[id] || 'cbe@' + id) {
+  const r = await call('/api/login', { method: 'POST', headers: { origin: 'https://cbe.example' }, body: JSON.stringify({ id, password }) });
   assert.equal(r.status, 200, 'login ' + id); return r.headers.get('set-cookie').split(';')[0];
 }
 const post = (path, cookie, body) => call(path, { method: 'POST', headers: { origin: 'https://cbe.example', cookie, 'content-type': 'application/json' }, body: JSON.stringify(body || {}) });
@@ -72,7 +76,38 @@ const days = (d, j) => call(`/api/notify?day=${d}${j ? '&job=' + j : ''}`, { met
 let n = 0; const ok = (name, fn) => fn().then(() => { n++; console.log('  ✓ ' + name); });
 
 reset();
-const rep = await signIn('3002'), aud = await signIn('1000');
+let rep = await signIn('3002'), aud = await signIn('1000');
+const bootOf = async c => (await (await call('/data-2570.js', { headers: { cookie: c } })).text());
+const cookieOf = r => r.headers.get('set-cookie').split(';')[0];
+await ok('password: default sign-in must set a new password before anything else', async () => {
+  assert.match(await bootOf(rep), /"pw":\{"must":true\}/);
+  assert.equal((await post('/api/line/status', rep)).status, 403);
+  assert.ok(books.sys.auth, 'auth tab created on first use');
+});
+await ok('password: weak or wrong input is refused', async () => {
+  for (const [cur, next, re] of [['nope', 'Abcdefg12', /ปัจจุบัน/], ['cbe@3002', 'Ab1', /8 ตัว/], ['cbe@3002', 'abcdefghij', /ตัวเลข/], ['cbe@3002', 'xx3002yy11', /รหัสพนักงาน/]]) {
+    const r = await post('/api/password', rep, { current: cur, next }); assert.equal(r.status, 400); assert.match((await r.json()).error, re);
+  }
+});
+await ok('password: change → hashed in the auth tab, new cookie, old sessions and old password end', async () => {
+  const old = rep, r = await post('/api/password', rep, { current: 'cbe@3002', next: 'Rubber2570x' }); assert.equal(r.status, 200);
+  const row = books.sys.auth.find(x => x[0] === '3002'); assert.ok(row[1] && row[1] !== 'Rubber2570x' && row[2]);
+  rep = cookieOf(r); PW['3002'] = 'Rubber2570x';
+  assert.doesNotMatch(await bootOf(rep), /"must":true/); assert.equal((await post('/api/line/status', rep)).status, 200);
+  assert.equal((await post('/api/line/status', old)).status, 401);
+  const bad = await call('/api/login', { method: 'POST', headers: { origin: 'https://cbe.example' }, body: JSON.stringify({ id: '3002', password: 'cbe@3002' }) }); assert.equal(bad.status, 401);
+  rep = await signIn('3002'); assert.ok(books.sys.log.some(x => x[3] === 'เปลี่ยนรหัสผ่าน'));
+  const a = await post('/api/password', aud, { current: 'cbe@1000', next: 'Audit2570x' }); aud = cookieOf(a); PW['1000'] = 'Audit2570x';
+});
+await ok('password: only กปม. can reset; reset ends sessions and brings back the default', async () => {
+  assert.equal((await post('/api/password/reset', rep, { id: '1000' })).status, 403);
+  assert.equal((await post('/api/password/reset', aud, { id: '9999' })).status, 404);
+  assert.equal((await post('/api/password/reset', aud, { id: '3002' })).status, 200);
+  assert.equal((await post('/api/line/status', rep)).status, 401);
+  rep = await signIn('3002', 'cbe@3002'); assert.match(await bootOf(rep), /"must":true/);
+  rep = cookieOf(await post('/api/password', rep, { current: 'cbe@3002', next: 'Rubber2570x' }));
+  assert.ok(books.sys.log.some(x => /รีเซ็ตรหัสผ่านของ 3002/.test(x[3])));
+});
 await ok('status before linking: enabled, not linked', async () => {
   const s = await (await post('/api/line/status', rep)).json(); assert.equal(s.enabled, true); assert.equal(s.linked, false); assert.equal(s.addUrl, env.LINE_ADD_URL);
 });
@@ -127,6 +162,10 @@ await ok('webhook error → apology reply instead of silence', async () => {
   const saved = books.sys.line; books.sys.line = null; lineCalls.length = 0;
   try { const r = await hook([msgEv('U-rep', 'สถานะ')]); assert.equal(r.status, 200); assert.match(lineCalls.at(-1).body.messages[0].text, /ระบบขัดข้อง/); }
   finally { books.sys.line = saved; }
+});
+await ok('password change is announced on LINE when linked', async () => {
+  lineCalls.length = 0; const r = await post('/api/password', rep, { current: 'Rubber2570x', next: 'Rubber2570y' }); rep = cookieOf(r); PW['3002'] = 'Rubber2570y';
+  const push = lineCalls.find(c => c.path === '/v2/bot/message/push'); assert.equal(push.body.to, 'U-rep'); assert.match(push.body.messages[0].altText, /รหัสผ่านถูกเปลี่ยน/);
 });
 await ok('notify needs the cron key', async () => {
   const r = await call('/api/notify?day=1', { method: 'POST' }); assert.equal(r.status, 401);
