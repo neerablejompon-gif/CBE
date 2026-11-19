@@ -3066,6 +3066,7 @@ function vGap(I) {
   var m = S.month, gf = ['gap', 'noact', 'late'].indexOf(S.filter) > -1 ? S.filter : 'all', rows = [], other = 0, cnt = { all: 0, gap: 0, noact: 0, late: 0, plan: 0, act: 0 }, C = cols();
   I.subs.forEach(function (s) { s.levels.forEach(function (L) {
     var gl = L.gsteps || [];
+    if (lvOff(L)) return;
     if (!L.gap && !(L.action || '').trim() && !gl.length) { other++; return; }
     var gs = gapStat(L, m), hasAct = !!(L.action || '').trim();
     cnt.all++; if (L.gap) cnt.gap++; if (!hasAct) cnt.noact++; else cnt.act++; if (gs === 'late') cnt.late++; if (gs) cnt.plan++;
@@ -3100,7 +3101,7 @@ function vGap(I) {
       kpi('มีแผนย่อยแล้ว', 'calendar', cnt.plan, '/ ' + cnt.all, 'กดแถวในตารางด้านล่างเพื่อวางแผน', cnt.all ? cnt.plan / cnt.all : 0) +
       kpi('ล่าช้ากว่าแผน', 'clock', cnt.late, 'ระดับ', 'ผลสะสมต่ำกว่าแผนสะสม ณ ' + asOf()) + '</div>' +
     '<div class="panel glass"><div class="panel-head" style="flex-wrap:wrap"><div><h2>' + ico('trend', 18) + ' แผน/ผลการปรับปรุงตาม GAP ปีบัญชี ' + FY + '</h2><p class="sub">แนวทางปรับปรุง แผนย่อยรายขั้นตอน และผลที่ลงไว้ · ข้อมูล ณ ' + asOf() + ' · กดแถวระดับเพื่อดูหรือแก้ไขแผน</p></div>' +
-      '<div class="toolbar">' + (canG ? '<button class="btn ' + (ge ? 'primary' : '') + ' sm" data-act="gedit">' + ico(ge ? 'check' : 'edit', 15) + (ge ? 'เสร็จสิ้นการแก้ไขแผน' : 'แก้ไขแผน') + '</button>' : '') + '<div class="seg" role="group" aria-label="กรอง">' + f('all', 'ทั้งหมด', cnt.all) + f('gap', 'มี GAP', cnt.gap) + f('noact', 'ยังไม่มีแนวทาง', cnt.noact) + f('late', 'ล่าช้า', cnt.late) + '</div></div></div>' + winBar('gap') + '' +
+      '<div class="toolbar">' + (canG ? '<button class="btn ' + (ge ? 'primary' : '') + ' sm" data-act="gedit">' + ico(ge ? 'check' : 'edit', 15) + (ge ? 'เสร็จสิ้นการแก้ไขแผน' : 'แก้ไขแผน') + '</button>' : '') + lvSeg() + '<div class="seg" role="group" aria-label="กรอง">' + f('all', 'ทั้งหมด', cnt.all) + f('gap', 'มี GAP', cnt.gap) + f('noact', 'ยังไม่มีแนวทาง', cnt.noact) + f('late', 'ล่าช้า', cnt.late) + '</div></div></div>' + winBar('gap') + '' +
     '<div class="lg" style="margin:4px 0 12px"><span><i class="sw pl-sw-p"></i>มีแผน</span><span><i class="sw pl-sw-r"></i>ลงผลแล้ว (ตัวเลข = ผล)</span><span><i class="sw pl-sw-miss"></i>ถึงกำหนดแต่ยังไม่มีผล</span><span><i class="sw pl-sw-cur"></i>' + (gran() === 'q' ? 'ไตรมาส' : 'เดือน') + 'ที่ติดตาม</span></div>' +
     '<div class="scroll-x pl-wrap"><table class="pl' + (gran() === 'q' ? ' plq' : '') + '"><thead><tr><th class="pl-name">ประเด็น · ระดับ · แผนย่อยปรับปรุง</th>' + C.map(function (c) { return colHead(c, 'pl-m'); }).join('') + '<th>ผล/เป้า</th><th>สถานะ</th></tr></thead><tbody>' +
       (body || '<tr><td colspan="' + (C.length + 3) + '"><div class="empty">' + ico('check') + 'ไม่มีรายการตามตัวกรองนี้</div></td></tr>') + '</tbody></table></div>' +
@@ -3108,11 +3109,15 @@ function vGap(I) {
 }
 
 /* ================= action plan: every planned activity of the indicator on a 12-month timeline ================= */
+// Criteria-level filter shared by the action-plan and GAP pages (ทุกระดับ / ระดับ 1–5)
+function lvOff(L) { return S.plv && S.plv !== 'all' && String(L.level) !== S.plv; }
+function lvSeg() { return '<div class="seg" role="group" aria-label="กรองระดับค่าเกณฑ์">' + ['all', '1', '2', '3', '4', '5'].map(function (k) { return '<button data-plv="' + k + '" aria-pressed="' + ((S.plv || 'all') === k) + '">' + (k === 'all' ? 'ทุกระดับ' : 'ระดับ ' + k) + '</button>'; }).join('') + '</div>'; }
 function vPlan(I) {
   var m = S.month, pf = S.pfilter || 'all', part = I.parts.length > 1 ? (S.ppart || (U.part && I.parts.some(function (p) { return p.key === U.part; }) ? U.part : 'all')) : 'all';
   var rows = [], noPlan = 0, cnt = { all: 0, now: 0, late: 0, done: 0 };
   I.topics.forEach(function (t) { t.subs.forEach(function (s) { s.levels.forEach(function (L) {
     if (part !== 'all' && s.part !== part) return;
+    if (lvOff(L)) return;
     if (!L.steps.length) { noPlan++; if (pf === 'all' && canEdit(I, s) && winOpen('plan')) rows.push({ t: t, s: s, L: L, st: null }); return; }
     L.steps.forEach(function (st, si) {
       var tg = stTarget(st), cp = cum(st.plan, m), cr = cum(st.result, m);
@@ -3143,7 +3148,7 @@ function vPlan(I) {
       cells + '<td class="num pl-sum">' + fmt(r.cr, r.cr % 1 ? 1 : 0) + '<span class="muted">/' + fmt(r.tg, r.tg % 1 ? 1 : 0) + '</span><small>' + esc(r.st.unit || '') + '</small></td><td>' + chip(STATUS[r.k]) + '</td></tr>';
   }).join('');
   return '<div class="panel glass"><div class="panel-head" style="flex-wrap:wrap"><div><h2>' + ico('calendar', 18) + ' แผนการดำเนินงาน ปีบัญชี ' + FY + '</h2><p class="sub">กิจกรรมตามค่าเกณฑ์แต่ละระดับ แผนรายเดือน และผลที่ลงไว้ · ข้อมูล ณ ' + asOf() + ' · กดแถวเพื่อดูหรือแก้ไขแผนของระดับนั้น</p></div>' +
-      '<div class="toolbar">' + (canP ? '<button class="btn ' + (pe ? 'primary' : '') + ' sm" data-act="pedit">' + ico(pe ? 'check' : 'edit', 15) + (pe ? 'เสร็จสิ้นการแก้ไขแผน' : 'แก้ไขแผน') + '</button>' : '') + parts + '<div class="seg" role="group" aria-label="กรองกิจกรรม">' + f('all', 'ทั้งหมด', cnt.all) + f('now', 'แผนเดือน ' + MONTHS[m], cnt.now) + f('late', 'ล่าช้า', cnt.late) + f('done', 'เสร็จแล้ว', cnt.done) + '</div></div></div>' +
+      '<div class="toolbar">' + (canP ? '<button class="btn ' + (pe ? 'primary' : '') + ' sm" data-act="pedit">' + ico(pe ? 'check' : 'edit', 15) + (pe ? 'เสร็จสิ้นการแก้ไขแผน' : 'แก้ไขแผน') + '</button>' : '') + parts + lvSeg() + '<div class="seg" role="group" aria-label="กรองกิจกรรม">' + f('all', 'ทั้งหมด', cnt.all) + f('now', 'แผนเดือน ' + MONTHS[m], cnt.now) + f('late', 'ล่าช้า', cnt.late) + f('done', 'เสร็จแล้ว', cnt.done) + '</div></div></div>' +
     winBar('plan') + (pf === 'all' && nowList.length && !pe ? '<div class="pl-now"><b>' + ico('target', 16) + ' เดือน ' + MONTHS[m] + ' มีแผน ' + nowList.length + ' กิจกรรม</b><div class="locs">' + nowList.slice(0, 10).map(function (r) {
       return '<button data-open="' + r.s.uid + '|' + r.L.level + '">' + esc(r.s.label) + ' ระดับ ' + r.L.level + ' · ' + fmt(r.st.plan[m], r.st.plan[m] % 1 ? 1 : 0) + ' ' + esc(r.st.unit || '') + '</button>'; }).join('') + (nowList.length > 10 ? '<span class="small muted" style="align-self:center">+' + (nowList.length - 10) + '</span>' : '') + '</div></div>' : '') +
     '<div class="lg" style="margin:4px 0 12px"><span><i class="sw pl-sw-p"></i>มีแผน</span><span><i class="sw pl-sw-r"></i>ลงผลแล้ว (ตัวเลข = ผล)</span><span><i class="sw pl-sw-miss"></i>ถึงกำหนดแต่ยังไม่มีผล</span><span><i class="sw pl-sw-cur"></i>เดือนที่ติดตาม</span></div>' +
@@ -3391,6 +3396,7 @@ document.addEventListener('click', function (e) {
   if (d.sfilter) { S.sfilter = d.sfilter; return render(); }
   if (d.pfilter) { S.pfilter = d.pfilter; return render(); }
   if (d.ppart) { S.ppart = d.ppart; return render(); }
+  if (d.plv) { S.plv = d.plv; return render(); }
   if ((d.act === 'unlock-lv' || d.act === 'relock-lv') && isAudit() && FY === CUR_FY) {
     var cu2 = curLv(), key2 = lvKey(cu2.s, cu2.L), on2 = d.act === 'unlock-lv';
     if (on2) UNLOCK[key2] = 1; else delete UNLOCK[key2];
