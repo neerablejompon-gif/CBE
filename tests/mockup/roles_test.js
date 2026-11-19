@@ -1,13 +1,17 @@
 const fs = require('fs'), vm = require('vm'), assert = require('assert');
 const ctx = vm.createContext({ console, Response, Request, URL, URLSearchParams, crypto, TextEncoder, TextDecoder, atob, btoa });
 vm.runInContext(fs.readFileSync(require('path').join(__dirname, '..', '..', 'mockup', '_worker.js'), 'utf8').replace('export default {', 'var __default = {'), ctx);
-ctx.USERS = [['5199', 'reporter', 'RM', '', 'จอมพล'], ['5199', 'audit', '', '', ''], ['1001', 'reporter', 'DT', '', 'TEST'], ['2001', 'exec', '', '', 'ผบ'], ['3001', 'reporter', 'RM', 'SM', 'ผิด'], ['3002', 'reporter', 'SCM', 'sm', 'ตัวเล็ก'], ['4001', 'reporter', 'RM', 'SM', 'x'], ['4001', 'audit', '', '', 'x']];
+ctx.USERS = [['5199', 'reporter', 'RM', '', 'จอมพล'], ['5199', 'audit', '', '', ''], ['1001', 'reporter', 'DT', '', 'TEST'], ['2001', 'exec', '', '', 'ผบ'], ['3001', 'reporter', 'RM', 'SM', 'ผิด'], ['3002', 'reporter', 'SCM', 'sm', 'ตัวเล็ก'], ['4001', 'reporter', 'RM', 'SM', 'x'], ['4001', 'audit', '', '', 'x'], ['6001', 'reporter', 'DT', '', 'ใหม่']];
 ctx.LOG = [];
-vm.runInContext(`getRanges = async (env, id, r) => r[0].startsWith('users') ? [USERS, []] : [[]]; appendRows = async (e, i, r, v) => { LOG.push(v[0][2] + ' | ' + v[0][3]); };`, ctx);
+ctx.AUTH = []; // auth tab rows; 6001 has none (still on the default password)
+vm.runInContext(`getRanges = async (env, id, r) => r[0].startsWith('users') ? [USERS, []] : r[0].startsWith('auth') ? [AUTH] : [[]]; appendRows = async (e, i, r, v) => { LOG.push(v[0][2] + ' | ' + v[0][3]); };`, ctx);
 const env = { SESSION_SECRET: 'x'.repeat(40), SYSTEM_SHEET_ID: 'S' };
 const O = 'https://cbe.dev', post = (path, body, cookie) => new Request(O + path, { method: 'POST', headers: { origin: O, 'content-type': 'application/json', ...(cookie ? { cookie } : {}) }, body: JSON.stringify(body) });
 const ck = r => r.headers.get('set-cookie').split(';')[0];
 (async () => {
+  // Hashed auth row for every test user except 6001: the hash is of "cbe@" + id, so the logins below keep their passwords
+  const salt = new Uint8Array(16).fill(7), pbkdf2 = vm.runInContext('pbkdf2', ctx), b64 = vm.runInContext('b64', ctx);
+  for (const id of ['5199', '1001', '2001', '3001', '3002', '4001']) ctx.AUTH.push([id, await pbkdf2('cbe@' + id, salt, 10000), b64(salt), '10000', '', '']);
   const sys = await vm.runInContext('system', ctx)(env), u = sys.users['5199'];
   assert.strictEqual(u.roles.length, 2); assert.strictEqual(u.role, 'reporter'); assert.strictEqual(u.name, 'จอมพล');
   assert.strictEqual(sys.users['3002'].part, 'SM'); console.log('✓ two rows → two roles; first row is default; name from first row; part/ind case-insensitive');
@@ -31,5 +35,12 @@ const ck = r => r.headers.get('set-cookie').split(';')[0];
   r = await vm.runInContext('login', ctx)(post('/api/login', { id: '1001', password: 'cbe@1001' }), env); assert.ok(r.headers.get('set-cookie')); console.log('✓ single-role user logs in directly as before');
   await assert.rejects(vm.runInContext('login', ctx)(post('/api/login', { id: '3001', password: 'cbe@3001' }), env), e => e.status === 403); console.log('✓ invalid only row (RM/SM) still refused');
   const s4 = (await vm.runInContext('system', ctx)(env)).users['4001']; assert.strictEqual(s4.roles.length, 1); assert.strictEqual(s4.role, 'audit'); console.log('✓ invalid row dropped when a valid one exists');
+  r = await vm.runInContext('login', ctx)(post('/api/login', { id: '6001', password: 'cbe@6001' }), env); j = await r.json();
+  assert.ok(r.headers.get('set-cookie')); assert.strictEqual(j.mustChange, true);
+  const c6 = new Request(O, { headers: { cookie: ck(r) } });
+  await assert.rejects(vm.runInContext('me', ctx)(c6, env), e => e.status === 403 && /ตั้งรหัสผ่านใหม่/.test(e.message));
+  assert.strictEqual((await vm.runInContext('me', ctx)(c6, env, true)).mustChange, true);
+  r = await vm.runInContext('login', ctx)(post('/api/login', { id: '1001', password: 'cbe@1001' }), env); assert.strictEqual((await r.json()).mustChange, false);
+  console.log('✓ no auth row: login works with mustChange: true, me() → 403 unless allowMust; hashed row → mustChange: false');
   console.log('ALL PASS');
 })().catch(e => { console.error('FAIL', e); process.exit(1); });
