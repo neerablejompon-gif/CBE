@@ -2331,7 +2331,7 @@ function vReview() {
         '<button class="btn sm" data-open="' + s.uid + '|' + (L ? L.level : 1) + '">' + ico('report', 15) + 'เปิดหน้ารายงาน <kbd>O</kbd></button></div>' +
         '<label class="label" for="tnote">หมายเหตุถึงผู้รายงาน (แนบไปกับการส่งกลับ)</label><textarea id="tnote" data-tnote="' + esc(f.id) + '"' + (isSelfRv(s.uid.split('|')[0]) ? ' disabled' : '') + ' rows="2" placeholder="เช่น แนบรายงานการประชุมครั้งที่ 3/2569 เพิ่ม">' + esc(TRI_NOTE[f.id]) + '</textarea></div>' +
       '<div class="dsec"><h4>คะแนนประเด็นนี้</h4><div class="scoreline"><div><span>เป้าหมายสิ้นปี</span><b class="num">' + fmt(subScore(s, S.month)) + '</b></div><div><span>หลักฐานรองรับ</span><b class="num">' + subSys(s, S.month) + '</b></div><div><span>น้ำหนัก</span><b class="num">' + fmt(s.weight, s.weight % 1 ? 2 : 0) + '</b></div></div></div>' +
-      (L ? '<div class="dsec"><h4>ค่าเกณฑ์ระดับ ' + L.level + '</h4><p class="criteria clamp" style="font-size:13.5px">' + esc(L.criteria) + '</p></div>' +
+      (L ? '<div class="dsec"><h4>ค่าเกณฑ์ระดับ ' + L.level + '</h4><p class="criteria clamp" style="font-size:13.5px">' + esc(critText(L)) + '</p></div>' +
         '<div class="dsec"><h4>ผลการดำเนินงานที่ส่งมา</h4>' + (L.narrative ? '<div class="narr-box">' + esc(L.narrative) + '</div>' : '<p class="bad" style="margin:0">ยังไม่มีผลการดำเนินงาน</p>') + '</div>' +
         '<div class="dsec"><h4>หลักฐาน ' + reqDocs(L).filter(function (r) { return r.has; }).length + '/' + reqDocs(L).length + '</h4>' + (L.mr.length ? L.mr.map(function (r) { return '<div class="small" style="display:flex;gap:8px;padding:4px 0"><span class="' + (r.has ? 'ok' : 'bad') + '">' + ico(r.has ? 'check' : 'alert', 15) + '</span><span style="min-width:0">' + esc(r.req.slice(0, 160)) + (r.evidence ? '<br><span class="muted">' + esc(r.evidence.slice(0, 160)) + '</span>' : '') + ((r.files || []).length ? '<br><span class="info">' + ico('clip', 13) + ' ' + r.files.map(function (f) { return esc(f.name); }).join(', ') + '</span>' : '') + '</span></div>'; }).join('') : '<p class="muted small" style="margin:0">ไม่มีรายการ</p>') + '</div>' +
         (L.steps.length ? '<div class="dsec"><h4>ผลสะสมเทียบแผน ณ ' + MONTHS[S.month] + '</h4>' + L.steps.map(function (st) { return '<div class="small" style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:4px 0"><span>' + esc(st.name.slice(0, 120)) + '</span><b class="num ' + (cum(st.result, S.month) < cum(st.plan, S.month) ? 'bad' : '') + '">' + cum(st.result, S.month) + ' / ' + cum(st.plan, S.month) + '</b></div>'; }).join('') + '</div>' : '') : '');
@@ -2790,7 +2790,7 @@ function vReport(I) {
       '<div class="fact"><span>คะแนนที่หลักฐานรองรับ</span><b class="' + (sys < Math.floor(sc) ? 'warn' : 'ok') + '">' + sys + '</b></div></div></div>' +
     lvTabs +
     '<div class="panel glass"><div class="panel-head" style="margin-bottom:8px"><h3>' + ico('target') + 'ค่าเกณฑ์ระดับ ' + L.level + '</h3>' + chip(st) + '</div>' +
-      '<p class="criteria' + (S.critOpen ? '' : ' clamp') + '">' + (esc(L.criteria) || '<span class="muted">ไม่มีข้อความเกณฑ์ในแบบฟอร์ม</span>') + '</p>' +
+      '<p class="criteria' + (S.critOpen ? '' : ' clamp') + '">' + (esc(critText(L)) || '<span class="muted">ไม่มีข้อความเกณฑ์ในแบบฟอร์ม</span>') + '</p>' +
       (L.criteria && L.criteria.length > 160 ? '<button class="linkbtn" data-act="crit-toggle">' + (S.critOpen ? 'ย่อ' : 'อ่านเกณฑ์ทั้งหมด') + '</button>' : '') + '</div>' +
     '<div class="panel glass">' + stepper + '<h3 style="margin-bottom:12px">' + ico(sx.ic) + '<span class="muted" style="font-weight:500">' + STEP_GROUPS[sx.g] + ' ·</span> ' + sx.n + '. ' + sx.t + (sx.g === 'a' && sx.n === 3 && L.mr.length ? ' <span class="small muted num">' + reqDocs(L).filter(function (r) { return r.has; }).length + '/' + reqDocs(L).length + '</span>' : '') + '</h3>' + body + '</div>' +
     savebar + '</div></div>';
@@ -2906,7 +2906,7 @@ function planEditor(I, kind) {
   return '<div class="panel glass pe-panel" id="pe-panel"><div class="panel-head"><div style="min-width:0"><div class="pe-eye"><span class="code">' + esc(c.s.label) + '</span><b>ระดับ ' + c.L.level + '</b>' + (kind === 'gs' ? '<span class="sp-tag own">แผนปรับปรุง GAP</span>' : '<span class="sp-tag form">แผนการดำเนินงาน</span>') + '</div><h3 style="margin:4px 0 0">' + esc(c.s.name) + '</h3></div>' +
       '<div class="toolbar"><button class="btn sm" data-open="' + c.s.uid + '|' + c.L.level + '">' + ico('report', 15) + 'ไปหน้ารายงานผล</button><button class="icon-btn" data-pick="" aria-label="ปิดตัวแก้ไขแผน">' + ico('x') + '</button></div></div>' +
     tgt + (kind === 'gs' ? gapBox(c.L) + '<label class="label" for="ac">แนวทางปรับปรุง / กิจกรรม</label><textarea id="ac" class="act-box" data-f="action" rows="3" placeholder="แนวทางปรับปรุงตามข้อเสนอแนะข้างต้น หรือที่ส่วนงานกำหนดเอง"' + (ae ? '' : ' disabled') + '>' + esc(c.L.action) + '</textarea>'
-      : '<p class="criteria' + (S.critOpen ? '' : ' clamp') + '" style="margin:0 0 12px">' + (esc(c.L.criteria) || '<span class="muted">ไม่มีข้อความเกณฑ์ในแบบฟอร์ม</span>') + '</p>') +
+      : '<p class="criteria' + (S.critOpen ? '' : ' clamp') + '" style="margin:0 0 12px">' + (esc(critText(c.L)) || '<span class="muted">ไม่มีข้อความเกณฑ์ในแบบฟอร์ม</span>') + '</p>') +
     spList(c.s, c.L, kind, ed, true) + '</div>';
 }
 function spArr(L, kind) { return kind === 'gs' ? (L.gsteps = L.gsteps || []) : L.steps; }
@@ -3110,6 +3110,8 @@ function vGap(I) {
 
 /* ================= action plan: every planned activity of the indicator on a 12-month timeline ================= */
 // Criteria-level filter shared by the action-plan and GAP pages (ทุกระดับ / ระดับ 1–5)
+// A level the form sheet has no criteria text for (e.g. CG 1.1 ระดับ 1/4) still shows, with a note instead of a blank
+function critText(L) { return (L.criteria || '').trim() || 'ยังไม่มีข้อความค่าเกณฑ์ในแบบฟอร์ม (แจ้ง กปม. 343)'; }
 function lvOff(L) { return S.plv && S.plv !== 'all' && String(L.level) !== S.plv; }
 function lvSeg() { return '<div class="seg" role="group" aria-label="กรองระดับค่าเกณฑ์">' + ['all', '1', '2', '3', '4', '5'].map(function (k) { return '<button data-plv="' + k + '" aria-pressed="' + ((S.plv || 'all') === k) + '">' + (k === 'all' ? 'ทุกระดับ' : 'ระดับ ' + k) + '</button>'; }).join('') + '</div>'; }
 function vPlan(I) {
