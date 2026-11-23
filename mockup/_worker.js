@@ -371,6 +371,11 @@ function parseForm(sum, rows) {
     }
     if (lv && cell(r, 'W')) { lv.mr.push({ req: cell(r, 'W'), has: cell(r, 'X') === '✓', evidence: cell(r, 'Y') }); lv.mrRows.push(i); }
   }
+  // Every sub has levels 1-5 even when the form sheet skips a row (CG 1.1 had no ระดับ 1/4): such a level has no row, so it is planned in the system only
+  subs.forEach(sb => {
+    for (let n = 1; n <= 5; n++) if (!sb.levels.some(L => L.level === n)) sb.levels.push({ level: n, criteria: '', gap: '', narrative: '', remark: '', note: '', mr: [], row: null, mrRows: [], steps: [] });
+    sb.levels.sort((a, b) => a.level - b.level);
+  });
   return { title: '', owner: '', target: null, topics: [], subs };
 }
 async function form(env, fy, code) {
@@ -504,7 +509,7 @@ async function mirror(env, fy, ops) {
   const byForm = {};
   for (const op of ops) {
     const { f, L } = await findLevel(env, fy, op.k), v = op.v;
-    if (!L) continue;
+    if (!L || !L.row) continue; // level not in the form sheet: kept in the system only
     const d = byForm[f.id] = byForm[f.id] || [];
     if (Array.isArray(v.plan) && v.plan[0] && L.steps.length) d.push({ range: `${FORM_TAB}!G${L.row}:R${L.row}`, values: [v.plan[0].map(x => +x || '')] });
     if (v.res && v.res[0] && L.steps.length) d.push({ range: `${FORM_TAB}!G${L.row + 1}:R${L.row + 1}`, values: [v.res[0].map(x => +x || '')] });
