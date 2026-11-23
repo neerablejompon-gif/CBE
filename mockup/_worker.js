@@ -366,7 +366,7 @@ function parseForm(sum, rows) {
     if ((m = /^ระดับ (\d)/.exec(B))) {
       const plan = MONTH_COLS.map(c => num(cell(r, c)) || 0), result = MONTH_COLS.map(c => num(cell(rows[i], c)) || 0), target = num(cell(r, 'D'));
       lv = { level: +m[1], criteria: cell(r, 'C'), gap: cell(r, 'AA'), narrative: cell(r, 'V'), remark: '', note: '', mr: [], row: i, mrRows: [],
-        steps: target || plan.some(Boolean) ? [{ name: 'ดำเนินการตามค่าเกณฑ์ระดับ ' + m[1], unit: cell(r, 'E'), target, plan, result }] : [] };
+        steps: cell(r, 'E') !== AGG_UNIT && (target || plan.some(Boolean)) ? [{ name: 'ดำเนินการตามค่าเกณฑ์ระดับ ' + m[1], unit: cell(r, 'E'), target, plan, result }] : [] };
       sub.levels.push(lv);
     }
     if (lv && cell(r, 'W')) { lv.mr.push({ req: cell(r, 'W'), has: cell(r, 'X') === '✓', evidence: cell(r, 'Y') }); lv.mrRows.push(i); }
@@ -505,14 +505,31 @@ async function check(env, fy, u, st, op) {
   } else if (!audit) fail(403, 'เฉพาะ กปม.');
 }
 // Results, narrative and evidence go back into the part's form so the sheet stays readable on its own
+// Steps added in the system (cs) live in the state sheet; the form gets their monthly totals per level so its own
+// formulas (progress, status, summary) work. E = AGG_UNIT marks such a row so parseForm does not read it back as a step.
+const AGG_UNIT = 'รวมจากระบบ';
+function aggRows(L, v) {
+  const z = () => Array(12).fill(0), plan = z(), res = z(); let target = 0, n = 0;
+  const add = (p, r, t) => { for (let i = 0; i < 12; i++) { plan[i] += +(p || [])[i] || 0; res[i] += +(r || [])[i] || 0; } target += +t || 0; n++; };
+  L.steps.forEach((st, i) => add((v.plan || [])[i] || st.plan, (v.res || [])[i] || st.result, st.target));
+  (v.cs || []).forEach(c => add(c.p, c.r, c.mo === 'pct' ? 100 : (+c.t || (c.p || []).reduce((a, x) => a + (+x || 0), 0))));
+  const cell = x => x ? Math.round(x * 100) / 100 : '';
+  return n ? { plan: plan.map(cell), res: res.map(cell), target: target || '' } : { plan: z().map(() => ''), res: z().map(() => ''), target: '' };
+}
 async function mirror(env, fy, ops) {
   const byForm = {};
   for (const op of ops) {
     const { f, L } = await findLevel(env, fy, op.k), v = op.v;
     if (!L || !L.row) continue; // level not in the form sheet: kept in the system only
     const d = byForm[f.id] = byForm[f.id] || [];
-    if (Array.isArray(v.plan) && v.plan[0] && L.steps.length) d.push({ range: `${FORM_TAB}!G${L.row}:R${L.row}`, values: [v.plan[0].map(x => +x || '')] });
-    if (v.res && v.res[0] && L.steps.length) d.push({ range: `${FORM_TAB}!G${L.row + 1}:R${L.row + 1}`, values: [v.res[0].map(x => +x || '')] });
+    if (Array.isArray(v.cs) && (v.cs.length || !L.steps.length)) {
+      const a = aggRows(L, v);
+      d.push({ range: `${FORM_TAB}!D${L.row}:E${L.row}`, values: [[a.target, v.cs.length ? AGG_UNIT : '']] });
+      d.push({ range: `${FORM_TAB}!G${L.row}:R${L.row}`, values: [a.plan] }, { range: `${FORM_TAB}!G${L.row + 1}:R${L.row + 1}`, values: [a.res] });
+    } else {
+      if (Array.isArray(v.plan) && v.plan[0] && L.steps.length) d.push({ range: `${FORM_TAB}!G${L.row}:R${L.row}`, values: [v.plan[0].map(x => +x || '')] });
+      if (v.res && v.res[0] && L.steps.length) d.push({ range: `${FORM_TAB}!G${L.row + 1}:R${L.row + 1}`, values: [v.res[0].map(x => +x || '')] });
+    }
     if (typeof v.narrative === 'string') d.push({ range: `${FORM_TAB}!V${L.row}`, values: [[v.narrative]] });
     (v.mr || []).forEach((x, i) => { if (L.mrRows[i]) d.push({ range: `${FORM_TAB}!X${L.mrRows[i]}:Y${L.mrRows[i]}`, values: [[x[0] ? '✓' : '', x[1] || '']] }); });
   }
